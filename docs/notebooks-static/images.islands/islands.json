@@ -1,0 +1,1 @@
+{"bond_graph":{"col_i":["row_i","col_i"],"myface1":["myface1"],"number_reds":["number_reds"],"range_cols":["range_rows","range_cols"],"range_rows":["range_rows","range_cols"],"row_i":["row_i","col_i"],"test_b":["test_g","test_b","test_r"],"test_g":["test_g","test_b","test_r"],"test_r":["test_g","test_b","test_r"]},"fallback_warnings":true,"groups":[],"version":1}

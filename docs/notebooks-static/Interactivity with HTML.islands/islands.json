@@ -1,0 +1,1 @@
+{"bond_graph":{"a":["a","f","b","d","e","c"],"b":["a","f","b","d","e","c"],"c":["a","f","b","d","e","c"],"counter":["counter"],"d":["a","f","b","d","e","c"],"e":["a","f","b","d","e","c"],"f":["a","f","b","d","e","c"],"limited":["limited"],"limited_counter":["limited_counter"],"x":["x"],"x1":["x2","x1"],"x2":["x2","x1"]},"fallback_warnings":true,"groups":[],"version":1}

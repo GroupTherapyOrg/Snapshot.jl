@@ -1,0 +1,340 @@
+@import "tailwindcss";
+
+/* Configure content sources for v4 */
+@source "./src/**/*.jl";
+
+/* Enable class-based dark mode (toggle via .dark class on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* View Transitions API override — Therapy's ClientRouter wraps each
+   SPA swap in `document.startViewTransition(doSwap)` when the browser
+   supports it. The default user-agent transition cross-fades the
+   whole `root` capture; during that animation old and new page
+   snapshots are both painted, briefly showing layout shifts when the
+   two routes' `#page-content` inner layouts differ (e.g. examples
+   index → an example page). Zeroing the animation keeps the VT
+   pipeline (so anything we tag later with a custom transition-name
+   still animates) while avoiding the cross-fade artifacts on route
+   boundaries. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* Stable scrollbar gutter so the document scrollbar appearing /
+   disappearing between pages doesn't reflow the content and shift
+   nav widths by a few pixels mid-navigation. */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Theme customizations */
+@theme {
+  --font-sans: 'Optima', 'Palatino Linotype', 'Book Antiqua', 'EB Garamond', serif;
+  --font-serif: 'EB Garamond', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --font-mono: 'JuliaMono', 'Fira Code', 'JetBrains Mono', monospace;
+
+  /* Warm neutral palette (shared across GroupTherapyOrg ecosystem) */
+  --color-warm-50: #f8f7f4;
+  --color-warm-100: #f0ece4;
+  --color-warm-200: #e8e3d9;
+  --color-warm-300: #d4d0c8;
+  --color-warm-400: #9a9590;
+  --color-warm-500: #8a8680;
+  --color-warm-600: #6b6560;
+  --color-warm-700: #5a5855;
+  --color-warm-800: #2a2520;
+  --color-warm-900: #1a1918;
+  --color-warm-950: #111110;
+
+  /* Accent palette — Julia Green #389826 (Therapy.jl primary accent) */
+  --color-accent-50: #f0f8ee;
+  --color-accent-100: #d6edcf;
+  --color-accent-200: #addba0;
+  --color-accent-300: #7ac46a;
+  --color-accent-400: #4da832;
+  --color-accent-500: #389826;
+  --color-accent-600: #2e7c1f;
+  --color-accent-700: #245f19;
+  --color-accent-800: #1b4813;
+  --color-accent-900: #12310d;
+  --color-accent-950: #0b1f08;
+
+  /* Accent-secondary palette — Julia Blue #4063d8 (Therapy.jl secondary accent) */
+  --color-accent-secondary-50: #eef2fc;
+  --color-accent-secondary-100: #d5def7;
+  --color-accent-secondary-200: #aabdef;
+  --color-accent-secondary-300: #7f9ce6;
+  --color-accent-secondary-400: #597edf;
+  --color-accent-secondary-500: #4063d8;
+  --color-accent-secondary-600: #3350b0;
+  --color-accent-secondary-700: #283e88;
+  --color-accent-secondary-800: #1e2f64;
+  --color-accent-secondary-900: #141f42;
+  --color-accent-secondary-950: #0c1329;
+
+  /* Border radius tokens (shadcn compatibility) */
+  --radius: 0.5rem;
+}
+
+/* Design System CSS custom properties */
+@layer base {
+  button { cursor: pointer; }
+  therapy-island { display: contents; }
+
+  /* Heading spacing and underlines — scoped to page content (Pluto-style separation) */
+  #page-content h1:not(.no-rule) { padding-top: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-warm-200); margin-bottom: 1rem; }
+  #page-content h2 { padding-top: 1.25rem; padding-bottom: 0.375rem; border-bottom: 1px solid var(--color-warm-200); margin-bottom: 0.75rem; }
+  #page-content h3 { padding-top: 1rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--color-warm-100); margin-bottom: 0.5rem; }
+  .dark #page-content h1:not(.no-rule), .dark #page-content h2 { border-bottom-color: var(--color-warm-800); }
+  .dark #page-content h3 { border-bottom-color: var(--color-warm-900); }
+
+  :root {
+    /* Shared neutrals */
+    --bg-primary: #f8f7f4;
+    --bg-secondary: #f0ece4;
+    --bg-tertiary: #e8e3d9;
+    --text-primary: #2a2520;
+    --text-secondary: #6b6560;
+    --text-tertiary: #9a9590;
+
+    /* Julia palette */
+    --julia-red: #cb3c33;
+    --julia-purple: #9558b2;
+    --julia-blue: #4063d8;
+    --julia-green: #389826;
+
+    /* Therapy.jl accent overrides */
+    --accent: var(--julia-green);
+    --accent-secondary: var(--julia-blue);
+
+    /* .jl wordmark tri-colors (exclude Green — the active accent) */
+    --jl-dot: #4063d8;  /* Blue */
+    --jl-j: #9558b2;    /* Purple */
+    --jl-l: #cb3c33;    /* Red */
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--bg-primary);
+  }
+
+  pre code {
+    font-family: 'JuliaMono', 'Fira Code', 'JetBrains Mono', monospace;
+  }
+}
+
+/* Dark mode custom properties */
+@layer base {
+  .dark {
+    --bg-primary: #111110;
+    --bg-secondary: #1a1918;
+    --bg-tertiary: #252422;
+    --text-primary: #d4d0c8;
+    --text-secondary: #8a8680;
+    --text-tertiary: #5a5855;
+  }
+}
+
+/* Theme switcher — override accent palette + visual dimensions via data-theme on <html> */
+@layer base {
+  /* Ocean theme — Blue accent, Rose secondary, larger radius, deeper shadows */
+  [data-theme="ocean"] {
+    --color-accent-50: #eff6ff;
+    --color-accent-100: #dbeafe;
+    --color-accent-200: #bfdbfe;
+    --color-accent-300: #93c5fd;
+    --color-accent-400: #60a5fa;
+    --color-accent-500: #3b82f6;
+    --color-accent-600: #2563eb;
+    --color-accent-700: #1d4ed8;
+    --color-accent-800: #1e40af;
+    --color-accent-900: #1e3a8a;
+    --color-accent-950: #172554;
+    --color-accent-secondary-50: #fff1f2;
+    --color-accent-secondary-100: #ffe4e6;
+    --color-accent-secondary-200: #fecdd3;
+    --color-accent-secondary-300: #fda4af;
+    --color-accent-secondary-400: #fb7185;
+    --color-accent-secondary-500: #f43f5e;
+    --color-accent-secondary-600: #e11d48;
+    --color-accent-secondary-700: #be123c;
+    --color-accent-secondary-800: #9f1239;
+    --color-accent-secondary-900: #881337;
+    --color-accent-secondary-950: #4c0519;
+    /* Larger radius (rounded-lg base feel) */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    /* Deeper shadows */
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.15), 0 2px 4px -2px rgb(0 0 0 / 0.15);
+    /* .jl wordmark: exclude Blue (accent), use Purple + Green + Red */
+    --jl-dot: #9558b2;
+    --jl-j: #389826;
+    --jl-l: #cb3c33;
+  }
+
+  /* Minimal theme — Zinc accent, Red secondary, no radius, no shadows, slate neutrals */
+  [data-theme="minimal"] {
+    --color-accent-50: #fafafa;
+    --color-accent-100: #f4f4f5;
+    --color-accent-200: #e4e4e7;
+    --color-accent-300: #d4d4d8;
+    --color-accent-400: #a1a1aa;
+    --color-accent-500: #71717a;
+    --color-accent-600: #52525b;
+    --color-accent-700: #3f3f46;
+    --color-accent-800: #27272a;
+    --color-accent-900: #18181b;
+    --color-accent-950: #09090b;
+    --color-accent-secondary-50: #fef2f2;
+    --color-accent-secondary-100: #fee2e2;
+    --color-accent-secondary-200: #fecaca;
+    --color-accent-secondary-300: #fca5a5;
+    --color-accent-secondary-400: #f87171;
+    --color-accent-secondary-500: #ef4444;
+    --color-accent-secondary-600: #dc2626;
+    --color-accent-secondary-700: #b91c1c;
+    --color-accent-secondary-800: #991b1b;
+    --color-accent-secondary-900: #7f1d1d;
+    --color-accent-secondary-950: #450a0a;
+    /* Sharp corners — no border-radius */
+    --radius-sm: 0;
+    --radius-md: 0;
+    --radius-lg: 0;
+    --radius-xl: 0;
+    --radius-2xl: 0;
+    /* No shadows */
+    --shadow-sm: 0 0 #0000;
+    --shadow-md: 0 0 #0000;
+    /* Slate neutrals (cooler than warm) */
+    --color-warm-50: #f8fafc;
+    --color-warm-100: #f1f5f9;
+    --color-warm-200: #e2e8f0;
+    --color-warm-300: #cbd5e1;
+    --color-warm-400: #94a3b8;
+    --color-warm-500: #64748b;
+    --color-warm-600: #475569;
+    --color-warm-700: #334155;
+    --color-warm-800: #1e293b;
+    --color-warm-900: #0f172a;
+    --color-warm-950: #020617;
+    /* Override design system custom properties for slate */
+    --bg-primary: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-tertiary: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+  }
+  .dark[data-theme="minimal"] {
+    --bg-primary: #020617;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #1e293b;
+    --text-primary: #cbd5e1;
+    --text-secondary: #64748b;
+    --text-tertiary: #475569;
+  }
+
+  /* Nature theme — Emerald accent, Amber secondary, generous radius, stone neutrals */
+  [data-theme="nature"] {
+    --color-accent-50: #ecfdf5;
+    --color-accent-100: #d1fae5;
+    --color-accent-200: #a7f3d0;
+    --color-accent-300: #6ee7b7;
+    --color-accent-400: #34d399;
+    --color-accent-500: #10b981;
+    --color-accent-600: #059669;
+    --color-accent-700: #047857;
+    --color-accent-800: #065f46;
+    --color-accent-900: #064e3b;
+    --color-accent-950: #022c22;
+    --color-accent-secondary-50: #fffbeb;
+    --color-accent-secondary-100: #fef3c7;
+    --color-accent-secondary-200: #fde68a;
+    --color-accent-secondary-300: #fcd34d;
+    --color-accent-secondary-400: #fbbf24;
+    --color-accent-secondary-500: #f59e0b;
+    --color-accent-secondary-600: #d97706;
+    --color-accent-secondary-700: #b45309;
+    --color-accent-secondary-800: #92400e;
+    --color-accent-secondary-900: #78350f;
+    --color-accent-secondary-950: #451a03;
+    /* Generous radius (rounded-xl base feel) */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-2xl: 2rem;
+    /* .jl wordmark: exclude Green (close to emerald accent), use Blue + Purple + Red */
+    --jl-dot: #4063d8;
+    --jl-j: #9558b2;
+    --jl-l: #cb3c33;
+    /* Stone neutrals (warmer earth tones) */
+    --color-warm-50: #fafaf9;
+    --color-warm-100: #f5f5f4;
+    --color-warm-200: #e7e5e4;
+    --color-warm-300: #d6d3d1;
+    --color-warm-400: #a8a29e;
+    --color-warm-500: #78716c;
+    --color-warm-600: #57534e;
+    --color-warm-700: #44403c;
+    --color-warm-800: #292524;
+    --color-warm-900: #1c1917;
+    --color-warm-950: #0c0a09;
+    /* Override design system custom properties for stone */
+    --bg-primary: #fafaf9;
+    --bg-secondary: #f5f5f4;
+    --bg-tertiary: #e7e5e4;
+    --text-primary: #292524;
+    --text-secondary: #57534e;
+    --text-tertiary: #a8a29e;
+  }
+  .dark[data-theme="nature"] {
+    --bg-primary: #0c0a09;
+    --bg-secondary: #1c1917;
+    --bg-tertiary: #292524;
+    --text-primary: #d6d3d1;
+    --text-secondary: #78716c;
+    --text-tertiary: #57534e;
+  }
+}
+
+/* Calendar selection states */
+@layer components {
+  .suite-cal-selected {
+    @apply bg-accent-600 text-white hover:bg-accent-700;
+  }
+  .suite-cal-range-middle {
+    @apply bg-accent-100 dark:bg-accent-900/30 rounded-none;
+  }
+  td[data-range-start] {
+    @apply rounded-l-md;
+  }
+  td[data-range-end] {
+    @apply rounded-r-md;
+  }
+  td[data-range-start] .suite-cal-selected {
+    @apply rounded-l-md rounded-r-none;
+  }
+  td[data-range-end] .suite-cal-selected {
+    @apply rounded-r-md rounded-l-none;
+  }
+}
+
+/* Julia syntax highlighting for CodeBlock */
+@layer components {
+  .suite-hl-keyword { color: #c792ea; }
+  .suite-hl-string  { color: #c3e88d; }
+  .suite-hl-comment { color: #6b6560; font-style: italic; }
+  .suite-hl-number  { color: #f78c6c; }
+  .suite-hl-funcall { color: #82aaff; }
+  .suite-hl-type    { color: #ffcb6b; }
+  .suite-hl-symbol  { color: #ff5370; }
+  .suite-hl-macro   { color: #c792ea; font-weight: 600; }
+  .suite-hl-special { color: #f78c6c; font-style: italic; }
+  .suite-hl-operator { color: #89ddff; }
+}

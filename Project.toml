@@ -1,0 +1,34 @@
+name = "PlutoIslands"
+uuid = "1e64ef43-5f79-4f6b-8e97-159df4e27032"
+version = "0.1.0"
+authors = ["Dale Black"]
+
+[deps]
+AbstractPlutoDingetjes = "6e696c72-6542-2067-7265-42206c756150"
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
+PlutoDependencyExplorer = "72656b73-756c-7461-726b-72656b6b696b"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+WasmTarget = "9f3a1415-1112-405b-ae89-c61daf9872bd"
+
+[compat]
+AbstractPlutoDingetjes = "1.4.0"
+Base64 = "1"
+JSON = "1"
+Pluto = "0.20.6"
+PlutoDependencyExplorer = "1"
+Random = "1"
+SHA = "0.7.0"
+Test = "1"
+UUIDs = "1"
+WasmTarget = "0.2"
+julia = "~1.12"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

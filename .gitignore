@@ -1,0 +1,6 @@
+.DS_Store
+Manifest.toml
+
+docs/dist/
+docs/Manifest.toml
+docs/node_modules/

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="wasm island">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8f7f4"/>
+      <stop offset="1" stop-color="#e9f3e4"/>
+    </linearGradient>
+    <linearGradient id="sea1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#addba0"/>
+      <stop offset="1" stop-color="#7ac46a"/>
+    </linearGradient>
+    <linearGradient id="sea2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4da832"/>
+      <stop offset="1" stop-color="#389826"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="360" fill="url(#sky)"/>
+
+  <!-- sun -->
+  <circle cx="500" cy="92" r="46" fill="#d6edcf"/>
+  <circle cx="500" cy="92" r="34" fill="#addba0" opacity="0.8"/>
+
+  <!-- far wave -->
+  <path d="M0 218 Q 80 196 160 214 T 320 212 T 480 210 T 640 206 L 640 360 L 0 360 Z"
+        fill="url(#sea1)" opacity="0.55"/>
+
+  <!-- island -->
+  <g>
+    <ellipse cx="252" cy="226" rx="86" ry="20" fill="#e8e3d9"/>
+    <!-- palm trunk -->
+    <path d="M252 224 C 250 196 244 176 230 160" stroke="#8a8680" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+    <!-- palm fronds -->
+    <g stroke="#2e7c1f" stroke-width="6" fill="none" stroke-linecap="round">
+      <path d="M230 160 C 208 150 188 152 172 164"/>
+      <path d="M230 160 C 224 138 232 122 248 112"/>
+      <path d="M230 160 C 248 146 270 144 288 154"/>
+      <path d="M230 160 C 214 144 196 138 178 140"/>
+    </g>
+  </g>
+
+  <!-- near wave -->
+  <path d="M0 268 Q 90 246 180 262 T 360 260 T 540 256 T 640 260 L 640 360 L 0 360 Z"
+        fill="url(#sea2)" opacity="0.9"/>
+
+  <!-- wasm hexagon bobbing on the near wave -->
+  <g transform="translate(430 250)">
+    <path d="M0 -34 L 30 -17 L 30 17 L 0 34 L -30 17 L -30 -17 Z"
+          fill="#654ff0" stroke="#f8f7f4" stroke-width="5"/>
+    <text x="0" y="9" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+          font-size="22" font-weight="bold" fill="#ffffff">WA</text>
+  </g>
+
+  <!-- julia dots, drifting like buoys -->
+  <g opacity="0.95">
+    <circle cx="96"  cy="300" r="11" fill="#cb3c33"/>
+    <circle cx="128" cy="312" r="11" fill="#389826"/>
+    <circle cx="160" cy="300" r="11" fill="#9558b2"/>
+  </g>
+</svg>

@@ -1,0 +1,1 @@
+{"bond_graph":{"x":["x"]},"fallback_warnings":true,"groups":[{"bonds":[{"initial":1,"name":"x","type":"int"}],"cells":[{"fn":"cellbody_aa0000040000","id":"aa000004-0000-4000-8000-000000000004"},{"fn":"cellbody_aa0000050000","id":"aa000005-0000-4000-8000-000000000005"}],"wasm":"group_0.wasm"}],"version":1}
