@@ -37,6 +37,12 @@
                     case 0xc0: return null
                     case 0xc2: return false
                     case 0xc3: return true
+                    case 0xd4: return ext(1)
+                    case 0xd5: return ext(2)
+                    case 0xd6: return ext(4)
+                    case 0xd7: return ext(8)
+                    case 0xd8: return ext(16)
+                    case 0xc7: return ext(u8[i++])
                     case 0xc4: return bin(u8[i++])
                     case 0xc5: return bin(u16())
                     case 0xc6: return bin(u32())
@@ -64,6 +70,15 @@
             const u32 = () => { const v = view.getUint32(i); i += 4; return v }
             const str = (n) => { const s = td.decode(u8.subarray(i, i + n)); i += n; return s }
             const bin = (n) => { const v = u8.slice(i, i + n); i += n; return v }
+            const ext = (n) => {
+                const type = view.getInt8(i); i += 1
+                if (type === 0x0d && n === 8) {   // Pluto Date ext: epoch ms i64
+                    const ms = view.getBigInt64(i); i += 8
+                    return { __pluto_date_ms: ms.toString() }
+                }
+                const v = u8.slice(i, i + n); i += n
+                return { __ext: type, data: Array.from(v) }
+            }
             const arr = (n) => { const a = new Array(n); for (let k = 0; k < n; k++) a[k] = read(); return a }
             const map = (n) => { const m = {}; for (let k = 0; k < n; k++) { const key = read(); m[key] = read() } return m }
             return read()
@@ -176,6 +191,12 @@
             case "str": return { s: Array.from(new TextEncoder().encode(String(v))) }
             case "vec": return { a: (Array.isArray(v) ? v : []).map((x) => value_tree(d.el, x)) }
             case "fields": {
+                if (v && v.__pluto_date_ms !== undefined) {
+                    // msgpack Date ext → Julia DateTime: instant ms = epoch ms + UNIXEPOCH
+                    const jl = BigInt(v.__pluto_date_ms) + 62135683200000n
+                    const wrap = (dd) => dd.k === "int" ? { x: jl.toString() } : { f: [wrap(dd.fs[0].d)] }
+                    return wrap(d)
+                }
                 const vals = Array.isArray(v)
                     ? v
                     : d.names
@@ -212,6 +233,7 @@ const _julia_float_str = (bitsStr) => {
     return s
 }
 const _tree_leaf = (d, t) => {
+    if (d.k === "fields" && d.leaf === "datetime") return _datetime_str(d, t)
     switch (d.k) {
         case "int": return d.w === 1 ? (t.x === "1" || t.x === "true" ? "true" : "false") : t.x
         case "bits": return _julia_float_str(t.x)
@@ -221,11 +243,22 @@ const _tree_leaf = (d, t) => {
     }
 }
 const _tree_limit = (depth) => Math.floor(30 / (1 + 2 * depth))
+const _datetime_str = (d, t) => {
+    // unwrap nested single-field ints to the instant ms, convert to Julia print
+    let dd = d, tt = t
+    while (dd.k !== "int") { dd = dd.fs[0].d; tt = tt.f[0] }
+    const ms = BigInt(tt.x) - 62135683200000n   // → unix epoch ms
+    const iso = new Date(Number(ms)).toISOString()
+    return iso.endsWith(".000Z") ? iso.slice(0, -5) : iso.slice(0, -1)
+}
 const pluto_tree_body = (d, t, depth = 0) => {
+    if (d.k === "fields" && d.leaf === "datetime") {
+        throw new Error("datetime is a leaf — handled by _tree_leaf")
+    }
     if (d.k === "fields") {
         // Tuple / NamedTuple: no prefix, no truncation (PlutoRunner tree_data)
         const fchild = (fd, ft) =>
-            fd.k === "vec" || fd.k === "fields"
+            (fd.k === "vec" || fd.k === "fields") && fd.leaf !== "datetime"
                 ? [pluto_tree_body(fd, ft, depth + 1), "application/vnd.pluto.tree+object"]
                 : [_tree_leaf(fd, ft), "text/plain"]
         const elements = d.fs.map((fd, i) => [
@@ -240,7 +273,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
     }
     if (d.k !== "vec") throw new Error("tree body root must be vec")
     const child = (ct) =>
-        d.el.k === "vec" || d.el.k === "fields"
+        (d.el.k === "vec" || d.el.k === "fields") && d.el.leaf !== "datetime"
             ? [pluto_tree_body(d.el, ct, depth + 1), "application/vnd.pluto.tree+object"]
             : [_tree_leaf(d.el, ct), "text/plain"]
     const n = t.a.length
