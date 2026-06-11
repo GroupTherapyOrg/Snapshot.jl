@@ -6,7 +6,7 @@
     "html": "wasm islands demo.html",
     "image": "island-demo.svg",
     "islands": 1,
-    "seconds": 34.2,
+    "seconds": 38.3,
     "slug": "wasm islands demo",
     "status": "interactive",
     "title": "wasm islands demo"
@@ -18,7 +18,7 @@
     "html": "two_groups.html",
     "image": "island-demo.svg",
     "islands": 2,
-    "seconds": 6.2,
+    "seconds": 6.8,
     "slug": "two_groups",
     "status": "interactive",
     "title": "two groups"
@@ -30,21 +30,21 @@
     "html": "Basic mathematics.html",
     "image": "https://user-images.githubusercontent.com/6933510/174066114-bc76964d-6ed1-491a-baa0-5063e3b08a17.png",
     "islands": 0,
-    "seconds": 9.3,
+    "seconds": 9.5,
     "slug": "Basic mathematics",
     "status": "static",
     "title": "Basic mathematics"
   },
   {
-    "degraded": 6,
+    "degraded": 2,
     "description": "Explore this cool math problem and create your own visualization!",
     "hash": "0cae714ff765506bc79b186639a473022d9a92bfd899eed0284c24bc17d28485",
     "html": "CollatzConjecture.html",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Collatz_Conjecture_Vizualization.png/500px-Collatz_Conjecture_Vizualization.png",
-    "islands": 0,
-    "seconds": 68.6,
+    "islands": 4,
+    "seconds": 68.1,
     "slug": "CollatzConjecture",
-    "status": "static",
+    "status": "interactive",
     "title": "Visualizing the Collatz Conjecture "
   },
   {
@@ -54,7 +54,7 @@
     "html": "Interactivity with HTML.html",
     "image": "https://user-images.githubusercontent.com/6933510/174067982-904951c4-4bba-42c7-a340-102ceb7e8e10.png",
     "islands": 4,
-    "seconds": 40.6,
+    "seconds": 38.3,
     "slug": "Interactivity with HTML",
     "status": "interactive",
     "title": "Interactivity with HTML"
@@ -66,7 +66,7 @@
     "html": "PlutoUI.jl.html",
     "image": "https://user-images.githubusercontent.com/6933510/174067690-50c8128d-748b-4f50-8a76-2ce18166642b.png",
     "islands": 20,
-    "seconds": 52.4,
+    "seconds": 54.1,
     "slug": "PlutoUI.jl",
     "status": "interactive",
     "title": "Interactivity"
@@ -78,7 +78,7 @@
     "html": "Titration.html",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Vinegar_Titration_-_Color_of_the_Phenolphthalein_reacting_to_NaOH.jpg/960px-Vinegar_Titration_-_Color_of_the_Phenolphthalein_reacting_to_NaOH.jpg",
     "islands": 0,
-    "seconds": 17.1,
+    "seconds": 16.6,
     "slug": "Titration",
     "status": "static",
     "title": "Simulating titrations"
@@ -90,7 +90,7 @@
     "html": "convolution_1d.html",
     "image": "https://github.com/JuliaPluto/featured/assets/6933510/65dadde7-6381-4cda-ad71-7bbba4b1db97",
     "islands": 0,
-    "seconds": 55.3,
+    "seconds": 54.5,
     "slug": "convolution_1d",
     "status": "static",
     "title": "Convolutions"
@@ -102,7 +102,7 @@
     "html": "convolution_2d.html",
     "image": "https://github.com/JuliaPluto/featured/assets/6933510/4215e7d0-53c4-4ee7-a26d-48d36457d194",
     "islands": 0,
-    "seconds": 13.0,
+    "seconds": 12.5,
     "slug": "convolution_2d",
     "status": "static",
     "title": "Images and Filtering"
@@ -114,7 +114,7 @@
     "html": "dither.html",
     "image": "https://github.com/JuliaPluto/PlutoUI.jl/assets/6933510/fb234dbf-4bc7-4b43-8630-3ba29eed6e1c",
     "islands": 0,
-    "seconds": 26.7,
+    "seconds": 25.9,
     "slug": "dither",
     "status": "static",
     "title": "Lo-fi webcam"
@@ -126,7 +126,7 @@
     "html": "fractals.html",
     "image": "https://github.com/user-attachments/assets/3e16917b-625b-41af-a8c2-727078a2afef",
     "islands": 1,
-    "seconds": 23.5,
+    "seconds": 24.6,
     "slug": "fractals",
     "status": "interactive",
     "title": "Fractals and Fractal Art"
@@ -138,7 +138,7 @@
     "html": "images.html",
     "image": "https://user-images.githubusercontent.com/6933510/136196634-2294d0a7-e79a-40d0-bbb8-81da70f4d398.png",
     "islands": 1,
-    "seconds": 11.2,
+    "seconds": 10.3,
     "slug": "images",
     "status": "interactive",
     "title": "Images as arrays"
@@ -150,7 +150,7 @@
     "html": "newton.html",
     "image": "https://user-images.githubusercontent.com/6933510/136196605-b6119b9d-223c-44bc-97d5-ef7cfce66483.gif",
     "islands": 1,
-    "seconds": 269.1,
+    "seconds": 264.2,
     "slug": "newton",
     "status": "interactive",
     "title": "The Newton Method"
@@ -162,7 +162,7 @@
     "html": "turtles-art.html",
     "image": "https://github.com/JuliaRegistries/General/assets/6933510/9a925232-6a75-47e7-9ab9-f384bc389602",
     "islands": 0,
-    "seconds": 27.4,
+    "seconds": 23.9,
     "slug": "turtles-art",
     "status": "static",
     "title": "Turtles – showcase"
