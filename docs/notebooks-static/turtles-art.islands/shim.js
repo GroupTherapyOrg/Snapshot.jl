@@ -222,9 +222,25 @@ const _tree_leaf = (d, t) => {
 }
 const _tree_limit = (depth) => Math.floor(30 / (1 + 2 * depth))
 const pluto_tree_body = (d, t, depth = 0) => {
+    if (d.k === "fields") {
+        // Tuple / NamedTuple: no prefix, no truncation (PlutoRunner tree_data)
+        const fchild = (fd, ft) =>
+            fd.k === "vec" || fd.k === "fields"
+                ? [pluto_tree_body(fd, ft, depth + 1), "application/vnd.pluto.tree+object"]
+                : [_tree_leaf(fd, ft), "text/plain"]
+        const elements = d.fs.map((fd, i) => [
+            d.tt === "NamedTuple" ? d.names[i] : i + 1,
+            fchild(fd.d, t.f[i]),
+        ])
+        return {
+            objectid: Math.floor(Math.random() * 2 ** 48).toString(16),
+            type: d.tt ?? "Tuple",
+            elements: elements,
+        }
+    }
     if (d.k !== "vec") throw new Error("tree body root must be vec")
     const child = (ct) =>
-        d.el.k === "vec"
+        d.el.k === "vec" || d.el.k === "fields"
             ? [pluto_tree_body(d.el, ct, depth + 1), "application/vnd.pluto.tree+object"]
             : [_tree_leaf(d.el, ct), "text/plain"]
     const n = t.a.length
@@ -322,8 +338,18 @@ const pluto_tree_body = (d, t, depth = 0) => {
         }
         const { ex, read_str } = await load_group(group)
         // args in manifest order; untouched bonds default to initial values.
-        // Each value is rebuilt INSIDE wasm via the bridge constructor closure.
-        const args = group.bonds.map((b) => build(ex, b.desc, value_tree(b.desc, bonds[b.name]?.value ?? b.initial)))
+        // transform tables map raw widget values (what the client sends) to
+        // what the notebook actually sees (transform_value); then each value
+        // is rebuilt INSIDE wasm via the bridge constructor closure.
+        const deep_eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+        const args = group.bonds.map((b) => {
+            let v = bonds[b.name]?.value
+            if (v !== undefined && b.transform) {
+                const hit = b.transform.find((pair) => deep_eq(pair[0], v))
+                if (hit) v = hit[1]
+            }
+            return build(ex, b.desc, value_tree(b.desc, v ?? b.initial))
+        })
         console.log("🏝️ staterequest served by wasm island:", bonds)
         // Patch shape mirrors a real PSS staterequest response exactly
         // (run_bonds_get_patches → Firebasey.diff): body + output.last_run_timestamp
