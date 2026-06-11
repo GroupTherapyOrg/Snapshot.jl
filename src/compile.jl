@@ -29,11 +29,11 @@ Base.@kwdef struct CompiledIsland
     # in the export — the shim decorates exactly these with warnings
     cell_failures::Vector{NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}} =
         NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}[]
+    # WasmTarget.Bridge arg descriptors, one per bond (manifest + verify/oracle)
+    arg_descs::Vector{Any} = Any[]
 end
 
-const _SUPPORTED_BOND_TYPES = (Int64, Int32, Float64, Float32, Bool)
-
-_js_arg_tag(T::DataType) = T <: Union{Int64,Int32} ? "int" : T <: Union{Float64,Float32} ? "float" : "bool"
+import WasmTarget.Bridge
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Group → wasm bytes
@@ -66,8 +66,21 @@ function compile_group(
         cell_failures=failures)
 
     g.ok || return fail("extraction not ok", g.reasons...)
-    all(T -> any(S -> T === S, _SUPPORTED_BOND_TYPES), g.arg_types) ||
-        return fail("unsupported bond arg types $(g.arg_types) (v0: Int/Float/Bool)")
+    all(Bridge.args_supported, g.arg_types) ||
+        return fail("bond arg types $(g.arg_types) outside the bridge universe")
+
+    # bridge marshalling: one arg descriptor per bond, plus the constructor
+    # closure (ctors, vector new/set pairs) compiled into the module
+    arg_descs = Any[]
+    bridge_accs = Any[]
+    bridge_names = Set{String}()
+    for T in g.arg_types
+        d, baccs = Bridge.arg_descriptor(T)
+        push!(arg_descs, d)
+        for (bf, bat, bnm) in baccs
+            Bridge._acc!(bridge_accs, bridge_names, bnm, bf, bat)
+        end
+    end
 
     # Sandbox module: preamble (structs/imports) at top level — group-level gate
     sandbox = Module(gensym(:PlutoIslandCompile))
@@ -112,6 +125,7 @@ function compile_group(
     # after string-concat functions (see WASM_FINDINGS.md).
     push!(entries, ((s::String) -> Int64(ncodeunits(s)), (String,), "_str_len"))
     push!(entries, ((s::String, i::Int64) -> Int64(codeunit(s, i)), (String, Int64), "_str_byte"))
+    append!(entries, bridge_accs)
 
     bytes = try
         WasmTarget.compile_multi(entries; optimize)
@@ -123,7 +137,7 @@ function compile_group(
         bond_names=g.bond_names, arg_types=g.arg_types, initial_values=g.initial_values,
         bytes,
         cells=[(cell_id=string(p.cell_id), export_name=p.export_name) for (_, p) in survivors],
-        ok=true, cell_failures=failures)
+        ok=true, cell_failures=failures, arg_descs)
 
     if verify_node && initial_bodies !== nothing
         result = _verify_initial_bodies(island, initial_bodies)
@@ -151,7 +165,8 @@ function exclude_cells(island::CompiledIsland, failed::Dict{String,String})::Com
         cells=[c for c in island.cells if !haskey(failed, c.cell_id)],
         ok=island.ok, reasons=island.reasons,
         cell_failures=vcat(island.cell_failures,
-            [(cell_id=id, reasons=[r]) for (id, r) in failed]))
+            [(cell_id=id, reasons=[r]) for (id, r) in failed]),
+        arg_descs=island.arg_descs)
 end
 
 "Compile every group; returns (islands, degraded) — degraded carry reasons."
@@ -164,9 +179,6 @@ end
 # Node verification (mini-oracle at initial values; M4 samples the domain)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_js_initial(v::Union{Int64,Int32}) = "BigInt(\"$(v)\")"
-_js_initial(v::Union{Float64,Float32}) = string(Float64(v))
-_js_initial(v::Bool) = v ? "1" : "0"
 
 """
 Per-cell Node verification. Returns a `String` on GLOBAL failure (module
@@ -175,8 +187,10 @@ reason (empty = all good). Each export call is individually try/caught so
 one trapping cell doesn't poison the others.
 """
 function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{String,String})
-    args_js = join([_js_initial(v) for v in island.initial_values], ", ")
-    calls = join(["""  try { out[$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)($args_js))}; }
+    # initial bond values cross via the bridge: tagged trees + in-module ctors
+    atrees = [Bridge.value_to_tree(island.arg_descs[j], island.initial_values[j])
+              for j in eachindex(island.arg_descs)]
+    calls = join(["""  try { out[$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)(...args))}; }
       catch (e) { out[$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; }"""
                   for c in island.cells], "\n")
     script = """
@@ -195,6 +209,10 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
         for (let i = 1; i <= len; i++) b[i-1] = Number(ex._str_byte(ref, BigInt(i)));
         return new TextDecoder().decode(b);
       };
+      const adescs = $(JSON.json(island.arg_descs));
+      const atrees = $(JSON.json(atrees));
+      $(Bridge.BUILD_JS)
+      const args = atrees.map((t, j) => build(adescs[j], t));
       const out = {};
     $(calls)
       console.log(JSON.stringify(out));
@@ -229,6 +247,18 @@ end
 # Asset writing (what the M3 export step ships)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# JSON-able raw form of an initial bond value — the shim feeds it through the
+# same descriptor-driven coercion as runtime msgpack values.
+_initial_json(v::Bool) = v
+_initial_json(v::Integer) = -(2^53) <= v <= 2^53 ? Int64(v) : string(v)
+_initial_json(v::AbstractFloat) = isfinite(Float64(v)) ? Float64(v) : string(Float64(v))
+_initial_json(v::Char) = string(v)
+_initial_json(v::String) = v
+_initial_json(v::Union{Tuple,AbstractVector}) = Any[_initial_json(x) for x in v]
+_initial_json(v) = isstructtype(typeof(v)) ?
+    Dict(string(fieldname(typeof(v), i)) => _initial_json(getfield(v, i))
+         for i in 1:fieldcount(typeof(v))) : string(v)
+
 """
     write_island_assets(dir, islands; bond_graph=nothing) -> manifest_path
 
@@ -261,15 +291,13 @@ function write_island_assets(
                 Dict(
                     "wasm" => wasm_name,
                     # initial values double as defaults: the client omits
-                    # never-touched bonds from staterequests. Non-finite floats
-                    # encode as strings (JSON forbids NaN/Inf); the shim's
-                    # Number(...) coercion decodes them.
+                    # never-touched bonds from staterequests. "desc" is the
+                    # bridge arg descriptor the shim builds values with.
                     "bonds" => [Dict(
                         "name" => string(n),
-                        "type" => _js_arg_tag(T),
-                        "initial" => v isa Bool ? v : v isa Integer ? Int(v) :
-                                     isfinite(Float64(v)) ? Float64(v) : string(Float64(v)),
-                        ) for (n, T, v) in zip(island.bond_names, island.arg_types, island.initial_values)],
+                        "desc" => d,
+                        "initial" => _initial_json(v),
+                        ) for (n, d, v) in zip(island.bond_names, island.arg_descs, island.initial_values)],
                     "cells" => [Dict("id" => c.cell_id, "fn" => c.export_name) for c in island.cells],
                 )
             end for (k, island) in enumerate(islands)

@@ -14,6 +14,9 @@ SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 WasmTarget = "9f3a1415-1112-405b-ae89-c61daf9872bd"
 
+[sources]
+WasmTarget = {url = "https://github.com/GroupTherapyOrg/WasmTarget.jl", rev = "bridge-module"}
+
 [compat]
 AbstractPlutoDingetjes = "1.4.0"
 Base64 = "1"

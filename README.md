@@ -4,7 +4,7 @@
 
 ### Interactive Pluto Exports. No Julia Server.
 
-`@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) and ship as **islands** inside the classic static HTML export — sliders work on any static host, with no slider server and no precomputed request files.
+`@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) and ship as **interactive islands** inside the classic static HTML export — sliders work on any static host, with no slider server and no precomputed request files.
 
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://grouptherapyorg.github.io/PlutoIslands.jl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)

@@ -15,7 +15,7 @@
                 A(:href => "https://plutojl.org", :target => "_blank", :class => "text-accent-500 hover:text-accent-600 underline", "Pluto.jl"),
                 " notebook compile to WebAssembly via ",
                 A(:href => "https://github.com/GroupTherapyOrg/WasmTarget.jl", :target => "_blank", :class => "text-accent-500 hover:text-accent-600 underline", "WasmTarget.jl"),
-                " and ship as islands inside the classic static export. Sliders work on any static host — ",
+                " and ship as ", Strong("interactive islands"), " inside the classic static export. Sliders work on any static host — ",
                 "no slider server, no precomputed request files. Cells that can't compile keep their ",
                 "original content and say so, beautifully."
             ),

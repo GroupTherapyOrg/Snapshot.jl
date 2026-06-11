@@ -14,6 +14,7 @@
 import Pluto
 import JSON
 import Random
+import WasmTarget
 
 
 Base.@kwdef struct OracleResult
@@ -83,24 +84,28 @@ end
 # Wasm side (one Node invocation for all samples)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# NB: Bool <: Integer in Julia — Bool must be checked FIRST (an i32 wasm
-# param fed a BigInt throws "Cannot convert a BigInt value to a number")
-_js_val(T::DataType, v) = T === Bool ? (v ? "1" : "0") :
-                          T <: Integer ? "BigInt(\"$(Int(v))\")" :
-                          T <: AbstractFloat ? string(Float64(v)) :
-                          error("unsupported oracle arg type $T")
+# best-effort coercion of a possible_bond_values sample to the observed arg
+# type (domains often yield Int where Float64 is observed, etc.)
+_coerce_sample(T::Type, v) = v isa T ? v : try convert(T, v) catch; v end
 
 "Evaluate every (sample, cell) under Node; returns sample_idx ⇒ cell_id ⇒ body."
 function _wasm_bodies(
     island::CompiledIsland,
     samples::Vector{Vector{Any}},
 )::Union{Vector{Dict{String,Any}},String}
+    # one tagged tree per (sample, bond); built in-module via bridge ctors
+    sample_trees = [
+        Any[WasmTarget.Bridge.value_to_tree(island.arg_descs[j],
+                _coerce_sample(island.arg_types[j], combo[j]))
+            for j in eachindex(island.arg_descs)]
+        for combo in samples
+    ]
     calls = String[]
-    for (si, combo) in enumerate(samples)
-        args = join([_js_val(T, v) for (T, v) in zip(island.arg_types, combo)], ", ")
+    for (si, _) in enumerate(samples)
         for c in island.cells
-            push!(calls, """  try { out[$(si - 1)][$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)($args))}; }
-      catch (e) { out[$(si - 1)][$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; }""")
+            push!(calls, """  { const args = strees[$(si - 1)].map((t, j) => build(adescs[j], t));
+      try { out[$(si - 1)][$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)(...args))}; }
+      catch (e) { out[$(si - 1)][$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; } }""")
         end
     end
     script = """
@@ -119,6 +124,9 @@ function _wasm_bodies(
         for (let i = 1; i <= len; i++) b[i-1] = Number(ex._str_byte(ref, BigInt(i)));
         return new TextDecoder().decode(b);
       };
+      const adescs = $(JSON.json(island.arg_descs));
+      const strees = $(JSON.json(sample_trees));
+      $(WasmTarget.Bridge.BUILD_JS)
       const out = Array.from({length: $(length(samples))}, () => ({}));
     $(join(calls, "\n"))
       console.log(JSON.stringify(out));

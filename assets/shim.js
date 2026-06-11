@@ -161,10 +161,54 @@
         return group._instance
     }
 
-    const coerce = (type, v) =>
-        type === "int" ? BigInt(Math.round(Number(v)))
-        : type === "float" ? Number(v)
-        : (v ? 1 : 0)
+    // ─── WasmTarget.Bridge marshalling: JS value → tagged tree → in-module ctors ───
+    const _dv = new DataView(new ArrayBuffer(8))
+    const f64bits_of = (v) => {
+        _dv.setFloat64(0, Number(v))
+        return String(BigInt.asIntN(64, _dv.getBigUint64(0)))
+    }
+    // runtime JS value (msgpack-decoded or manifest initial) → tagged exact tree
+    const value_tree = (d, v) => {
+        switch (d.k) {
+            case "int": return { x: String(typeof v === "boolean" ? (v ? 1 : 0) : (typeof v === "number" ? Math.round(v) : v)) }
+            case "bits": return { x: f64bits_of(v) }
+            case "char": return { x: String(typeof v === "string" ? v.codePointAt(0) : Number(v)) }
+            case "str": return { s: Array.from(new TextEncoder().encode(String(v))) }
+            case "vec": return { a: (Array.isArray(v) ? v : []).map((x) => value_tree(d.el, x)) }
+            case "fields": {
+                const vals = Array.isArray(v)
+                    ? v
+                    : d.names
+                    ? d.names.map((n) => v?.[n])
+                    : Object.values(v ?? {})
+                return { f: d.fs.map((fd, i) => value_tree(fd.d, vals[i])) }
+            }
+            default: throw new Error("bad desc kind " + d.k)
+        }
+    }
+    // tagged tree → Julia value INSIDE wasm (via compiled constructor exports)
+    const build = (ex, d, t) => {
+        switch (d.k) {
+            case "int": return d.w === 64 ? BigInt(t.x) : Number(t.x)
+            case "bits": {
+                _dv.setBigUint64(0, BigInt.asUintN(64, BigInt(t.x)))
+                return _dv.getFloat64(0)
+            }
+            case "char": return ex[d.mk](BigInt(t.x))
+            case "str": {
+                const b = ex[d.new](BigInt(t.s.length))
+                for (let i = 0; i < t.s.length; i++) ex[d.set](b, BigInt(i + 1), t.s[i])
+                return ex[d.mk](b)
+            }
+            case "fields": return ex[d.mk](...d.fs.map((fd, i) => build(ex, fd.d, t.f[i])))
+            case "vec": {
+                const v = ex[d.new](BigInt(t.a.length))
+                for (let i = 0; i < t.a.length; i++) ex[d.set](v, BigInt(i + 1), build(ex, d.el, t.a[i]))
+                return v
+            }
+            default: throw new Error("bad desc kind " + d.k)
+        }
+    }
 
     const msgpack_response = (u8) =>
         new Response(u8, { status: 200, headers: { "Content-Type": "application/msgpack" } })
@@ -193,8 +237,9 @@
             return passthrough()
         }
         const { ex, read_str } = await load_group(group)
-        // args in manifest order; untouched bonds default to initial values
-        const args = group.bonds.map((b) => coerce(b.type, bonds[b.name]?.value ?? b.initial))
+        // args in manifest order; untouched bonds default to initial values.
+        // Each value is rebuilt INSIDE wasm via the bridge constructor closure.
+        const args = group.bonds.map((b) => build(ex, b.desc, value_tree(b.desc, bonds[b.name]?.value ?? b.initial)))
         console.log("🏝️ staterequest served by wasm island:", bonds)
         // Patch shape mirrors a real PSS staterequest response exactly
         // (run_bonds_get_patches → Firebasey.diff): body + output.last_run_timestamp

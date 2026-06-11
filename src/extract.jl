@@ -24,6 +24,7 @@ import Pluto
 import Pluto: Notebook, Cell, ServerSession
 import PlutoDependencyExplorer
 import UUIDs: UUID
+import WasmTarget
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -360,8 +361,10 @@ function extract_groups(
             end
             push!(initial_values, v)
             push!(arg_types, typeof(v))
-            if !(typeof(v) <: Union{Number,Bool,Char,String})
-                push!(reasons, "bond $(n) has unsupported value type $(typeof(v)) in v0")
+            # the bridge marshals Int/UInt/Float/Bool/Char/String/Tuple/
+            # NamedTuple/struct/Vector (nested) — anything outside is honest
+            if !WasmTarget.Bridge.args_supported(typeof(v))
+                push!(reasons, "bond $(n) value type $(typeof(v)) is outside the bridge universe")
             end
         end
 
