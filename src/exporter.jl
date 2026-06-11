@@ -40,6 +40,12 @@ function generate_wasm_islands(
     oracle_samples::Integer=5,
     max_wasm_size_per_group::Integer=5_000_000,
     fallback_warnings::Bool=true,
+    # notebooks using the Pkg.activate escape hatch (nbpkg disabled, e.g. for
+    # unregistered packages like WasmMakie) have no nbpkg env to detect —
+    # callers pass the activated env here. With in-process workspaces the env
+    # must also REMAIN active while this runs: Pluto re-evals the notebook's
+    # `using`s in each fresh workspace module the oracle's bond re-runs create
+    env_dir::Union{Nothing,String}=nothing,
 )::Union{Nothing,String}
     connections = bound_variable_connections_graph(session, notebook)
     groups = extract_groups(session, notebook; connections, original_state)
@@ -56,7 +62,8 @@ function generate_wasm_islands(
         (body isa String || body isa AbstractDict) && (initial_bodies[string(id)] = body)
     end
 
-    nb_env_dir = notebook.nbpkg_ctx === nothing ? nothing :
+    nb_env_dir = env_dir !== nothing ? env_dir :
+        notebook.nbpkg_ctx === nothing ? nothing :
         try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
 
     islands = CompiledIsland[]
@@ -221,6 +228,7 @@ function export_notebook(
     disable_ui::Bool=true,
     pluto_cdn_root::Union{Nothing,String}=nothing,
     session::Union{Nothing,Pluto.ServerSession}=nothing,
+    env_dir::Union{Nothing,String}=nothing,
 )
     mkpath(output_dir)
     jl_contents = read(notebook_path, String)
@@ -238,7 +246,7 @@ function export_notebook(
             generate_wasm_islands(
                 session, notebook, original_state;
                 output_dir, url_path=basename(notebook_path),
-                verify, oracle_samples, max_wasm_size_per_group)
+                verify, oracle_samples, max_wasm_size_per_group, env_dir)
         catch e
             @error "🏝️ island generation failed — exporting static" exception =
                 (e, catch_backtrace())

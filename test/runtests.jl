@@ -109,8 +109,9 @@ if isdir(WASMMAKIE_DIR)
         nbpath = joinpath(mktempdir(), "figure.jl")
         write(nbpath, replace(src, "@@WM_ENV@@" => env))
         nbf = Pluto.SessionActions.open(session, nbpath; run_async=false)
-        # the notebook's own Pkg.activate ran in-process — restore
-        Pkg.activate(dirname(prev_proj); io=devnull)
+        # the notebook's own Pkg.activate ran in-process and must STAY active:
+        # Pluto re-evals `using WasmMakie` in each fresh workspace module the
+        # oracle's bond re-runs create — restoring early breaks the reimport
         stf = Pluto.notebook_to_js(nbf)
         connf = bound_variable_connections_graph(session, nbf)
         gf = only(extract_groups(session, nbf; connections=connf, original_state=stf))
@@ -175,9 +176,58 @@ if isdir(WASMMAKIE_DIR)
                 @test ok
                 ok && @test parse(Int, strip(String(take!(io)))) > 50
             end
+
+            # command-stream equality oracle: native html_snippet's embedded
+            # RecordingCtx stream vs the wasm export run under recording stubs
+            res = differential_oracle(session, nbf, stf, connf, gf, island; samples=4)
+            @test res.ok
+            @test res.samples_run == 4
+            @test isempty(res.failed_cells)
         end
 
         Pluto.SessionActions.shutdown(session, nbf; async=false)
+        Pkg.activate(dirname(prev_proj); io=devnull)
+    end
+
+    HAS_NODE && @testset "canvas export (figure notebook e2e)" begin
+        # reuse the prepared env + templated notebook from the testset above
+        env = mktempdir()
+        write(joinpath(env, "Project.toml"), """
+            [deps]
+            WasmMakie = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+
+            [sources]
+            WasmMakie = {path = "$(WASMMAKIE_DIR)"}
+            """)
+        prev_proj = Base.active_project()
+        Pkg.activate(env; io=devnull)
+        Pkg.instantiate(; io=devnull)
+        Pkg.activate(dirname(prev_proj); io=devnull)
+
+        src = read(joinpath(@__DIR__, "notebooks", "figure.jl"), String)
+        nbpath = joinpath(mktempdir(), "figure.jl")
+        write(nbpath, replace(src, "@@WM_ENV@@" => env))
+
+        out = mktempdir()
+        html_path = export_notebook(nbpath; output_dir=out, session, env_dir=env)
+        Pkg.activate(dirname(prev_proj); io=devnull)   # notebook leaked its activate
+        @test isfile(html_path)
+
+        manifest = JSON.parsefile(joinpath(out, "figure.islands", "islands.json"))
+        kinds = [c["kind"] for g2 in manifest["groups"] for c in g2["cells"]]
+        @test "canvas" in kinds
+        @test any(g2 -> g2["canvas_glue"] !== nothing, manifest["groups"])
+        report = JSON.parsefile(joinpath(out, "figure.islands", "report.json"))
+        @test report[1]["judgement"] == "island"
+        @test all(c -> c["ok"], report[1]["cells"])
+
+        e2e = joinpath(@__DIR__, "e2e_canvas.mjs")
+        proc = run(ignorestatus(`node $e2e $out figure.html`))
+        if proc.exitcode == 2
+            @test_skip "playwright unavailable"
+        else
+            @test proc.exitcode == 0
+        end
     end
 end
 

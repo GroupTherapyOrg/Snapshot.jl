@@ -36,11 +36,14 @@ begin
 	figk = coalesce(n, 2)
 	figxs = Float64[]
 	figys = Float64[]
-	figt = 0.0
-	while figt <= 6.3
-		push!(figxs, figt)
-		push!(figys, sin(figt * Float64(figk)))
-		figt += 0.1
+	# let-scoped loop var: a bare top-level `while` with `t += 0.1` hits
+	# Julia's soft-scope UndefVarError on Pluto re-runs
+	let t = 0.0
+		while t <= 6.3
+			push!(figxs, t)
+			push!(figys, sin(t * Float64(figk)))
+			t += 0.1
+		end
 	end
 	fig = WasmMakie.Figure()
 	figax = WasmMakie.Axis(fig[1, 1])
