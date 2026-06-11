@@ -22,7 +22,7 @@ Base.@kwdef struct CompiledIsland
     arg_types::Vector{DataType}
     initial_values::Vector{Any}
     bytes::Vector{UInt8}
-    cells::Vector{NamedTuple{(:cell_id, :export_name),Tuple{String,String}}}
+    cells::Vector{NamedTuple{(:cell_id, :export_name, :kind, :desc),Tuple{String,String,String,Any}}}
     ok::Bool
     reasons::Vector{String} = String[]
     # per-cell failures (PARTIAL islands): these dependent cells won't update
@@ -34,6 +34,7 @@ Base.@kwdef struct CompiledIsland
 end
 
 import WasmTarget.Bridge
+import Pkg
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Group → wasm bytes
@@ -52,9 +53,12 @@ degrade the whole group.
 """
 function compile_group(
     g::ExtractedGroup;
-    initial_bodies::Union{Nothing,Dict{String,String}}=nothing,
+    initial_bodies::Union{Nothing,Dict{String,Any}}=nothing,
     verify_node::Bool=true,
     optimize=false,
+    # the notebook's package environment — activated during eval/compile so
+    # notebook imports (e.g. `using Collatz`) resolve in the sandbox
+    env_dir::Union{Nothing,String}=nothing,
 )::CompiledIsland
     CF = NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}
     failures = CF[]
@@ -66,6 +70,10 @@ function compile_group(
         cell_failures=failures)
 
     g.ok || return fail("extraction not ok", g.reasons...)
+
+    prev_project = Base.active_project()
+    env_dir !== nothing && Pkg.activate(env_dir; io=devnull)
+    try
     all(Bridge.args_supported, g.arg_types) ||
         return fail("bond arg types $(g.arg_types) outside the bridge universe")
 
@@ -85,6 +93,9 @@ function compile_group(
     # Sandbox module: preamble (structs/imports) at top level — group-level gate
     sandbox = Module(gensym(:PlutoIslandCompile))
     try
+        # Pluto injects these into every notebook module implicitly
+        Core.eval(sandbox, :(using Markdown))
+        Core.eval(sandbox, :(using InteractiveUtils))
         for pre in g.preamble
             Core.eval(sandbox, pre)
         end
@@ -94,7 +105,7 @@ function compile_group(
 
     # Per-cell: eval + probe-compile individually; survivors enter the module
     arg_tuple = Tuple(g.arg_types)
-    survivors = Pair{Function,CellPlan}[]
+    survivors = Tuple{Function,CellPlan,Any}[]
     for p in g.cell_plans
         if !p.ok
             cellfail!(p.cell_id, p.reasons...)
@@ -112,14 +123,36 @@ function compile_group(
             cellfail!(p.cell_id, "WasmTarget compile failed: $(sprint(showerror, e)[1:min(end, 200)])")
             continue
         end
-        push!(survivors, f => p)
+        tree_desc = nothing
+        if p.body_kind === :tree
+            rt = try
+                only(Base.return_types(f, arg_tuple))
+            catch
+                Any
+            end
+            tree_desc = _tree_descriptor(rt)
+            if tree_desc isa String
+                cellfail!(p.cell_id, "tree body: $(tree_desc)")
+                continue
+            end
+        end
+        push!(survivors, (f, p, tree_desc))
     end
     isempty(survivors) && return fail("no cells compiled")
 
     entries = Vector{Any}()
-    for (f, p) in survivors
+    tree_acc_names = Set{String}()
+    tree_accs = Any[]
+    for (f, p, tree_desc) in survivors
         push!(entries, (f, arg_tuple, p.export_name))
+        if tree_desc !== nothing
+            # read-side accessors so the walker can take the value apart
+            for (af, aat, anm) in tree_desc.accs
+                Bridge._acc!(tree_accs, tree_acc_names, anm, af, aat)
+            end
+        end
     end
+    append!(entries, tree_accs)
     # String→JS accessors. Closure form on purpose: the typed-declaration form
     # trips WasmTarget's sequential-compile state pollution gap when compiled
     # after string-concat functions (see WASM_FINDINGS.md).
@@ -136,7 +169,9 @@ function compile_group(
     island = CompiledIsland(;
         bond_names=g.bond_names, arg_types=g.arg_types, initial_values=g.initial_values,
         bytes,
-        cells=[(cell_id=string(p.cell_id), export_name=p.export_name) for (_, p) in survivors],
+        cells=[(cell_id=string(p.cell_id), export_name=p.export_name,
+                kind=p.body_kind === :tree ? "tree" : "string",
+                desc=td === nothing ? nothing : td.desc) for (_, p, td) in survivors],
         ok=true, cell_failures=failures, arg_descs)
 
     if verify_node && initial_bodies !== nothing
@@ -155,6 +190,10 @@ function compile_group(
     end
 
     island
+    finally
+        env_dir !== nothing && prev_project !== nothing &&
+            Pkg.activate(dirname(prev_project); io=devnull)
+    end
 end
 
 "Drop cells (id ⇒ reason) from an island, recording them as failures."
@@ -176,6 +215,63 @@ function compile_islands(groups::Vector{ExtractedGroup}; kwargs...)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Tree (vector) bodies — bridge read-side
+# ─────────────────────────────────────────────────────────────────────────────
+
+const TREE_BODY_JS = read(joinpath(@__DIR__, "..", "assets", "tree_body.js"), String)
+
+"""
+Read descriptor for a tree-rendered cell value, decorated with the prefix
+metadata the body renderer needs. Returns `(; desc, accs)` or a String reason.
+v1 shape: `Vector` (nested) with Int/Bool/Float64/Char/String leaves.
+"""
+function _tree_descriptor(rt)
+    rt isa DataType && rt <: Vector && isconcretetype(rt) ||
+        return "unsupported value type $(rt) (v1: concrete Vector)"
+    dp = Bridge.descriptor(rt)
+    dp === nothing && return "type $(rt) outside the bridge universe"
+    desc = deepcopy(dp[1])
+    ok = _tree_meta!(desc, rt)
+    ok === nothing || return ok
+    (; desc, accs=dp[2])
+end
+
+function _tree_meta!(d, T)
+    if d["k"] == "vec"
+        d["prefix"] = string(eltype(T))
+        d["prefix_short"] = T <: Vector ? "" : string(eltype(T))
+        return _tree_meta!(d["el"], eltype(T))
+    elseif d["k"] in ("int", "char", "str")
+        return nothing
+    elseif d["k"] == "bits"
+        # Float32 leaves print as "1.0f0" — renderer only does Float64
+        return d["w"] == 64 ? nothing : "Float32 leaves unsupported in tree bodies"
+    end
+    return "tree leaf kind $(d["k"]) unsupported in v1"
+end
+
+"Body comparison that tolerates representation noise: Symbol vs String keys,
+tuples vs arrays, and ignores Pluto's per-render `objectid`."
+function _body_match(a, b)::Bool
+    if a isa AbstractString || a isa Number || a isa Bool
+        return string(a) == string(b)
+    elseif a isa AbstractDict
+        b isa AbstractDict || return false
+        ka = Set(string(k) for k in keys(a) if string(k) != "objectid")
+        kb = Set(string(k) for k in keys(b) if string(k) != "objectid")
+        ka == kb || return false
+        return all(_body_match(_dget(a, k), _dget(b, k)) for k in ka)
+    elseif a isa Union{Tuple,AbstractVector}
+        (b isa Union{Tuple,AbstractVector} && length(a) == length(b)) || return false
+        return all(_body_match(x, y) for (x, y) in zip(a, b))
+    elseif a isa Symbol || a isa MIME
+        return string(a) == string(b)
+    end
+    return isequal(a, b)
+end
+_dget(d::AbstractDict, k::String) = haskey(d, k) ? d[k] : d[Symbol(k)]
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Node verification (mini-oracle at initial values; M4 samples the domain)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -186,11 +282,15 @@ won't instantiate etc.), else `Dict{String,String}` of failing cell ids ⇒
 reason (empty = all good). Each export call is individually try/caught so
 one trapping cell doesn't poison the others.
 """
-function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{String,String})
+function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{String,Any})
     # initial bond values cross via the bridge: tagged trees + in-module ctors
     atrees = [Bridge.value_to_tree(island.arg_descs[j], island.initial_values[j])
               for j in eachindex(island.arg_descs)]
-    calls = join(["""  try { out[$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)(...args))}; }
+    cdescs = Dict(c.cell_id => c.desc for c in island.cells if c.kind == "tree")
+    calls = join([c.kind == "tree" ?
+        """  try { out[$(repr(c.cell_id))] = {ok: true, body: pluto_tree_body(cdescs[$(repr(c.cell_id))], walk(cdescs[$(repr(c.cell_id))], ex.$(c.export_name)(...args)))}; }
+      catch (e) { out[$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; }""" :
+        """  try { out[$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)(...args))}; }
       catch (e) { out[$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; }"""
                   for c in island.cells], "\n")
     script = """
@@ -211,7 +311,10 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
       };
       const adescs = $(JSON.json(island.arg_descs));
       const atrees = $(JSON.json(atrees));
+      const cdescs = $(JSON.json(cdescs));
       $(Bridge.BUILD_JS)
+      $(Bridge.WALK_JS)
+      $(TREE_BODY_JS)
       const args = atrees.map((t, j) => build(adescs[j], t));
       const out = {};
     $(calls)
@@ -235,8 +338,8 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
                 failed[c.cell_id] = "no original body to verify against"
             elseif r === nothing || !r["ok"]
                 failed[c.cell_id] = "wasm call failed: $(r === nothing ? "missing" : r["err"])"
-            elseif r["body"] != expected
-                failed[c.cell_id] = "initial body mismatch: wasm $(repr(r["body"])) != original $(repr(expected))"
+            elseif !_body_match(expected, r["body"])
+                failed[c.cell_id] = "initial body mismatch: wasm $(repr(r["body"])[1:min(end,150)]) != original $(repr(expected)[1:min(end,150)])"
             end
         end
         failed
@@ -298,13 +401,15 @@ function write_island_assets(
                         "desc" => d,
                         "initial" => _initial_json(v),
                         ) for (n, d, v) in zip(island.bond_names, island.arg_descs, island.initial_values)],
-                    "cells" => [Dict("id" => c.cell_id, "fn" => c.export_name) for c in island.cells],
+                    "cells" => [Dict("id" => c.cell_id, "fn" => c.export_name,
+                                     "kind" => c.kind, "desc" => c.desc) for c in island.cells],
                 )
             end for (k, island) in enumerate(islands)
         ],
     )
     manifest_path = joinpath(dir, "islands.json")
     write(manifest_path, JSON.json(manifest))
-    cp(joinpath(@__DIR__, "..", "assets", "shim.js"), joinpath(dir, "shim.js"); force=true)
+    shim = read(joinpath(@__DIR__, "..", "assets", "shim.js"), String)
+    write(joinpath(dir, "shim.js"), replace(shim, "//__TREE_BODY_JS__" => TREE_BODY_JS))
     manifest_path
 end

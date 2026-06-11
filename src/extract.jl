@@ -38,6 +38,9 @@ Base.@kwdef struct CellPlan
     fn_expr::Union{Expr,Nothing}     # function (bonds…) … end — nothing if !ok
     ok::Bool
     reasons::Vector{String} = String[]
+    # :string — fn returns the body string; :tree — fn returns the raw value,
+    # rendered into Pluto's tree+object body via the bridge read-side walker
+    body_kind::Symbol = :string
 end
 
 Base.@kwdef struct ExtractedGroup
@@ -283,6 +286,7 @@ function _plan_cell(
     append!(preamble, pre_t)
     val = gensym(:cellval)
 
+    body_kind = :string
     body_string_expr = if mime == "text/html" && length(body_t) == 1 && _is_md_cell(body_t[1])
         sentineled, slots = _sentinelize_interpolations(cell.code)
         isempty(slots) && return fail("md cell with no interpolations should never re-run — why is it in the chain?")
@@ -303,6 +307,12 @@ function _plan_cell(
         # quotes/escapes. The function object is interpolated directly so the
         # sandbox eval resolves it regardless of module context.
         :($(_plain_body)($val))
+    elseif mime == "application/vnd.pluto.tree+object"
+        _capture_value!(stmts, body_t, val) || return fail("empty cell body")
+        # raw value out; compile-time discovers the concrete type and attaches
+        # the bridge read descriptor (leaf/shape gates live in compile)
+        body_kind = :tree
+        val
     else
         return fail("unsupported output mime $(mime) in v0 (text/plain & md-text/html only)")
     end
@@ -310,7 +320,7 @@ function _plan_cell(
     args = [Expr(:(::), n, t) for (n, t) in zip(bond_names, arg_types)]
     fn_expr = Expr(:function, Expr(:tuple, args...), Expr(:block, stmts..., :(return $body_string_expr)))
 
-    (CellPlan(; cell_id=id, mime, export_name, fn_expr, ok=true), preamble)
+    (CellPlan(; cell_id=id, mime, export_name, fn_expr, ok=true, body_kind), preamble)
 end
 
 "Pluto text/plain body semantics: strings repr-quoted, everything else string()."
@@ -348,11 +358,12 @@ function extract_groups(
         reasons = String[]
         synthetic_initials = false
         for n in bond_names
+            fetch_failed = false
             v = try
                 Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook), n)
             catch e
-                push!(reasons, "could not fetch initial value of $(n): $(typeof(e))")
-                nothing
+                fetch_failed = true   # un-serializable over the workspace boundary
+                missing
             end
             if v === missing
                 # widget without initial_value, run headless — synthesize the
@@ -363,7 +374,7 @@ function extract_groups(
                     Symbol("possible_bond_values failed: $(typeof(e))")
                 end
                 if domain isa Symbol || isempty(domain)
-                    push!(reasons, "bond $(n) is missing and has no usable possible_values ($(domain isa Symbol ? domain : "empty"))")
+                    push!(reasons, "bond $(n) is $(fetch_failed ? "unfetchable" : "missing") and has no usable possible_values ($(domain isa Symbol ? domain : "empty"))")
                 else
                     v = first(domain)
                     synthetic_initials = true

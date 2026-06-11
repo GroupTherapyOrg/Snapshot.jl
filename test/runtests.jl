@@ -39,7 +39,7 @@ connections = bound_variable_connections_graph(session, notebook)
 end
 
 if HAS_NODE
-    initial_bodies = Dict{String,String}(
+    initial_bodies = Dict{String,Any}(
         string(id) => cr["output"]["body"] for (id, cr) in original_state["cell_results"]
     )
 
@@ -51,7 +51,7 @@ if HAS_NODE
         @test isempty(island.cell_failures)
 
         # tampered bodies must be caught per cell — none survive
-        bad_bodies = Dict(k => v * "TAMPERED" for (k, v) in initial_bodies)
+        bad_bodies = Dict{String,Any}(k => v * "TAMPERED" for (k, v) in initial_bodies)
         bad = compile_group(g; initial_bodies=bad_bodies, verify_node=true)
         @test !bad.ok
         @test length(bad.cell_failures) == 2

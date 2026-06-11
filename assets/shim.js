@@ -186,6 +186,29 @@
             default: throw new Error("bad desc kind " + d.k)
         }
     }
+    //__TREE_BODY_JS__
+
+    // bridge read-side walker (parameterized by exports)
+    const walk_ex = (ex, d, v) => {
+        switch (d.k) {
+            case "int": return { x: String(v) }
+            case "bits": return { x: String(ex[d.b](v)) }
+            case "char": return { x: String(ex[d.b](v)) }
+            case "str": {
+                const n = Number(ex[d.len](v)); const a = []
+                for (let i = 1; i <= n; i++) a.push(Number(ex[d.cu](v, BigInt(i))))
+                return { s: a }
+            }
+            case "fields": return { f: d.fs.map((fd) => walk_ex(ex, fd.d, ex[fd.a](v))) }
+            case "vec": {
+                const n = Number(ex[d.len](v)); const a = []
+                for (let i = 1; i <= n; i++) a.push(walk_ex(ex, d.el, ex[d.get](v, BigInt(i))))
+                return { a: a }
+            }
+            default: throw new Error("bad desc kind " + d.k)
+        }
+    }
+
     // tagged tree → Julia value INSIDE wasm (via compiled constructor exports)
     const build = (ex, d, t) => {
         switch (d.k) {
@@ -246,7 +269,9 @@
         // (which CellOutput uses to invalidate) + persist_js_state + logs + runtime.
         const patches = []
         for (const cell of group.cells) {
-            const body = read_str(ex[cell.fn](...args))
+            const body = cell.kind === "tree"
+                ? pluto_tree_body(cell.desc, walk_ex(ex, cell.desc, ex[cell.fn](...args)))
+                : read_str(ex[cell.fn](...args))
             patches.push({ op: "replace", path: ["cell_results", cell.id, "logs"], value: [] })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "body"], value: body })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "persist_js_state"], value: true })

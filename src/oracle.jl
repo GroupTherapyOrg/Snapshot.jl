@@ -58,24 +58,25 @@ end
 # Native side (ground truth)
 # ─────────────────────────────────────────────────────────────────────────────
 
-"Run the notebook with the given bond values; return cell_id → new body."
+"Run the notebook with the given bond values; return cell_id → new body
+(String for text mimes, Dict for tree+object)."
 function _native_bodies(
     session::Pluto.ServerSession,
     run::RunningNotebook,
     g::ExtractedGroup,
     combo::Vector,
-)::Union{Dict{String,String},String}
+)::Union{Dict{String,Any},String}
     bonds = Dict{Symbol,Any}(
         n => Dict{String,Any}("value" => v) for (n, v) in zip(g.bond_names, combo)
     )
     result = run_bonds_get_patches(session, run, bonds, nothing)
     result === nothing && return "run_bonds_get_patches returned nothing"
-    bodies = Dict{String,String}()
+    bodies = Dict{String,Any}()
     for patch in result.patches
         patch isa Pluto.Firebasey.ReplacePatch || continue
         p = patch.path
         (length(p) == 4 && p[1] == "cell_results" && p[3] == "output" && p[4] == "body") || continue
-        patch.value isa String && (bodies[string(p[2])] = patch.value)
+        (patch.value isa String || patch.value isa AbstractDict) && (bodies[string(p[2])] = patch.value)
     end
     bodies
 end
@@ -100,11 +101,15 @@ function _wasm_bodies(
             for j in eachindex(island.arg_descs)]
         for combo in samples
     ]
+    cdescs = Dict(c.cell_id => c.desc for c in island.cells if c.kind == "tree")
     calls = String[]
     for (si, _) in enumerate(samples)
         for c in island.cells
+            body_js = c.kind == "tree" ?
+                "pluto_tree_body(cdescs[$(repr(c.cell_id))], walk(cdescs[$(repr(c.cell_id))], ex.$(c.export_name)(...args)))" :
+                "readStr(ex.$(c.export_name)(...args))"
             push!(calls, """  { const args = strees[$(si - 1)].map((t, j) => build(adescs[j], t));
-      try { out[$(si - 1)][$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)(...args))}; }
+      try { out[$(si - 1)][$(repr(c.cell_id))] = {ok: true, body: $(body_js)}; }
       catch (e) { out[$(si - 1)][$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; } }""")
         end
     end
@@ -126,7 +131,10 @@ function _wasm_bodies(
       };
       const adescs = $(JSON.json(island.arg_descs));
       const strees = $(JSON.json(sample_trees));
+      const cdescs = $(JSON.json(cdescs));
       $(WasmTarget.Bridge.BUILD_JS)
+      $(WasmTarget.Bridge.WALK_JS)
+      $(TREE_BODY_JS)
       const out = Array.from({length: $(length(samples))}, () => ({}));
     $(join(calls, "\n"))
       console.log(JSON.stringify(out));
@@ -200,9 +208,9 @@ function differential_oracle(
             # native may omit a cell whose body didn't change vs current state;
             # only compare when ground truth is present
             real === nothing && continue
-            if r["body"] != real
+            if !_body_match(real, r["body"])
                 failed_cells[c.cell_id] =
-                    "oracle mismatch at $(g.bond_names)=$(combo): wasm $(repr(r["body"])) != native $(repr(real))"
+                    "oracle mismatch at $(g.bond_names)=$(combo): wasm $(repr(r["body"])[1:min(end,120)]) != native $(repr(real)[1:min(end,120)])"
             end
         end
     end

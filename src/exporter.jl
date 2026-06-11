@@ -45,21 +45,25 @@ function generate_wasm_islands(
     groups = extract_groups(session, notebook; connections, original_state)
     isempty(groups) && return nothing
 
-    # original output bodies (String bodies only — tree+object bodies are Dicts)
-    initial_bodies = Dict{String,String}()
+    # original output bodies — String for text mimes, Dict for tree+object
+    initial_bodies = Dict{String,Any}()
     for (id, cr) in original_state["cell_results"]
         body = try
             cr["output"]["body"]
         catch
             nothing
         end
-        body isa String && (initial_bodies[string(id)] = body)
+        (body isa String || body isa AbstractDict) && (initial_bodies[string(id)] = body)
     end
+
+    nb_env_dir = notebook.nbpkg_ctx === nothing ? nothing :
+        try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
 
     islands = CompiledIsland[]
     report = []   # the judgement record, one entry per group
     for g in groups
         island = compile_group(g;
+            env_dir=nb_env_dir,
             # missing-initial groups: original bodies are missing-tainted and
             # not reproducible — skip initial-body check, the oracle covers them
             initial_bodies=g.synthetic_initials ? nothing : initial_bodies,
