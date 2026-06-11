@@ -60,6 +60,7 @@ function generate_wasm_islands(
         try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
 
     islands = CompiledIsland[]
+    all_islands = CompiledIsland[]   # per-group, shipped or not (state refresh)
     report = []   # the judgement record, one entry per group
     for g in groups
         island = compile_group(g;
@@ -130,6 +131,7 @@ function generate_wasm_islands(
             "oracle_skipped" => oracle === nothing ? nothing : oracle.skipped_reason,
             "cells" => cell_records,
         ))
+        push!(all_islands, island)
         if ship
             push!(islands, island)
             @info "🏝️ island compiled" url_path bonds = island.bond_names cells =
@@ -139,6 +141,24 @@ function generate_wasm_islands(
         else
             @warn "🏝️ bond group degraded to fallback" url_path bonds = g.bond_names reasons =
                 island.reasons
+        end
+    end
+
+    # make the EXPORTED initial state self-consistent: synthetic-initial groups
+    # ran headless with `missing` — set their introspected initials through the
+    # real bond machinery so the re-snapshotted statefile shows real bodies
+    # (callers re-take notebook_to_js after this returns)
+    for (g, island) in zip(groups, all_islands)
+        (island.ok && !isempty(island.cells) && g.synthetic_initials) || continue
+        try
+            run = RunningNotebook(; path=string(notebook.path), notebook,
+                original_state, bond_connections=connections)
+            bonds = Dict{Symbol,Any}(
+                n => Dict{String,Any}("value" => _raw_initial(g, j))
+                for (j, n) in enumerate(g.bond_names))
+            run_bonds_get_patches(session, run, bonds, nothing)
+        catch e
+            @warn "🏝️ initial-state refresh failed for group" bonds = g.bond_names exception = e
         end
     end
 
@@ -224,6 +244,13 @@ function export_notebook(
                 (e, catch_backtrace())
             nothing
         end
+    end
+
+    if islands_dirname !== nothing
+        # island generation may have set synthetic initials in the workspace —
+        # re-snapshot so the exported initial state matches the widgets
+        original_state = Pluto.notebook_to_js(notebook)
+        delete!(original_state, "status_tree")
     end
 
     Pluto.SessionActions.shutdown(session, notebook; async=false)

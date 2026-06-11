@@ -86,6 +86,16 @@ end
 # Wasm side (one Node invocation for all samples)
 # ─────────────────────────────────────────────────────────────────────────────
 
+"The group's j-th initial value in RAW (client-wire) terms."
+function _raw_initial(g, j)
+    t = isempty(g.transforms) ? nothing : g.transforms[j]
+    if t !== nothing
+        hit = findfirst(pair -> isequal(pair[2], g.initial_values[j]), t)
+        hit === nothing || return t[hit][1]
+    end
+    g.initial_values[j]
+end
+
 # best-effort coercion of a possible_bond_values sample to the observed arg
 # type (domains often yield Int where Float64 is observed, etc.)
 _coerce_sample(T::Type, v) = v isa T ? v : try convert(T, v) catch; v end
@@ -230,9 +240,10 @@ function differential_oracle(
         ok=global_mismatch === nothing && isempty(failed_cells),
         samples_run, mismatch=global_mismatch, failed_cells)
 
-    # restore initial bond values (politeness for keep_running / later groups)
+    # restore initial bond values — in RAW terms: replaying TRANSFORMED values
+    # through run_bonds would double-transform (Select: "melon" is not a key)
     try
-        _native_bodies(session, run, g, Vector{Any}(g.initial_values))
+        _native_bodies(session, run, g, Any[_raw_initial(g, j) for j in eachindex(g.bond_names)])
     catch
     end
 
