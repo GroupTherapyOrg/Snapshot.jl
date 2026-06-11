@@ -56,6 +56,9 @@ Base.@kwdef struct ExtractedGroup
     # possible_bond_values. Original bodies are then missing-tainted and NOT
     # reproducible — skip initial-body verification, trust the oracle.
     synthetic_initials::Bool = false
+    # per-bond sampling domains for the oracle; `nothing` = use
+    # possible_bond_values. Populated by HTML-widget introspection.
+    domains::Vector{Any} = Any[]
 end
 
 is_ok(g::ExtractedGroup) = g.ok && all(p -> p.ok, g.cell_plans)
@@ -307,6 +310,12 @@ function _plan_cell(
         # quotes/escapes. The function object is interpolated directly so the
         # sandbox eval resolves it regardless of module context.
         :($(_plain_body)($val))
+    elseif mime == "text/html"
+        # non-md HTML cells: support values that ARE html wrappers (html"…" →
+        # Docs.HTML{String}) or raw strings; anything needing real show()
+        # machinery probe-fails honestly at compile
+        _capture_value!(stmts, body_t, val) || return fail("empty cell body")
+        :($(_html_body)($val))
     elseif mime == "application/vnd.pluto.tree+object"
         _capture_value!(stmts, body_t, val) || return fail("empty cell body")
         # raw value out; compile-time discovers the concrete type and attaches
@@ -323,12 +332,62 @@ function _plan_cell(
     (CellPlan(; cell_id=id, mime, export_name, fn_expr, ok=true, body_kind), preamble)
 end
 
+"text/html body for value-is-markup cells (html\"…\" wrappers, raw strings)."
+_html_body(v::Base.Docs.HTML{String})::String = v.content
+_html_body(v::AbstractString)::String = String(v)
+# anything else needs show(io, MIME"text/html", v) — not wasm-compilable;
+# typed to fail inference/probe rather than silently mis-render
+_html_body(v) = error("text/html rendering of $(typeof(v)) unsupported")
+
 "Pluto text/plain body semantics: strings repr-quoted, everything else string()."
 _plain_body(x)::String = string(x)
 # escape_string traps `unreachable` in wasm (WASM_FINDINGS #4) — replace-chain
 # covers backslash+quote, the dominant cases; the oracle catches exotica.
 _plain_body(s::String)::String =
     "\"" * replace(replace(s, "\\" => "\\\\"), "\"" => "\\\"") * "\""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Raw-HTML widget introspection — bonds with no initial_value/possible_values
+# (plain `html"<input …>"` elements). Parse the widget's RENDERED html (the
+# bond-defining cell's output body) the way Pluto's own frontend reads it:
+# range/number → min:step:max numeric domain, checkbox → Bool. Gives these
+# bonds a verifiable domain — the oracle samples it like any finite widget.
+# ─────────────────────────────────────────────────────────────────────────────
+
+function _widget_introspect(original_state, topology, bond_name::Symbol)
+    cells = PlutoDependencyExplorer.where_assigned(topology, Set([bond_name]))
+    isempty(cells) && return nothing
+    _sget(d, k, default) = try d[k] catch; default end
+    crs = _sget(original_state, "cell_results", Dict())
+    id = cells[1].cell_id
+    cr = something(_sget(crs, id, nothing), _sget(crs, string(id), nothing), Some(nothing))
+    cr === nothing && return nothing
+    body = _sget(_sget(cr, "output", Dict()), "body", nothing)
+    body isa String || return nothing
+    m = match(r"<input\b[^>]*>"i, body)
+    m === nothing && return nothing
+    tag = m.match
+    attr(name) = (am = match(Regex("\\b$(name)\\s*=\\s*[\"']?([^\"'\\s>]+)", "i"), tag);
+                  am === nothing ? nothing : String(am.captures[1]))
+    typ = something(attr("type"), "text")
+    if typ in ("range", "number")
+        pnum(x, dflt) = x === nothing ? dflt : something(tryparse(Int64, x),
+                                                         something(tryparse(Float64, x), dflt))
+        lo = pnum(attr("min"), typ == "range" ? 0 : nothing)
+        hi = pnum(attr("max"), typ == "range" ? 100 : nothing)
+        st = pnum(attr("step"), 1)
+        (lo === nothing || hi === nothing) && return nothing
+        v0 = pnum(attr("value"), typ == "range" ? lo + div(hi - lo, 2) : lo)
+        if lo isa Int64 && hi isa Int64 && st isa Int64 && v0 isa Int64
+            return (initial=v0, domain=collect(lo:st:hi))
+        else
+            return (initial=Float64(v0), domain=collect(Float64(lo):Float64(st):Float64(hi)))
+        end
+    elseif typ == "checkbox"
+        return (initial=attr("checked") !== nothing, domain=[false, true])
+    end
+    nothing   # text/select etc: no verifiable finite domain in v1
+end
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
@@ -357,6 +416,7 @@ function extract_groups(
         initial_values = Any[]
         reasons = String[]
         synthetic_initials = false
+        domains = Any[]
         for n in bond_names
             fetch_failed = false
             v = try
@@ -365,6 +425,7 @@ function extract_groups(
                 fetch_failed = true   # un-serializable over the workspace boundary
                 missing
             end
+            bond_domain = nothing
             if v === missing
                 # widget without initial_value, run headless — synthesize the
                 # initial from the bond's domain (same source precompute trusts)
@@ -374,12 +435,21 @@ function extract_groups(
                     Symbol("possible_bond_values failed: $(typeof(e))")
                 end
                 if domain isa Symbol || isempty(domain)
-                    push!(reasons, "bond $(n) is $(fetch_failed ? "unfetchable" : "missing") and has no usable possible_values ($(domain isa Symbol ? domain : "empty"))")
+                    # last resort: read the widget's own rendered <input> html
+                    wi = _widget_introspect(original_state, topology, n)
+                    if wi !== nothing
+                        v = wi.initial
+                        bond_domain = wi.domain
+                        synthetic_initials = true
+                    else
+                        push!(reasons, "bond $(n) is $(fetch_failed ? "unfetchable" : "missing") and has no usable possible_values ($(domain isa Symbol ? domain : "empty")) or introspectable widget html")
+                    end
                 else
                     v = first(domain)
                     synthetic_initials = true
                 end
             end
+            push!(domains, bond_domain)
             push!(initial_values, v)
             push!(arg_types, typeof(v))
             # the bridge marshals Int/UInt/Float/Bool/Char/String/Tuple/
@@ -404,7 +474,7 @@ function extract_groups(
             bond_names, arg_types, initial_values,
             preamble, cell_plans=plans,
             ok=isempty(reasons), reasons,
-            synthetic_initials,
+            synthetic_initials, domains,
         )
     end
 end

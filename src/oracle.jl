@@ -39,8 +39,9 @@ function _sample_combinations(
     rng,
 )::Union{Vector{Vector{Any}},String}
     domains = Vector{Any}[]
-    for name in g.bond_names
-        result = try
+    for (j, name) in enumerate(g.bond_names)
+        explicit = isempty(g.domains) ? nothing : g.domains[j]
+        result = explicit !== nothing ? explicit : try
             Pluto.possible_bond_values(session, notebook, name)
         catch e
             return "possible_bond_values($(name)) failed: $(typeof(e))"

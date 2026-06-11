@@ -101,11 +101,14 @@ if HAS_NODE
         @test by_bonds["x"]["judgement"] == "island"
         @test by_bonds["x"]["oracle_samples"] > 0
         @test all(c -> c["ok"], by_bonds["x"]["cells"])
-        @test by_bonds["z"]["judgement"] == "fallback"
-        @test all(c -> !c["ok"], by_bonds["z"]["cells"])
+        # z's collect(1:z) ships as a TREE island (bridge read-side)
+        @test by_bonds["z"]["judgement"] == "island"
+        @test all(c -> c["ok"], by_bonds["z"]["cells"])
 
         manifest = JSON.parsefile(joinpath(assets, "islands.json"))
-        @test length(manifest["groups"]) == 1
+        @test length(manifest["groups"]) == 2
+        tree_cells = [c for g in manifest["groups"] for c in g["cells"] if c["kind"] == "tree"]
+        @test length(tree_cells) == 1
         @test haskey(manifest["bond_graph"], "x") && haskey(manifest["bond_graph"], "z")
         @test manifest["fallback_warnings"] == true
         @test isfile(joinpath(assets, "shim.js"))
