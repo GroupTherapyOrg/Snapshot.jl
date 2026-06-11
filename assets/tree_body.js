@@ -24,6 +24,7 @@ const _julia_float_str = (bitsStr) => {
     return s
 }
 const _tree_leaf = (d, t) => {
+    if (d.k === "fields" && d.leaf === "datetime") return _datetime_str(d, t)
     switch (d.k) {
         case "int": return d.w === 1 ? (t.x === "1" || t.x === "true" ? "true" : "false") : t.x
         case "bits": return _julia_float_str(t.x)
@@ -33,11 +34,22 @@ const _tree_leaf = (d, t) => {
     }
 }
 const _tree_limit = (depth) => Math.floor(30 / (1 + 2 * depth))
+const _datetime_str = (d, t) => {
+    // unwrap nested single-field ints to the instant ms, convert to Julia print
+    let dd = d, tt = t
+    while (dd.k !== "int") { dd = dd.fs[0].d; tt = tt.f[0] }
+    const ms = BigInt(tt.x) - 62135683200000n   // → unix epoch ms
+    const iso = new Date(Number(ms)).toISOString()
+    return iso.endsWith(".000Z") ? iso.slice(0, -5) : iso.slice(0, -1)
+}
 const pluto_tree_body = (d, t, depth = 0) => {
+    if (d.k === "fields" && d.leaf === "datetime") {
+        throw new Error("datetime is a leaf — handled by _tree_leaf")
+    }
     if (d.k === "fields") {
         // Tuple / NamedTuple: no prefix, no truncation (PlutoRunner tree_data)
         const fchild = (fd, ft) =>
-            fd.k === "vec" || fd.k === "fields"
+            (fd.k === "vec" || fd.k === "fields") && fd.leaf !== "datetime"
                 ? [pluto_tree_body(fd, ft, depth + 1), "application/vnd.pluto.tree+object"]
                 : [_tree_leaf(fd, ft), "text/plain"]
         const elements = d.fs.map((fd, i) => [
@@ -52,7 +64,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
     }
     if (d.k !== "vec") throw new Error("tree body root must be vec")
     const child = (ct) =>
-        d.el.k === "vec" || d.el.k === "fields"
+        (d.el.k === "vec" || d.el.k === "fields") && d.el.leaf !== "datetime"
             ? [pluto_tree_body(d.el, ct, depth + 1), "application/vnd.pluto.tree+object"]
             : [_tree_leaf(d.el, ct), "text/plain"]
     const n = t.a.length

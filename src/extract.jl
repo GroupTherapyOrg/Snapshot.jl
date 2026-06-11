@@ -25,6 +25,7 @@ import Pluto: Notebook, Cell, ServerSession
 import PlutoDependencyExplorer
 import UUIDs: UUID
 import WasmTarget
+import Dates
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -381,6 +382,14 @@ function _widget_introspect(original_state, topology, bond_name::Symbol)
     cr === nothing && return nothing
     body = _sget(_sget(cr, "output", Dict()), "body", nothing)
     body isa String || return nothing
+    # <select>: options' values are the domain (strings)
+    msel = match(r"<select\b.*?</select>"is, body)
+    if msel !== nothing
+        opts = [String(o.captures[1]) for o in eachmatch(r"<option\b[^>]*value\s*=\s*[\"']?([^\"'\s>]+)"i, msel.match)]
+        isempty(opts) && return nothing
+        sel = match(r"<option\b[^>]*selected[^>]*value\s*=\s*[\"']?([^\"'\s>]+)"i, msel.match)
+        return (initial=sel === nothing ? opts[1] : String(sel.captures[1]), domain=opts)
+    end
     m = match(r"<input\b[^>]*>"i, body)
     m === nothing && return nothing
     tag = m.match
@@ -402,8 +411,25 @@ function _widget_introspect(original_state, topology, bond_name::Symbol)
         end
     elseif typ == "checkbox"
         return (initial=attr("checked") !== nothing, domain=[false, true])
+    elseif typ in ("text", "search", "password", "email", "url")
+        # free text: Bond.js sends .value (String). The domain is a PROBE SET —
+        # native re-runs with these strings are valid ground truth, and the
+        # runtime accepts arbitrary strings identically.
+        v0 = something(attr("value"), "")
+        return (initial=v0, domain=Any[v0, "abc", "hello world", "123"])
+    elseif typ == "color"
+        v0 = something(attr("value"), "#000000")
+        return (initial=v0, domain=Any[v0, "#ff0000", "#1a2b3c", "#ffffff"])
+    elseif typ == "date"
+        # Bond.js sends valueAsDate → msgpack Date ext → Julia DateTime
+        v0 = let a = attr("value")
+            a === nothing ? Dates.DateTime(2026, 1, 1) :
+                something(tryparse(Dates.DateTime, a * "T00:00:00"), Dates.DateTime(2026, 1, 1))
+        end
+        return (initial=v0,
+                domain=Any[v0, Dates.DateTime(2024, 6, 15), Dates.DateTime(2030, 12, 31)])
     end
-    nothing   # text/select etc: no verifiable finite domain in v1
+    nothing   # button/file etc: not introspectable in v1
 end
 
 # ─────────────────────────────────────────────────────────────────────────────

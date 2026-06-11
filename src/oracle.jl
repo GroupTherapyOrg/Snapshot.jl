@@ -146,7 +146,7 @@ function _wasm_bodies(
       const cdescs = $(JSON.json(cdescs));
       $(WasmTarget.Bridge.BUILD_JS)
       $(WasmTarget.Bridge.WALK_JS)
-      $(TREE_BODY_JS)
+      $(TREE_BODY_JS())
       const out = Array.from({length: $(length(samples))}, () => ({}));
     $(join(calls, "\n"))
       console.log(JSON.stringify(out));

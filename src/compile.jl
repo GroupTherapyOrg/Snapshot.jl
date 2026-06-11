@@ -37,6 +37,7 @@ end
 
 import WasmTarget.Bridge
 import Pkg
+import Dates
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Group → wasm bytes
@@ -221,7 +222,8 @@ end
 # Tree (vector) bodies — bridge read-side
 # ─────────────────────────────────────────────────────────────────────────────
 
-const TREE_BODY_JS = read(joinpath(@__DIR__, "..", "assets", "tree_body.js"), String)
+# runtime read — a precompile-baked const would go stale when the asset changes
+TREE_BODY_JS() = read(joinpath(@__DIR__, "..", "assets", "tree_body.js"), String)
 
 """
 Read descriptor for a tree-rendered cell value, decorated with the prefix
@@ -245,6 +247,9 @@ function _tree_meta!(d, T)
         d["prefix"] = string(eltype(T))
         d["prefix_short"] = T <: Vector ? "" : string(eltype(T))
         return _tree_meta!(d["el"], eltype(T))
+    elseif d["k"] == "fields" && T === Dates.DateTime
+        d["leaf"] = "datetime"   # renders as Julia's "yyyy-mm-ddTHH:MM:SS"
+        return nothing
     elseif d["k"] == "fields" && (T <: Tuple || T <: NamedTuple)
         d["tt"] = T <: NamedTuple ? "NamedTuple" : "Tuple"
         for (i, fd) in enumerate(d["fs"])
@@ -325,7 +330,7 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
       const cdescs = $(JSON.json(cdescs));
       $(Bridge.BUILD_JS)
       $(Bridge.WALK_JS)
-      $(TREE_BODY_JS)
+      $(TREE_BODY_JS())
       const args = atrees.map((t, j) => build(adescs[j], t));
       const out = {};
     $(calls)
@@ -426,6 +431,6 @@ function write_island_assets(
     manifest_path = joinpath(dir, "islands.json")
     write(manifest_path, JSON.json(manifest))
     shim = read(joinpath(@__DIR__, "..", "assets", "shim.js"), String)
-    write(joinpath(dir, "shim.js"), replace(shim, "//__TREE_BODY_JS__" => TREE_BODY_JS))
+    write(joinpath(dir, "shim.js"), replace(shim, "//__TREE_BODY_JS__" => TREE_BODY_JS()))
     manifest_path
 end
