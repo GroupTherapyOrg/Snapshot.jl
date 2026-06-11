@@ -261,8 +261,18 @@
         }
         const { ex, read_str } = await load_group(group)
         // args in manifest order; untouched bonds default to initial values.
-        // Each value is rebuilt INSIDE wasm via the bridge constructor closure.
-        const args = group.bonds.map((b) => build(ex, b.desc, value_tree(b.desc, bonds[b.name]?.value ?? b.initial)))
+        // transform tables map raw widget values (what the client sends) to
+        // what the notebook actually sees (transform_value); then each value
+        // is rebuilt INSIDE wasm via the bridge constructor closure.
+        const deep_eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+        const args = group.bonds.map((b) => {
+            let v = bonds[b.name]?.value
+            if (v !== undefined && b.transform) {
+                const hit = b.transform.find((pair) => deep_eq(pair[0], v))
+                if (hit) v = hit[1]
+            }
+            return build(ex, b.desc, value_tree(b.desc, v ?? b.initial))
+        })
         console.log("🏝️ staterequest served by wasm island:", bonds)
         // Patch shape mirrors a real PSS staterequest response exactly
         // (run_bonds_get_patches → Firebasey.diff): body + output.last_run_timestamp

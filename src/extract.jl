@@ -59,6 +59,10 @@ Base.@kwdef struct ExtractedGroup
     # per-bond sampling domains for the oracle; `nothing` = use
     # possible_bond_values. Populated by HTML-widget introspection.
     domains::Vector{Any} = Any[]
+    # per-bond transform tables (raw widget value ⇒ transform_value output)
+    # for finite-domain widgets whose transform is not the identity —
+    # `nothing` = identity. The shim looks raw values up before marshalling.
+    transforms::Vector{Any} = Any[]
 end
 
 is_ok(g::ExtractedGroup) = g.ok && all(p -> p.ok, g.cell_plans)
@@ -73,7 +77,7 @@ is_bind_cell(cell::Cell) = occursin("@bind", cell.code)
 "Top-level expr kinds that must live at module level, not in a function body."
 function _is_preamble_expr(ex)
     ex isa Expr || return false
-    ex.head in (:struct, :abstract, :primitive, :import, :using, :module) && return true
+    ex.head in (:struct, :abstract, :primitive, :import, :using, :module, :macro) && return true
     ex.head === :macrocall && return false
     if ex.head === :const
         return true
@@ -81,13 +85,20 @@ function _is_preamble_expr(ex)
     false
 end
 
-"Split a cell's parsed expr into (preamble_exprs, body_exprs)."
+"Split a cell's parsed expr into (preamble_exprs, body_exprs).
+`:toplevel` wrappers (e.g. from a trailing `;` in the cell) flatten like
+`:block`s — their contents are ordinary statements."
 function _split_preamble(ex)
     pre, body = Expr[], Any[]
-    exprs = (ex isa Expr && ex.head === :block) ? ex.args : [ex]
+    exprs = (ex isa Expr && ex.head in (:block, :toplevel)) ? ex.args : [ex]
     for sub in exprs
+        sub === nothing && continue
         sub isa LineNumberNode && continue
-        if _is_preamble_expr(sub)
+        if sub isa Expr && sub.head in (:block, :toplevel)
+            spre, sbody = _split_preamble(sub)
+            append!(pre, spre)
+            append!(body, sbody)
+        elseif _is_preamble_expr(sub)
             push!(pre, sub)
         else
             push!(body, sub)
@@ -316,6 +327,12 @@ function _plan_cell(
         # machinery probe-fails honestly at compile
         _capture_value!(stmts, body_t, val) || return fail("empty cell body")
         :($(_html_body)($val))
+    elseif mime == "application/vnd.pluto.stacktrace+object"
+        # the cell ERRORED in the headless initial run (e.g. missing bond) —
+        # optimistically render text/plain; initial verify is skipped for
+        # synthetic groups and the oracle judges real values
+        _capture_value!(stmts, body_t, val) || return fail("empty cell body")
+        :($(_plain_body)($val))
     elseif mime == "application/vnd.pluto.tree+object"
         _capture_value!(stmts, body_t, val) || return fail("empty cell body")
         # raw value out; compile-time discovers the concrete type and attaches
@@ -417,6 +434,7 @@ function extract_groups(
         reasons = String[]
         synthetic_initials = false
         domains = Any[]
+        transforms = Any[]
         for n in bond_names
             fetch_failed = false
             v = try
@@ -449,6 +467,37 @@ function extract_groups(
                     synthetic_initials = true
                 end
             end
+            # big-int slider values: narrow when exactly representable — the
+            # client sends plain ints anyway; the oracle verifies semantics
+            if v isa BigInt && typemin(Int64) <= v <= typemax(Int64)
+                v = Int64(v)
+            end
+            # finite-domain transform_value table (Select sends option KEYS;
+            # the notebook sees transformed VALUES — tabulate the mapping)
+            bond_transform = nothing
+            raw_domain = bond_domain
+            if raw_domain === nothing
+                pv = try
+                    Pluto.possible_bond_values(session, notebook, n)
+                catch
+                    nothing
+                end
+                (pv isa Symbol || pv === nothing) || (raw_domain = collect(Any, pv))
+            end
+            if raw_domain !== nothing && length(raw_domain) <= 500
+                transformed = try
+                    Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook),
+                        :(map(r -> Main.PlutoRunner.transform_bond_value($(QuoteNode(n)), r), $(raw_domain))))
+                catch
+                    nothing
+                end
+                if transformed !== nothing && length(transformed) == length(raw_domain) &&
+                   any(!isequal(t, r) for (t, r) in zip(transformed, raw_domain))
+                    bond_transform = collect(zip(raw_domain, transformed))
+                end
+                bond_domain = raw_domain
+            end
+            push!(transforms, bond_transform)
             push!(domains, bond_domain)
             push!(initial_values, v)
             push!(arg_types, typeof(v))
@@ -474,7 +523,7 @@ function extract_groups(
             bond_names, arg_types, initial_values,
             preamble, cell_plans=plans,
             ok=isempty(reasons), reasons,
-            synthetic_initials, domains,
+            synthetic_initials, domains, transforms,
         )
     end
 end

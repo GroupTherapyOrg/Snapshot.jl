@@ -95,10 +95,21 @@ function _wasm_bodies(
     island::CompiledIsland,
     samples::Vector{Vector{Any}},
 )::Union{Vector{Dict{String,Any}},String}
-    # one tagged tree per (sample, bond); built in-module via bridge ctors
+    # one tagged tree per (sample, bond); built in-module via bridge ctors.
+    # samples are RAW widget values (what the client sends, what native
+    # run_bonds expects) — the WASM side gets the TRANSFORMED value, exactly
+    # like the shim does at runtime.
+    transform_one(j, v) = begin
+        t = j <= length(island.transforms) ? island.transforms[j] : nothing
+        if t !== nothing
+            hit = findfirst(pair -> isequal(pair[1], v), t)
+            hit === nothing || return t[hit][2]
+        end
+        v
+    end
     sample_trees = [
         Any[WasmTarget.Bridge.value_to_tree(island.arg_descs[j],
-                _coerce_sample(island.arg_types[j], combo[j]))
+                _coerce_sample(island.arg_types[j], transform_one(j, combo[j])))
             for j in eachindex(island.arg_descs)]
         for combo in samples
     ]

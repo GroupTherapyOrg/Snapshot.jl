@@ -31,6 +31,8 @@ Base.@kwdef struct CompiledIsland
         NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}[]
     # WasmTarget.Bridge arg descriptors, one per bond (manifest + verify/oracle)
     arg_descs::Vector{Any} = Any[]
+    # per-bond raw⇒transformed tables (see ExtractedGroup.transforms)
+    transforms::Vector{Any} = Any[]
 end
 
 import WasmTarget.Bridge
@@ -172,7 +174,8 @@ function compile_group(
         cells=[(cell_id=string(p.cell_id), export_name=p.export_name,
                 kind=p.body_kind === :tree ? "tree" : "string",
                 desc=td === nothing ? nothing : td.desc) for (_, p, td) in survivors],
-        ok=true, cell_failures=failures, arg_descs)
+        ok=true, cell_failures=failures, arg_descs,
+        transforms=isempty(g.transforms) ? Any[nothing for _ in g.bond_names] : g.transforms)
 
     if verify_node && initial_bodies !== nothing
         result = _verify_initial_bodies(island, initial_bodies)
@@ -205,7 +208,7 @@ function exclude_cells(island::CompiledIsland, failed::Dict{String,String})::Com
         ok=island.ok, reasons=island.reasons,
         cell_failures=vcat(island.cell_failures,
             [(cell_id=id, reasons=[r]) for (id, r) in failed]),
-        arg_descs=island.arg_descs)
+        arg_descs=island.arg_descs, transforms=island.transforms)
 end
 
 "Compile every group; returns (islands, degraded) — degraded carry reasons."
@@ -226,8 +229,9 @@ metadata the body renderer needs. Returns `(; desc, accs)` or a String reason.
 v1 shape: `Vector` (nested) with Int/Bool/Float64/Char/String leaves.
 """
 function _tree_descriptor(rt)
-    rt isa DataType && rt <: Vector && isconcretetype(rt) ||
-        return "unsupported value type $(rt) (v1: concrete Vector)"
+    rt isa DataType && isconcretetype(rt) &&
+        (rt <: Vector || rt <: Tuple || rt <: NamedTuple) ||
+        return "unsupported value type $(rt) (tree bodies: Vector/Tuple/NamedTuple)"
     dp = Bridge.descriptor(rt)
     dp === nothing && return "type $(rt) outside the bridge universe"
     desc = deepcopy(dp[1])
@@ -241,13 +245,20 @@ function _tree_meta!(d, T)
         d["prefix"] = string(eltype(T))
         d["prefix_short"] = T <: Vector ? "" : string(eltype(T))
         return _tree_meta!(d["el"], eltype(T))
+    elseif d["k"] == "fields" && (T <: Tuple || T <: NamedTuple)
+        d["tt"] = T <: NamedTuple ? "NamedTuple" : "Tuple"
+        for (i, fd) in enumerate(d["fs"])
+            r = _tree_meta!(fd["d"], fieldtype(T, i))
+            r === nothing || return r
+        end
+        return nothing
     elseif d["k"] in ("int", "char", "str")
         return nothing
     elseif d["k"] == "bits"
         # Float32 leaves print as "1.0f0" — renderer only does Float64
         return d["w"] == 64 ? nothing : "Float32 leaves unsupported in tree bodies"
     end
-    return "tree leaf kind $(d["k"]) unsupported in v1"
+    return "tree leaf kind $(d["k"]) unsupported"
 end
 
 "Body comparison that tolerates representation noise: Symbol vs String keys,
@@ -400,7 +411,12 @@ function write_island_assets(
                         "name" => string(n),
                         "desc" => d,
                         "initial" => _initial_json(v),
-                        ) for (n, d, v) in zip(island.bond_names, island.arg_descs, island.initial_values)],
+                        # raw widget value ⇒ transformed value (finite widgets
+                        # with non-identity transform_value); shim looks up raw
+                        "transform" => t === nothing ? nothing :
+                            Any[Any[_initial_json(r), _initial_json(tv)] for (r, tv) in t],
+                        ) for (n, d, v, t) in zip(island.bond_names, island.arg_descs,
+                                                  island.initial_values, island.transforms)],
                     "cells" => [Dict("id" => c.cell_id, "fn" => c.export_name,
                                      "kind" => c.kind, "desc" => c.desc) for c in island.cells],
                 )
