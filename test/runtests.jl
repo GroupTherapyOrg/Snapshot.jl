@@ -4,6 +4,7 @@
 using Test
 import Pluto
 import JSON
+import Pkg
 using PlutoIslands
 
 const HAS_NODE = Sys.which("node") !== nothing
@@ -83,6 +84,102 @@ if HAS_NODE
 end
 
 Pluto.SessionActions.shutdown(session, notebook; async=false)
+
+# ─── figure notebook: WasmMakie canvas cells (E-004) ─────────────────────────
+const WASMMAKIE_DIR = normpath(joinpath(@__DIR__, "..", "..", "WasmMakie.jl"))
+
+if isdir(WASMMAKIE_DIR)
+    @testset "canvas cells (WasmMakie figure)" begin
+        # WasmMakie is unregistered → prepare a real env for the notebook's
+        # Pkg.activate escape-hatch cell (nbpkg can't install path deps)
+        env = mktempdir()
+        write(joinpath(env, "Project.toml"), """
+            [deps]
+            WasmMakie = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+
+            [sources]
+            WasmMakie = {path = "$(WASMMAKIE_DIR)"}
+            """)
+        prev_proj = Base.active_project()
+        Pkg.activate(env; io=devnull)
+        Pkg.instantiate(; io=devnull)
+        Pkg.activate(dirname(prev_proj); io=devnull)
+
+        src = read(joinpath(@__DIR__, "notebooks", "figure.jl"), String)
+        nbpath = joinpath(mktempdir(), "figure.jl")
+        write(nbpath, replace(src, "@@WM_ENV@@" => env))
+        nbf = Pluto.SessionActions.open(session, nbpath; run_async=false)
+        # the notebook's own Pkg.activate ran in-process — restore
+        Pkg.activate(dirname(prev_proj); io=devnull)
+        stf = Pluto.notebook_to_js(nbf)
+        connf = bound_variable_connections_graph(session, nbf)
+        gf = only(extract_groups(session, nbf; connections=connf, original_state=stf))
+        @test gf.ok
+        @test gf.bond_names == [:n]
+        @test gf.arg_types == [Int64]
+
+        island = compile_group(gf; verify_node=false, env_dir=env)
+        @test island.ok
+        canvas_cells = [c for c in island.cells if c.kind == "canvas"]
+        @test length(canvas_cells) == 1
+        cc = only(canvas_cells)
+        @test cc.desc["w"] > 0 && cc.desc["h"] > 0
+        @test any(c -> c.kind == "string", island.cells)   # md cell stays a string body
+        @test island.canvas_glue !== nothing && occursin("canvas2d_imports", island.canvas_glue)
+        @test island.canvas_fonts !== nothing && startswith(island.canvas_fonts, "[")
+        @test findfirst(codeunits("canvas2d"), island.bytes) !== nothing
+
+        # manifest carries the provider payload + cell kind
+        out = mktempdir()
+        write_island_assets(out, [island])
+        manifest = JSON.parsefile(joinpath(out, "islands.json"))
+        grp = manifest["groups"][1]
+        @test grp["canvas_glue"] !== nothing
+        cellsm = Dict(c["id"] => c for c in grp["cells"])
+        @test cellsm[cc.cell_id]["kind"] == "canvas"
+        @test cellsm[cc.cell_id]["desc"]["w"] == cc.desc["w"]
+
+        # node smoke: the canvas export must actually drive the canvas2d
+        # imports (counting stubs; per-import return types from the specs)
+        if HAS_NODE
+            WM = Base.loaded_modules[Base.PkgId(
+                Base.UUID("782397d3-b2e0-4093-86f4-3070b4a5c6bd"), "WasmMakie")]
+            rets = Dict(string(s.name) => string(s.ret) for s in WM.import_specs())
+            script = """
+            const fs = require('fs');
+            const bytes = fs.readFileSync(process.argv[2]);
+            const rets = $(JSON.json(rets));
+            let count = 0;
+            (async () => {
+              const mod = await WebAssembly.compile(bytes);
+              const imports = {};
+              for (const imp of WebAssembly.Module.imports(mod)) {
+                (imports[imp.module] ||= {})[imp.name] =
+                  imp.module === 'Math' ? Math[imp.name] :
+                  imp.module === 'canvas2d'
+                    ? (rets[imp.name] === 'F64' ? (() => { count++; return 0; })
+                                                : (() => { count++; return 0n; }))
+                    : (() => 0n);
+              }
+              const ex = (await WebAssembly.instantiate(mod, imports)).exports;
+              ex["$(cc.export_name)"](2n);
+              console.log(count);
+            })().catch(e => { console.error(String(e && e.message || e)); process.exit(1); });
+            """
+            mktempdir() do dir
+                write(joinpath(dir, "island.wasm"), island.bytes)
+                write(joinpath(dir, "smoke.cjs"), script)
+                io = IOBuffer()
+                ok = success(pipeline(`node $(joinpath(dir, "smoke.cjs")) $(joinpath(dir, "island.wasm"))`;
+                                      stdout=io, stderr=stderr))
+                @test ok
+                ok && @test parse(Int, strip(String(take!(io)))) > 50
+            end
+        end
+
+        Pluto.SessionActions.shutdown(session, nbf; async=false)
+    end
+end
 
 # ─── two_groups: per-cell judgement + asset writing ──────────────────────────
 if HAS_NODE

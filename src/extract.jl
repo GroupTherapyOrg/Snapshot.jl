@@ -86,6 +86,19 @@ function _is_preamble_expr(ex)
     false
 end
 
+"Top-level `Pkg.<setup>(…)` calls (the nbpkg-disabling escape hatch for
+unregistered packages, e.g. `Pkg.activate(...)`) — environment setup is the
+HOST's concern (`compile_group(env_dir=…)` activates the notebook env around
+eval/compile), so these are DROPPED from extraction: inlined into a
+recompute fn they would probe-fail every dependent cell."
+function _is_pkg_setup_expr(ex)
+    ex isa Expr && ex.head === :call || return false
+    f = ex.args[1]
+    f isa Expr && f.head === :. && length(f.args) == 2 || return false
+    f.args[1] === :Pkg && f.args[2] isa QuoteNode &&
+        f.args[2].value in (:activate, :instantiate, :resolve, :add, :develop, :status)
+end
+
 "Split a cell's parsed expr into (preamble_exprs, body_exprs).
 `:toplevel` wrappers (e.g. from a trailing `;` in the cell) flatten like
 `:block`s — their contents are ordinary statements."
@@ -99,6 +112,8 @@ function _split_preamble(ex)
             spre, sbody = _split_preamble(sub)
             append!(pre, spre)
             append!(body, sbody)
+        elseif _is_pkg_setup_expr(sub)
+            continue
         elseif _is_preamble_expr(sub)
             push!(pre, sub)
         else

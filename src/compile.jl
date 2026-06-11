@@ -33,6 +33,11 @@ Base.@kwdef struct CompiledIsland
     arg_descs::Vector{Any} = Any[]
     # per-bond raw⇒transformed tables (see ExtractedGroup.transforms)
     transforms::Vector{Any} = Any[]
+    # E-004: canvas cells (WasmMakie figures) — the provider glue + font
+    # payload the shim embeds; sourced from the NOTEBOOK's own WasmMakie
+    # (PlutoIslands has no WasmMakie dependency)
+    canvas_glue::Union{String,Nothing} = nothing
+    canvas_fonts::Union{String,Nothing} = nothing
 end
 
 import WasmTarget.Bridge
@@ -108,7 +113,7 @@ function compile_group(
 
     # Per-cell: eval + probe-compile individually; survivors enter the module
     arg_tuple = Tuple(g.arg_types)
-    survivors = Tuple{Function,CellPlan,Any}[]
+    survivors = Tuple{Function,CellPlan,Any,Any}[]
     for p in g.cell_plans
         if !p.ok
             cellfail!(p.cell_id, p.reasons...)
@@ -120,10 +125,28 @@ function compile_group(
             cellfail!(p.cell_id, "sandbox eval failed: $(sprint(showerror, e)[1:min(end, 200)])")
             continue
         end
+
+        # E-004: a cell whose VALUE is a WasmMakie.Figure becomes a "canvas"
+        # cell — detected by TYPE NAME on the raw (un-_html_body-wrapped)
+        # value fn, so PlutoIslands needs no WasmMakie dependency; the
+        # compiled fn renders through the canvas2d import surface and the
+        # shim provides the canvas. This must run BEFORE the generic probe:
+        # the html wrapper on a Figure infers to the `_html_body(v)=error`
+        # fallback (Union{}) and would probe-fail.
+        canvas_desc = nothing
+        if p.body_kind === :string && p.mime == "text/html"
+            cv = _canvas_probe_fn(sandbox, p, g.initial_values, arg_tuple)
+            if cv !== nothing
+                f = cv.render_fn
+                canvas_desc = (w=cv.w, h=cv.h, wm=cv.wm)
+            end
+        end
+
         try
             WasmTarget.compile(f, arg_tuple)
         catch e
-            cellfail!(p.cell_id, "WasmTarget compile failed: $(sprint(showerror, e)[1:min(end, 200)])")
+            cellfail!(p.cell_id,
+                "$(canvas_desc === nothing ? "WasmTarget" : "canvas render") compile failed: $(sprint(showerror, e)[1:min(end, 200)])")
             continue
         end
         tree_desc = nothing
@@ -139,14 +162,14 @@ function compile_group(
                 continue
             end
         end
-        push!(survivors, (f, p, tree_desc))
+        push!(survivors, (f, p, tree_desc, canvas_desc))
     end
     isempty(survivors) && return fail("no cells compiled")
 
     entries = Vector{Any}()
     tree_acc_names = Set{String}()
     tree_accs = Any[]
-    for (f, p, tree_desc) in survivors
+    for (f, p, tree_desc, _) in survivors
         push!(entries, (f, arg_tuple, p.export_name))
         if tree_desc !== nothing
             # read-side accessors so the walker can take the value apart
@@ -163,8 +186,30 @@ function compile_group(
     push!(entries, ((s::String, i::Int64) -> Int64(codeunit(s, i)), (String, Int64), "_str_byte"))
     append!(entries, bridge_accs)
 
+    canvas_wm = nothing
+    for (_, _, _, cd) in survivors
+        cd !== nothing && (canvas_wm = cd.wm; break)
+    end
     bytes = try
-        WasmTarget.compile_multi(entries; optimize)
+        if canvas_wm === nothing
+            WasmTarget.compile_multi(entries; optimize)
+        else
+            # E-004: canvas cells need the canvas2d import surface — the
+            # compile_with_canvas pattern over the NOTEBOOK's WasmMakie
+            cmod = WasmTarget.WasmModule()
+            WasmTarget.add_import!(cmod, "Math", "pow",
+                WasmTarget.NumType[WasmTarget.F64, WasmTarget.F64],
+                WasmTarget.NumType[WasmTarget.F64])
+            import_stubs = Any[]
+            for sp in Base.invokelatest(getfield(canvas_wm, :import_specs))
+                params = WasmTarget.NumType[q === :F64 ? WasmTarget.F64 : WasmTarget.I64 for q in sp.params]
+                ret = WasmTarget.NumType[sp.ret === :F64 ? WasmTarget.F64 : WasmTarget.I64]
+                idx = WasmTarget.add_import!(cmod, sp.mod, sp.name, params, ret)
+                push!(import_stubs, (sp.func, sp.name, Tuple(sp.arg_types), idx, sp.return_type))
+            end
+            wmod = WasmTarget.compile_module(entries; existing_module=cmod, import_stubs=import_stubs)
+            WasmTarget.to_bytes(wmod)
+        end
     catch e
         return fail("module assembly (compile_multi) failed: $(sprint(showerror, e)[1:min(end, 300)])")
     end
@@ -173,10 +218,15 @@ function compile_group(
         bond_names=g.bond_names, arg_types=g.arg_types, initial_values=g.initial_values,
         bytes,
         cells=[(cell_id=string(p.cell_id), export_name=p.export_name,
-                kind=p.body_kind === :tree ? "tree" : "string",
-                desc=td === nothing ? nothing : td.desc) for (_, p, td) in survivors],
+                kind=cd !== nothing ? "canvas" : (p.body_kind === :tree ? "tree" : "string"),
+                desc=cd !== nothing ? Dict("w" => cd.w, "h" => cd.h) :
+                     (td === nothing ? nothing : td.desc)) for (_, p, td, cd) in survivors],
         ok=true, cell_failures=failures, arg_descs,
-        transforms=isempty(g.transforms) ? Any[nothing for _ in g.bond_names] : g.transforms)
+        transforms=isempty(g.transforms) ? Any[nothing for _ in g.bond_names] : g.transforms,
+        canvas_glue=canvas_wm === nothing ? nothing :
+            String(Base.invokelatest(getfield(canvas_wm, :js_glue))),
+        canvas_fonts=canvas_wm === nothing ? nothing :
+            String(Base.invokelatest(getfield(canvas_wm, :font_faces_json))))
 
     if verify_node && initial_bodies !== nothing
         result = _verify_initial_bodies(island, initial_bodies)
@@ -216,6 +266,72 @@ end
 function compile_islands(groups::Vector{ExtractedGroup}; kwargs...)
     islands = [compile_group(g; kwargs...) for g in groups]
     (islands=[i for i in islands if i.ok], degraded=[i for i in islands if !i.ok])
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Canvas (WasmMakie figure) bodies — E-004
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+Probe a text/html cell plan for a WasmMakie Figure value. The plan's fn is
+`(bonds…) -> _html_body(val)`; rebuild it WITHOUT the wrapper, check the raw
+return type by NAME (`Figure` from a module named `WasmMakie` — duck-typed,
+zero dependency), and on a hit build the render wrapper
+
+    (bonds…) -> (WasmMakie.render!(fig, WasmCtx()); Int64(0))
+
+whose canvas2d import calls the shim satisfies against a live canvas.
+Returns `(; render_fn, wm, w, h)` or `nothing` (not a figure cell).
+"""
+function _canvas_probe_fn(sandbox::Module, p::CellPlan, initial_values, arg_tuple)
+    fe = p.fn_expr
+    (fe isa Expr && fe.head === :function && length(fe.args) == 2) || return nothing
+    body = fe.args[2]
+    (body isa Expr && body.head === :block && !isempty(body.args)) || return nothing
+    ret = body.args[end]
+    (ret isa Expr && ret.head === :return && length(ret.args) == 1) || return nothing
+    call = ret.args[1]
+    (call isa Expr && call.head === :call && length(call.args) == 2 &&
+        call.args[1] === _html_body) || return nothing
+    val_sym = call.args[2]
+
+    raw_expr = Expr(:function, fe.args[1],
+                    Expr(:block, body.args[1:end-1]..., :(return $val_sym)))
+    vf = try
+        Core.eval(sandbox, raw_expr)
+    catch
+        return nothing
+    end
+    rt = try
+        only(Base.return_types(vf, arg_tuple))
+    catch
+        Any
+    end
+    (rt isa DataType && nameof(rt) === :Figure &&
+        string(nameof(parentmodule(rt))) == "WasmMakie") || return nothing
+    wm = parentmodule(rt)
+
+    # native dims at initial bond values (the shim sizes the <canvas>)
+    w, h = try
+        fig0 = Base.invokelatest(vf, initial_values...)
+        (Int64(round(Float64(getfield(fig0, :width)))),
+         Int64(round(Float64(getfield(fig0, :height)))))
+    catch
+        (Int64(600), Int64(450))
+    end
+
+    render_fn_obj = getfield(wm, :render!)
+    ctx_type = getfield(wm, :WasmCtx)
+    rexpr = Expr(:function, fe.args[1],
+                 Expr(:block, body.args[1:end-1]...,
+                      :($(render_fn_obj)($val_sym, $(ctx_type)())),
+                      :(return Int64(0))))
+    rf = try
+        Core.eval(sandbox, rexpr)
+    catch
+        return nothing
+    end
+    (; render_fn=rf, wm, w, h)
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -303,12 +419,15 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
     atrees = [Bridge.value_to_tree(island.arg_descs[j], island.initial_values[j])
               for j in eachindex(island.arg_descs)]
     cdescs = Dict(c.cell_id => c.desc for c in island.cells if c.kind == "tree")
+    # canvas cells have no body string to verify (export draws via canvas2d
+    # imports and returns 0) — the E-004 command-stream oracle judges them
+    verifiable = [c for c in island.cells if c.kind != "canvas"]
     calls = join([c.kind == "tree" ?
         """  try { out[$(repr(c.cell_id))] = {ok: true, body: pluto_tree_body(cdescs[$(repr(c.cell_id))], walk(cdescs[$(repr(c.cell_id))], ex.$(c.export_name)(...args)))}; }
       catch (e) { out[$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; }""" :
         """  try { out[$(repr(c.cell_id))] = {ok: true, body: readStr(ex.$(c.export_name)(...args))}; }
       catch (e) { out[$(repr(c.cell_id))] = {ok: false, err: String(e && e.message || e)}; }"""
-                  for c in island.cells], "\n")
+                  for c in verifiable], "\n")
     script = """
     const fs = require('fs');
     const bytes = fs.readFileSync(process.argv[2]);
@@ -347,7 +466,7 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
         ok || return "node failed: $(String(take!(errio))[1:min(end, 300)])"
         got = JSON.parse(String(take!(out)))
         failed = Dict{String,String}()
-        for c in island.cells
+        for c in verifiable
             expected = get(initial_bodies, c.cell_id, nothing)
             r = get(got, c.cell_id, nothing)
             if expected === nothing
@@ -424,6 +543,9 @@ function write_island_assets(
                                                   island.initial_values, island.transforms)],
                     "cells" => [Dict("id" => c.cell_id, "fn" => c.export_name,
                                      "kind" => c.kind, "desc" => c.desc) for c in island.cells],
+                    # E-004: canvas provider payload (null for figure-less groups)
+                    "canvas_glue" => island.canvas_glue,
+                    "canvas_fonts" => island.canvas_fonts,
                 )
             end for (k, island) in enumerate(islands)
         ],
