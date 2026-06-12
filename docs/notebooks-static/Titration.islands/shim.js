@@ -159,9 +159,33 @@
         group._instance ??= (async () => {
             const wasm_resp = await orig_fetch(new URL(group.wasm, assets_base))
             const mod = await WebAssembly.compileStreaming(wasm_resp)
+            // canvas provider (E-004): groups with figure cells carry their
+            // own glue (canvas2d_imports/canvas2d_load_fonts from the
+            // notebook's WasmMakie). Imports are fixed at instantiation, so
+            // the glue gets a PROXY ctx that forwards to group._ctx — each
+            // render points it at a fresh canvas.
+            let canvas2d = null
+            if (group.canvas_glue) {
+                const ctx_proxy = new Proxy({}, {
+                    get: (_, prop) => {
+                        const c = group._ctx
+                        const v = c ? c[prop] : undefined
+                        return typeof v === "function" ? v.bind(c) : v
+                    },
+                    set: (_, prop, val) => { const c = group._ctx; if (c) c[prop] = val; return true },
+                })
+                const factory = new Function(group.canvas_glue + "\nreturn { canvas2d_imports, canvas2d_load_fonts };")()
+                canvas2d = factory.canvas2d_imports(ctx_proxy)
+                try {
+                    await factory.canvas2d_load_fonts(JSON.parse(group.canvas_fonts ?? "[]"))
+                } catch (e) { console.warn("🏝️ canvas font load failed:", e) }
+            }
             const imports = {}
             for (const imp of WebAssembly.Module.imports(mod)) {
-                ;(imports[imp.module] ||= {})[imp.name] = imp.module === "Math" ? Math[imp.name] : () => 0
+                ;(imports[imp.module] ||= {})[imp.name] =
+                    imp.module === "Math" ? Math[imp.name]
+                    : imp.module === "canvas2d" && canvas2d ? canvas2d[imp.name]
+                    : () => 0
             }
             const ex = (await WebAssembly.instantiate(mod, imports)).exports
             const read_str = (ref) => {
@@ -384,6 +408,17 @@ const pluto_tree_body = (d, t, depth = 0) => {
             return build(ex, b.desc, value_tree(b.desc, v ?? b.initial))
         })
         console.log("🏝️ staterequest served by wasm island:", bonds)
+        // canvas cells: render into an offscreen canvas and patch the body
+        // with a data-URL <img> — stateless like every other cell body
+        const render_canvas = (cell) => {
+            const w = Number(cell.desc?.w ?? 640), h = Number(cell.desc?.h ?? 480)
+            const cv = document.createElement("canvas")
+            cv.width = w
+            cv.height = h
+            group._ctx = cv.getContext("2d")
+            try { ex[cell.fn](...args) } finally { group._ctx = null }
+            return `<img class="wasmmakie-island" width="${w}" height="${h}" src="${cv.toDataURL()}">`
+        }
         // Patch shape mirrors a real PSS staterequest response exactly
         // (run_bonds_get_patches → Firebasey.diff): body + output.last_run_timestamp
         // (which CellOutput uses to invalidate) + persist_js_state + logs + runtime.
@@ -391,6 +426,8 @@ const pluto_tree_body = (d, t, depth = 0) => {
         for (const cell of group.cells) {
             const body = cell.kind === "tree"
                 ? pluto_tree_body(cell.desc, walk_ex(ex, cell.desc, ex[cell.fn](...args)))
+                : cell.kind === "canvas"
+                ? render_canvas(cell)
                 : read_str(ex[cell.fn](...args))
             patches.push({ op: "replace", path: ["cell_results", cell.id, "logs"], value: [] })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "body"], value: body })

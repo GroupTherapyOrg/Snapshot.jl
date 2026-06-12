@@ -36,15 +36,15 @@
     "title": "Basic mathematics"
   },
   {
-    "degraded": 2,
+    "degraded": 6,
     "description": "Explore this cool math problem and create your own visualization!",
-    "hash": "0cae714ff765506bc79b186639a473022d9a92bfd899eed0284c24bc17d28485",
+    "hash": "736944333dc7ab118f7cf48096814c5c2844c501a631deb0e73a95bed36b1056",
     "html": "CollatzConjecture.html",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Collatz_Conjecture_Vizualization.png/500px-Collatz_Conjecture_Vizualization.png",
-    "islands": 4,
-    "seconds": 68.1,
+    "islands": 0,
+    "seconds": 251.9,
     "slug": "CollatzConjecture",
-    "status": "interactive",
+    "status": "static",
     "title": "Visualizing the Collatz Conjecture "
   },
   {
@@ -72,49 +72,37 @@
     "title": "Interactivity"
   },
   {
-    "degraded": 1,
-    "description": "Learn about titrations and indicators. Deepen your understanding by conducting a digital titration yourself! ",
-    "hash": "cf6457e3c769736c107c178348b480d1c0136e6994ede935e0cf4199ed3e6c13",
-    "html": "Titration.html",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Vinegar_Titration_-_Color_of_the_Phenolphthalein_reacting_to_NaOH.jpg/960px-Vinegar_Titration_-_Color_of_the_Phenolphthalein_reacting_to_NaOH.jpg",
-    "islands": 0,
-    "seconds": 16.6,
-    "slug": "Titration",
-    "status": "static",
-    "title": "Simulating titrations"
-  },
-  {
     "degraded": 0,
     "description": "Learn about the cool concept of convolution on continuous functions!",
-    "hash": "cb69cd00456e33ffbac66c0c051f50354541f1ffa16d247fedf753ab9c5c0cac",
+    "hash": "ad781210493fff2e79446ab3f9638d99e5beb54eaf0919547986ad724e9950d4",
     "html": "convolution_1d.html",
     "image": "https://github.com/JuliaPluto/featured/assets/6933510/65dadde7-6381-4cda-ad71-7bbba4b1db97",
-    "islands": 0,
-    "seconds": 54.5,
+    "islands": 1,
+    "seconds": 228.9,
     "slug": "convolution_1d",
-    "status": "static",
+    "status": "interactive",
     "title": "Convolutions"
   },
   {
-    "degraded": 4,
+    "degraded": 3,
     "description": "Learn how convolutions are used as filters in image processing!",
-    "hash": "b31f88b76916c01ec34871ab61b70efda4ad2f23f7d78b4f35126bc5291c0dc2",
+    "hash": "5490c89c852c526d5ba15fa07bc14d82fdffbfe0ae93f425ef98aa5ba2e00bce",
     "html": "convolution_2d.html",
     "image": "https://github.com/JuliaPluto/featured/assets/6933510/4215e7d0-53c4-4ee7-a26d-48d36457d194",
-    "islands": 0,
-    "seconds": 12.5,
+    "islands": 1,
+    "seconds": 180.0,
     "slug": "convolution_2d",
-    "status": "static",
+    "status": "interactive",
     "title": "Images and Filtering"
   },
   {
     "degraded": 1,
     "description": "Use DitherPunk.jl to create a low-fi filter for your webcam!",
-    "hash": "de4ba61bdd262d723f68543d388ee7fb38d9b56b31eb0e774b8dfc350f95053c",
+    "hash": "d28e9c97e47c895a39312ba7acc328d064acfd5fed66de145383fe288e3f0509",
     "html": "dither.html",
     "image": "https://github.com/JuliaPluto/PlutoUI.jl/assets/6933510/fb234dbf-4bc7-4b43-8630-3ba29eed6e1c",
     "islands": 0,
-    "seconds": 25.9,
+    "seconds": 91.7,
     "slug": "dither",
     "status": "static",
     "title": "Lo-fi webcam"
@@ -122,11 +110,11 @@
   {
     "degraded": 4,
     "description": "Math + fractals, generate your own fractal art!",
-    "hash": "9c776e49de50d161402a1a539e12c6ba3a6a72b85791d99ebc356a0c144b37aa",
+    "hash": "1adb5529c25c68bc93b8d636f531c4e0da3962551f8c2f721b42dcae60491d06",
     "html": "fractals.html",
     "image": "https://github.com/user-attachments/assets/3e16917b-625b-41af-a8c2-727078a2afef",
     "islands": 1,
-    "seconds": 24.6,
+    "seconds": 44.4,
     "slug": "fractals",
     "status": "interactive",
     "title": "Fractals and Fractal Art"
@@ -134,11 +122,11 @@
   {
     "degraded": 4,
     "description": "How can an image be stored as an array of colored pixels? Can we transform this data?",
-    "hash": "4c7e6f513eeed1537a38310e420b4ab356248c2b7dc1db580c4c4d644e19d294",
+    "hash": "a4dc7b245ab0f5430c74cb59bebe30ac37641bb1c9e466635d653c7c9256a1b2",
     "html": "images.html",
     "image": "https://user-images.githubusercontent.com/6933510/136196634-2294d0a7-e79a-40d0-bbb8-81da70f4d398.png",
     "islands": 1,
-    "seconds": 10.3,
+    "seconds": 42.0,
     "slug": "images",
     "status": "interactive",
     "title": "Images as arrays"
@@ -146,11 +134,11 @@
   {
     "degraded": 4,
     "description": "This lecture explains a method for finding the root of a function, but using code an illustrations instead of a chalkboard! We will illustrate the Newton method using the ForwardDiff.jl package to carry out automatic differentiation, but we will also try to understand what's going on \\\"under the hood\\\".",
-    "hash": "fea7d99d9387e4ea551d125b709135b028539e20ed9324d783d84bb65aa7b50b",
+    "hash": "09100abc0eda21d25dc9d276863c29af81b86d1f8e44d62be33a9b43c293274d",
     "html": "newton.html",
     "image": "https://user-images.githubusercontent.com/6933510/136196605-b6119b9d-223c-44bc-97d5-ef7cfce66483.gif",
     "islands": 1,
-    "seconds": 264.2,
+    "seconds": 467.6,
     "slug": "newton",
     "status": "interactive",
     "title": "The Newton Method"
@@ -158,13 +146,25 @@
   {
     "degraded": 4,
     "description": "🐢 A couple of cool artworks made with simple Julia code",
-    "hash": "3a3ce433f9641ff405a5aeb29c463134466ebcf98feed46d1659cd704eea7f8b",
+    "hash": "614346e5219db2c1f7604bdf2e57606c1d4e6a7149b8eeccbc2b0a0d83143314",
     "html": "turtles-art.html",
     "image": "https://github.com/JuliaRegistries/General/assets/6933510/9a925232-6a75-47e7-9ab9-f384bc389602",
     "islands": 0,
-    "seconds": 23.9,
+    "seconds": 35.9,
     "slug": "turtles-art",
     "status": "static",
     "title": "Turtles – showcase"
+  },
+  {
+    "islands": 0,
+    "status": "static",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Vinegar_Titration_-_Color_of_the_Phenolphthalein_reacting_to_NaOH.jpg/960px-Vinegar_Titration_-_Color_of_the_Phenolphthalein_reacting_to_NaOH.jpg",
+    "hash": "b70f29b142bff0d3fe77de6394cf58221a704e119201e172a46172a3795dadae",
+    "degraded": 1,
+    "html": "Titration.html",
+    "slug": "Titration",
+    "title": "Simulating titrations",
+    "description": "Learn about titrations and indicators. Deepen your understanding by conducting a digital titration yourself! ",
+    "seconds": 90.1
   }
 ]
