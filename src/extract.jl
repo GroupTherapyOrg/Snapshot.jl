@@ -381,11 +381,33 @@ _plain_body(s::String)::String =
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Raw-HTML widget introspection — bonds with no initial_value/possible_values
-# (plain `html"<input …>"` elements). Parse the widget's RENDERED html (the
-# bond-defining cell's output body) the way Pluto's own frontend reads it:
+# (plain `html"<input …>"` elements, and combine()-style multi-input widgets).
+# Parse the widget's RENDERED html the way Pluto's own frontend reads it:
 # range/number → min:step:max numeric domain, checkbox → Bool. Gives these
 # bonds a verifiable domain — the oracle samples it like any finite widget.
+#
+# The html comes from the bond-defining cell's output when it has one — but a
+# `x = @bind y widget;` cell SUPPRESSES output (text/plain, no html). The
+# reliable source is the workspace's own bond registry: render the registered
+# element exactly like Pluto does (_bond_element_html).
 # ─────────────────────────────────────────────────────────────────────────────
+
+"Render a bond's registered element to html inside the workspace (the element
+itself usually can't cross the Malt boundary; its html always can)."
+function _bond_element_html(session, notebook, bond_name::Symbol)
+    h = try
+        Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook),
+            # PlutoRunner's own iocontext: without it, PlutoUI widgets (combine
+            # et al.) render their "update Pluto" fallback instead of the inputs
+            :(let el = get(Main.PlutoRunner.registered_bond_elements, $(QuoteNode(bond_name)), nothing)
+                  el === nothing ? nothing :
+                  repr(MIME"text/html"(), el; context=Main.PlutoRunner.default_iocontext)
+              end))
+    catch
+        nothing
+    end
+    h isa String ? h : nothing
+end
 
 function _widget_introspect(original_state, topology, bond_name::Symbol)
     cells = PlutoDependencyExplorer.where_assigned(topology, Set([bond_name]))
@@ -397,17 +419,48 @@ function _widget_introspect(original_state, topology, bond_name::Symbol)
     cr === nothing && return nothing
     body = _sget(_sget(cr, "output", Dict()), "body", nothing)
     body isa String || return nothing
-    # <select>: options' values are the domain (strings)
-    msel = match(r"<select\b.*?</select>"is, body)
-    if msel !== nothing
-        opts = [String(o.captures[1]) for o in eachmatch(r"<option\b[^>]*value\s*=\s*[\"']?([^\"'\s>]+)"i, msel.match)]
-        isempty(opts) && return nothing
-        sel = match(r"<option\b[^>]*selected[^>]*value\s*=\s*[\"']?([^\"'\s>]+)"i, msel.match)
-        return (initial=sel === nothing ? opts[1] : String(sel.captures[1]), domain=opts)
+    _introspect_widget_html(body)
+end
+
+"Parse ONE <select>…</select> block: options' values are the domain (strings)."
+function _introspect_select(selhtml::AbstractString)
+    opts = [String(o.captures[1]) for o in eachmatch(r"<option\b[^>]*value\s*=\s*[\"']?([^\"'\s>]+)"i, selhtml)]
+    isempty(opts) && return nothing
+    sel = match(r"<option\b[^>]*selected[^>]*value\s*=\s*[\"']?([^\"'\s>]+)"i, selhtml)
+    (initial=sel === nothing ? opts[1] : String(sel.captures[1]), domain=opts)
+end
+
+function _introspect_widget_html(body::String)
+    # gather every widget in DOM order: <select> blocks + <input> tags
+    sels = collect(eachmatch(r"<select\b.*?</select>"is, body))
+    inputs = [m for m in eachmatch(r"<input\b[^>]*>"i, body)
+              if !any(s.offset <= m.offset < s.offset + ncodeunits(s.match) for s in sels)]
+    widgets = sort!(vcat(Any[sels...], Any[inputs...]); by=m -> m.offset)
+    isempty(widgets) && return nothing
+    parsed = Any[w in sels ? _introspect_select(w.match) : _introspect_input_tag(w.match) for w in widgets]
+    any(isnothing, parsed) && return nothing
+    length(parsed) == 1 && return parsed[1]
+    # combine()-style multi-input widget: the client sends a VECTOR of child
+    # values in DOM order (transform_value shapes it server-side). Domain is a
+    # finite probe set: the initial combo + vary-one-child-at-a-time.
+    initials = identity.(Any[p.initial for p in parsed])
+    cap_per_child = max(2, fld(400, length(parsed)))
+    combos = Any[initials]
+    for (j, p) in enumerate(parsed)
+        vals = collect(p.domain)
+        length(vals) > cap_per_child && (vals = vals[round.(Int, range(1, length(vals); length=cap_per_child))])
+        for val in vals
+            isequal(val, initials[j]) && continue
+            combo = copy(initials)
+            combo[j] = val
+            push!(combos, identity.(combo))
+        end
     end
-    m = match(r"<input\b[^>]*>"i, body)
-    m === nothing && return nothing
-    tag = m.match
+    (initial=initials, domain=combos)
+end
+
+"Parse ONE <input …> tag into (initial, domain) — same rules as Pluto's Bond.js."
+function _introspect_input_tag(tag::AbstractString)
     attr(name) = (am = match(Regex("\\b$(name)\\s*=\\s*[\"']?([^\"'\\s>]+)", "i"), tag);
                   am === nothing ? nothing : String(am.captures[1]))
     typ = something(attr("type"), "text")
@@ -478,6 +531,7 @@ function extract_groups(
         transforms = Any[]
         for n in bond_names
             fetch_failed = false
+            v_synthetic = false   # v holds a RAW client value (not the workspace's transformed one)
             v = try
                 Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook), n)
             catch e
@@ -494,18 +548,26 @@ function extract_groups(
                     Symbol("possible_bond_values failed: $(typeof(e))")
                 end
                 if domain isa Symbol || isempty(domain)
-                    # last resort: read the widget's own rendered <input> html
+                    # last resort: read the widget's own rendered html — from the
+                    # cell output, else rendered fresh from the workspace's bond
+                    # registry (output-suppressed `x = @bind …;` cells have none)
                     wi = _widget_introspect(original_state, topology, n)
+                    if wi === nothing
+                        h = _bond_element_html(session, notebook, n)
+                        h === nothing || (wi = _introspect_widget_html(h))
+                    end
                     if wi !== nothing
                         v = wi.initial
                         bond_domain = wi.domain
                         synthetic_initials = true
+                        v_synthetic = true
                     else
                         push!(reasons, "bond $(n) is $(fetch_failed ? "unfetchable" : "missing") and has no usable possible_values ($(domain isa Symbol ? domain : "empty")) or introspectable widget html")
                     end
                 else
                     v = first(domain)
                     synthetic_initials = true
+                    v_synthetic = true
                 end
             end
             # big-int slider values: narrow when exactly representable — the
@@ -537,6 +599,12 @@ function extract_groups(
                     bond_transform = collect(zip(raw_domain, transformed))
                 end
                 bond_domain = raw_domain
+            end
+            # a synthetic initial is a RAW client value; the cell fn (and the
+            # bridge arg descriptor) work on TRANSFORMED values — remap it
+            if bond_transform !== nothing && v_synthetic
+                hit = findfirst(p -> isequal(p[1], v), bond_transform)
+                hit === nothing || (v = bond_transform[hit][2])
             end
             push!(transforms, bond_transform)
             push!(domains, bond_domain)

@@ -39,6 +39,31 @@ connections = bound_variable_connections_graph(session, notebook)
     end
 end
 
+# ─── combine-style multi-input widget: output-suppressed bond cell, html from
+#     the workspace bond registry, Vector raw values + transform table ────────
+let
+    nb2 = Pluto.SessionActions.open(session, joinpath(@__DIR__, "notebooks", "combine_widget.jl"); run_async=false)
+    st2 = Pluto.notebook_to_js(nb2)
+    conn2 = bound_variable_connections_graph(session, nb2)
+    @testset "combine widget introspection" begin
+        gs = extract_groups(session, nb2; connections=conn2, original_state=st2)
+        @test length(gs) == 1
+        g = gs[1]
+        @test g.ok
+        @test g.bond_names == [:duo]
+        @test g.synthetic_initials
+        # the initial is REMAPPED through the transform table: raw ["#aabbcc", 2]
+        # (what the client sends) becomes the NamedTuple the cell fn consumes
+        @test g.initial_values == [(color = "#aabbcc", n = 2)]
+        # raw probe domain: initial combo + vary-one-child-at-a-time
+        @test g.domains[1] isa Vector
+        @test length(g.domains[1]) >= 3
+        @test all(d -> d isa Vector, g.domains[1])
+        @test g.transforms[1] !== nothing
+    end
+    Pluto.SessionActions.shutdown(session, nb2)
+end
+
 if HAS_NODE
     initial_bodies = Dict{String,Any}(
         string(id) => cr["output"]["body"] for (id, cr) in original_state["cell_results"]
