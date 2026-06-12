@@ -146,7 +146,8 @@ function compile_group(
             WasmTarget.compile(f, arg_tuple)
         catch e
             cellfail!(p.cell_id,
-                "$(canvas_desc === nothing ? "WasmTarget" : "canvas render") compile failed: $(sprint(showerror, e)[1:min(end, 200)])")
+                # validation errors carry a disassembly context — keep enough of it
+                "$(canvas_desc === nothing ? "WasmTarget" : "canvas render") compile failed: $(sprint(showerror, e)[1:min(end, 1200)])")
             continue
         end
         tree_desc = nothing
