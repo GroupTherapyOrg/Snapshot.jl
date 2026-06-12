@@ -15,6 +15,7 @@ import Pluto
 import JSON
 import Random
 import WasmTarget
+import Base64
 
 
 Base.@kwdef struct OracleResult
@@ -225,10 +226,30 @@ function _host_stream(native_body)
     m = match(_REPLAY_RE, native_body)
     m === nothing && return nothing
     try
-        JSON.parse(m.captures[1])
+        _expand_stream(JSON.parse(m.captures[1]))
     catch
         nothing
     end
+end
+
+"Expand to_json's coalesced `img_buf_push_rgba_b64` runs back into per-pixel
+`img_buf_push_rgba` commands — the JS-side wasm recorder logs individual glue
+calls, so equality is compared in the expanded form."
+function _expand_stream(host)
+    any(c -> c["op"] == "img_buf_push_rgba_b64", host) || return host
+    out = Any[]
+    for c in host
+        if c["op"] == "img_buf_push_rgba_b64"
+            bytes = Base64.base64decode(c["args"][1])
+            for k in 1:4:length(bytes)
+                push!(out, Dict{String,Any}("op" => "img_buf_push_rgba",
+                    "args" => Any[Int(bytes[k]), Int(bytes[k+1]), Int(bytes[k+2]), Int(bytes[k+3])]))
+            end
+        else
+            push!(out, c)
+        end
+    end
+    out
 end
 
 # numbers compare by VALUE (host to_json says "600.0" where the JS recorder

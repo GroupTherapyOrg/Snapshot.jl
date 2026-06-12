@@ -85,6 +85,44 @@ but fail wasm-tools validation ("func N failed to validate"), 11 cells
 across 4 groups. Reproduce via `generate_wasm_islands` on
 `test/notebooks/featured/newton.jl` and dump a failing group's `fn_expr`s.
 
+## 7. `StepRangeLen{Float64}` iteration traps `unreachable` at runtime  [OPEN]
+
+```julia
+# validates clean; TRAPS (unreachable) the moment the loop runs in wasm:
+for x in -1:0.01:10      # StepRangeLen{Float64} iterate
+    push!(xs, Float64(x))
+end
+# while-loop with a Float64 accumulator → works (the campaign workaround):
+let t = -1.0; while t <= 10.0; push!(xs, t); t += 0.01; end; end
+# Integer ranges (1:n, -nb:2*nb) iterate fine. Also affects broadcasts that
+# materialize over a StepRangeLen (`range(...) .- 1.5`) and likely
+# collect(::StepRangeLen) / LinRange iteration.
+```
+
+Found 2026-06-12 by the WasmMakie figure-kernel campaign: the newton.jl
+`standard_Newton` kernel compiled + validated and trapped in the oracle at
+the first sample. Minimized via /tmp bisect v4 (while, OK) vs v5 (range,
+trap), WasmMakie import surface, WT 0.3.3. Every converted featured
+notebook now carries the while-loop workaround (grep "WASM_FINDINGS #7").
+
+## 8. Type-unstable local rebinding → `i64.mul expected i64, found f64`  [OPEN]
+
+```julia
+# fails wasm VALIDATION (not even instantiable):
+function kernel(x02::Int64)
+    x0 = x02                 # starts Int64
+    for i in 1:5
+        x1 = x0 - f(x0)/m    # Float64
+        x0 = x1              # rebinds the same local to Float64
+    end
+end
+# workaround: x0 = Float64(x0) before the loop (type-stable local).
+```
+
+Found in the same bisect (v3): a Newton iteration whose iterate starts as
+the Int slider value. Validation error surfaces in whatever arithmetic
+touches the stale i64 slot (`i64.mul[1] expected i64, found local.get f64`).
+
 ## Survey-ranked WT/extractor work items (from tools/ISLAND_SURVEY.md)
 
 Baseline 2026-06-10: **16/64 bond groups extraction-ok** over 12 featured
