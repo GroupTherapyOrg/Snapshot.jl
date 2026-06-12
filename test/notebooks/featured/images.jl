@@ -33,7 +33,8 @@ end
 
 # ╔═╡ 74b008f6-ed6b-11ea-291f-b3791d6d1b35
 begin
-	using Colors, ColorVectorSpace, ImageShow, FileIO, ImageIO
+	using Colors, ColorVectorSpace, FileIO, ImageIO
+	using WasmMakie
 	using PlutoUI
 	using PlutoTeachingTools
 	using HypertextLiteral
@@ -136,6 +137,32 @@ md"""
 
 _When running this notebook for the first time, this could take up to 15 minutes. Hang in there!_
 """
+
+# ╔═╡ 1d02d216-705e-4d99-b7bd-351310aadde0
+begin
+	function rgb_figure(m::AbstractMatrix; px::Int=240)
+		small = m[1:ceil(Int, size(m, 1) / px):end, 1:ceil(Int, size(m, 2) / px):end]
+		nrows, ncols = size(small)
+		(nrows == 0 || ncols == 0) && return Figure(size=(80, 80))
+		pixels = Vector{NTuple{4,Float64}}(undef, nrows * ncols)
+		for i in 1:nrows, j in 1:ncols
+			c = RGBA{Float64}(small[i, j])
+			pixels[j + (nrows - i) * ncols] =
+				(Float64(red(c)), Float64(green(c)), Float64(blue(c)), Float64(alpha(c)))
+		end
+		target = max(nrows, ncols) <= 8 ? 80.0 : 360.0
+		s = target / max(nrows, ncols)
+		fig = Figure(size=(max(round(Int, ncols * s), 24), max(round(Int, nrows * s), 24)))
+		ax = Axis(fig[1, 1])
+		hidedecorations!(ax)
+		hidespines!(ax)
+		image!(ax, (0, ncols), (0, nrows), pixels, Int64(ncols), Int64(nrows); interpolate=false)
+		# no text is drawn (decorations hidden) → skip the per-cell fonts embed
+		HTML(WasmMakie.html_snippet(fig; fonts=false))
+	end
+	rgb_figure(v::AbstractVector{<:Colorant}; kwargs...) = rgb_figure(permutedims(v); kwargs...)
+	rgb_figure(c::Colorant; kwargs...) = rgb_figure(fill(c, 1, 1); kwargs...)
+end
 
 # ╔═╡ ca1b507e-6017-11eb-34e6-6b85cd189002
 md"""
@@ -285,7 +312,10 @@ Using the `Images.jl` package (loaded at the start of this notebook; scroll up a
 """
 
 # ╔═╡ aafe76a6-601e-11eb-1ff5-01885c5238da
-philip = load(philip_filename)
+philip = load(philip_filename);
+
+# ╔═╡ 9fec662f-7cd1-40db-8c45-25423473db6f
+rgb_figure(philip)
 
 # ╔═╡ e86ed944-ee05-11ea-3e0f-d70fc73b789c
 md"_Hi there Philip_"
@@ -316,10 +346,14 @@ press the camera to capture an image. Kind of fun to keep pressing the button as
 @bind myface1 PlutoUI.WebcamInput(help=false, max_size=150)
 
 # ╔═╡ 6224c74b-8915-4983-abf0-30e6ba04a46d
-[
-	myface1              myface1[   :    , end:-1:1]
-	myface1[end:-1:1, :] myface1[end:-1:1, end:-1:1]
-]
+if myface1 isa AbstractMatrix
+	rgb_figure([
+		myface1              myface1[   :    , end:-1:1]
+		myface1[end:-1:1, :] myface1[end:-1:1, end:-1:1]
+	])
+else
+	md"*no webcam image*"
+end
 
 # ╔═╡ cef1a95a-64c6-11eb-15e7-636a3621d727
 md"""
@@ -363,7 +397,10 @@ In Julia we use (square) brackets, `[` and `]` for indexing:
 """
 
 # ╔═╡ bd22d09a-64c7-11eb-146f-67733b8be241
-a_pixel = philip[200, 100]
+a_pixel = philip[200, 100];
+
+# ╔═╡ 5a3109be-b90c-4145-a4d9-63378ad4414e
+rgb_figure(a_pixel)
 
 # ╔═╡ 28860d48-64c8-11eb-240f-e1232b3638df
 md"""
@@ -395,7 +432,7 @@ md"""
 row_i,col_i
 
 # ╔═╡ ff762861-b186-4eb0-9582-0ce66ca10f60
-philip[row_i, col_i]
+rgb_figure(philip[row_i, col_i])
 
 # ╔═╡ c9ed950c-dcd9-4296-a431-ee0f36d5b557
 md"""
@@ -405,7 +442,7 @@ We saw that we can use the **row number** and **column number** to index a _sing
 """
 
 # ╔═╡ f0796032-8105-4f6d-b5ee-3647b052f2f6
-philip[550:650, 1:philip_width]
+rgb_figure(philip[550:650, 1:philip_width])
 
 # ╔═╡ b9be8761-a9c9-49eb-ba1b-527d12097362
 md"""
@@ -423,7 +460,7 @@ You can also use a `:` without start and end to mean "_every index_"
 """
 
 # ╔═╡ 4e6a31d6-1ef8-4a69-b346-ad58cfc4d8a5
-philip[550:650, :]
+rgb_figure(philip[550:650, :])
 
 # ╔═╡ e11f0e47-02d9-48a6-9b1a-e313c18db129
 md"""
@@ -431,10 +468,13 @@ Let's get a single row of pixels:
 """
 
 # ╔═╡ 9e447eab-14b6-45d8-83ab-1f7f1f1c70d2
-philip[550, :]
+rgb_figure(philip[550, :])
 
 # ╔═╡ c926435c-c648-419c-9951-ac8a1d4f3b92
-philip_head = philip[470:800, 140:410]
+philip_head = philip[470:800, 140:410];
+
+# ╔═╡ d1174f21-5c74-4934-acdf-716671cfc2db
+rgb_figure(philip_head)
 
 # ╔═╡ 32e7e51c-dd0d-483d-95cb-e6043f2b2975
 md"""
@@ -450,7 +490,10 @@ Use the widgets below (slide left and right sides).
 @bind range_cols RangeSlider(1:size(philip_head)[2])
 
 # ╔═╡ 2ac47b91-bbc3-49ae-9bf5-4def30ff46f4
-nose = philip_head[range_rows, range_cols]
+nose = philip_head[range_rows, range_cols];
+
+# ╔═╡ 93b18ee8-f11c-40e2-b292-562798100ba4
+rgb_figure(nose)
 
 # ╔═╡ 5a0cc342-64c9-11eb-1211-f1b06d652497
 md"""
@@ -479,7 +522,7 @@ We can create a new color in Julia as follows:
 """
 
 # ╔═╡ 552235ec-64c9-11eb-1f7f-f76da2818cb3
-RGB(1.0, 0.0, 0.0)
+rgb_figure(RGB(1.0, 0.0, 0.0))
 
 # ╔═╡ c2907d1a-47b1-4634-8669-a68022706861
 begin
@@ -490,7 +533,7 @@ end
 	
 
 # ╔═╡ ff9eea3f-cab0-4030-8337-f519b94316c5
-RGB(test_r, test_g, test_b)
+rgb_figure(RGB(test_r, test_g, test_b))
 
 # ╔═╡ f6cc03a0-ee07-11ea-17d8-013991514d42
 md"""
@@ -508,16 +551,26 @@ end
 md"Let's invert some colors:"
 
 # ╔═╡ b8f26960-ee0a-11ea-05b9-3f4bc1099050
-color_black = RGB(0.0, 0.0, 0.0)
+color_black = RGB(0.0, 0.0, 0.0);
+
+# ╔═╡ 29a227fe-b6d3-404f-b3a5-b7707ceee690
+rgb_figure(color_black)
 
 # ╔═╡ 5de3a22e-ee0b-11ea-230f-35df4ca3c96d
-invert(color_black)
+let c = invert(color_black)
+	c isa Colorant ? rgb_figure(c) : c
+end
 
 # ╔═╡ 4e21e0c4-ee0b-11ea-3d65-b311ae3f98e9
-color_red = RGB(0.8, 0.1, 0.1)
+color_red = RGB(0.8, 0.1, 0.1);
+
+# ╔═╡ 22d4c031-d333-46a6-9a0e-13a2bd89b8c8
+rgb_figure(color_red)
 
 # ╔═╡ 6dbf67ce-ee0b-11ea-3b71-abc05a64dc43
-invert(color_red)
+let c = invert(color_red)
+	c isa Colorant ? rgb_figure(c) : c
+end
 
 # ╔═╡ 846b1330-ee0b-11ea-3579-7d90fafd7290
 md"Can you invert the picture of Philip?"
@@ -539,7 +592,7 @@ We do this by assigning a new value to the color of a pixel:
 let
 	temp = copy(philip_head)
 	temp[100, 200] = RGB(1.0, 0.0, 0.0)
-	temp
+	rgb_figure(temp)
 end
 
 # ╔═╡ ab9af0f6-64c9-11eb-13d3-5dbdb75a69a7
@@ -551,7 +604,7 @@ For example, we can extract a horizontal strip 1 pixel tall:
 """
 
 # ╔═╡ e29b7954-64cb-11eb-2768-47de07766055
-philip_head[50, 50:100]
+rgb_figure(philip_head[50, 50:100])
 
 # ╔═╡ 8e7c4866-64cc-11eb-0457-85be566a8966
 md"""
@@ -569,7 +622,7 @@ And then modify it:
 let
 	temp = copy(philip_head)
 	temp[50, 50:100] .= RGB(1.0, 0.0, 0.0)
-	temp
+	rgb_figure(temp)
 end
 
 # ╔═╡ 2808339c-64cc-11eb-21d1-c76a9854aa5b
@@ -581,7 +634,7 @@ Similarly we can modify a whole rectangular block of pixels:
 let
 	temp = copy(philip_head)
 	temp[50:100, 50:100] .= RGB(1.0, 0.0, 0.0)
-	temp
+	rgb_figure(temp)
 end
 
 # ╔═╡ a5f8bafe-edf0-11ea-0da3-3330861ae43a
@@ -628,7 +681,10 @@ Maybe we would also like to reduce the size of this image, since it's rather lar
 """
 
 # ╔═╡ ae542fe4-64cc-11eb-29fc-73b7a66314a9
-reduced_image = philip[1:10:end, 1:10:end]
+reduced_image = philip[1:10:end, 1:10:end];
+
+# ╔═╡ 843b5dca-3c90-4090-b74f-cf0a69e53080
+rgb_figure(reduced_image)
 
 # ╔═╡ c29292b8-64cc-11eb-28db-b52c46e865e6
 md"""
@@ -706,7 +762,7 @@ Vectors, or one-dimensional arrays, are written using square brackets and commas
 [1, 20, "hello"]
 
 # ╔═╡ 1b2b2b18-64d4-11eb-2d43-e31cb8bc25d1
-[RGB(1, 0, 0), RGB(0, 1, 0), RGB(0, 0, 1)]
+rgb_figure([RGB(1, 0, 0), RGB(0, 1, 0), RGB(0, 0, 1)])
 
 # ╔═╡ 2b0e6450-64d4-11eb-182b-ff1bd515b56f
 md"""
@@ -714,8 +770,8 @@ Matrices, or two-dimensional arrays, also use square brackets, but with spaces a
 """
 
 # ╔═╡ 3b2b041a-64d4-11eb-31dd-47d7321ee909
-[RGB(1, 0, 0)  RGB(0, 1, 0)
- RGB(0, 0, 1)  RGB(0.5, 0.5, 0.5)]
+rgb_figure([RGB(1, 0, 0)  RGB(0, 1, 0)
+ RGB(0, 0, 1)  RGB(0.5, 0.5, 0.5)])
 
 # ╔═╡ 0f35603a-64d4-11eb-3baf-4fef06d82daa
 md"""
@@ -731,7 +787,7 @@ A neat method to do this is an **array comprehension**. Again we use square brac
 """
 
 # ╔═╡ e69b02c6-64d6-11eb-02f1-21c4fb5d1043
-[RGB(x, 0, 0) for x in 0:0.1:1]
+rgb_figure([RGB(x, 0, 0) for x in 0:0.1:1])
 
 # ╔═╡ fce76132-64d6-11eb-259d-b130038bbae6
 md"""
@@ -744,7 +800,7 @@ In a similar way we can create two-dimensional matrices, by separating the two v
 """
 
 # ╔═╡ 291b04de-64d7-11eb-1ee0-d998dccb998c
-[RGB(i, j, 0) for i in 0:0.1:1, j in 0:0.1:1]
+rgb_figure([RGB(i, j, 0) for i in 0:0.1:1, j in 0:0.1:1])
 
 # ╔═╡ 647fddf2-60ee-11eb-124d-5356c7014c3b
 md"""
@@ -754,11 +810,11 @@ We often want to join vectors and matrices together. We can do so using an exten
 """
 
 # ╔═╡ 7d9ad134-60ee-11eb-1b2a-a7d63f3a7a2d
-[philip_head  philip_head]
+rgb_figure([philip_head  philip_head])
 
 # ╔═╡ 8433b862-60ee-11eb-0cfc-add2b72997dc
-[philip_head                   reverse(philip_head, dims=2)
- reverse(philip_head, dims=1)  rot180(philip_head)]
+rgb_figure([philip_head                   reverse(philip_head, dims=2)
+ reverse(philip_head, dims=1)  rot180(philip_head)])
 
 # ╔═╡ 5e52d12e-64d7-11eb-0905-c9038a404e24
 md"""
@@ -796,7 +852,7 @@ Let's use this to make a slider for our one-dimensional collection of reds:
 """
 
 # ╔═╡ 88933746-6028-11eb-32de-13eb6ff43e29
-[RGB(red_value / number_reds, 0, 0) for red_value in 0:number_reds]
+rgb_figure([RGB(red_value / number_reds, 0, 0) for red_value in 0:number_reds])
 
 # ╔═╡ 1c539b02-64d8-11eb-3505-c9288357d139
 md"""
@@ -840,7 +896,9 @@ begin
 end
 
 # ╔═╡ d862fb16-edf1-11ea-36ec-615d521e6bc0
-colored_line(create_bar())
+let m = colored_line(create_bar())
+	m isa AbstractMatrix ? rgb_figure(m) : m
+end
 
 # ╔═╡ e0a6031c-601b-11eb-27a5-65140dd92897
 bigbreak = html"<br><br><br><br><br>";
@@ -856,9 +914,12 @@ Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 HypertextLiteral = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
 ImageIO = "82e4d734-157c-48bb-816b-45c225c6df19"
-ImageShow = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+WasmMakie = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+
+[sources]
+WasmMakie = {url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"}
 
 [compat]
 ColorVectorSpace = "~0.11.0"
@@ -866,18 +927,18 @@ Colors = "~0.13.1"
 FileIO = "~1.19.0"
 HypertextLiteral = "~1.0.0"
 ImageIO = "~0.6.9"
-ImageShow = "~0.3.8"
 PlutoTeachingTools = "~0.4.7"
-PlutoUI = "~0.7.81"
+PlutoUI = "~0.7.83"
+WasmMakie = "~0.1.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.4"
+julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "79a0e086886676acc653b8b5d714bdfe62959e6d"
+project_hash = "4621bf522c63afa8f0615d7b9cea752219da0f81"
 
 [[deps.AbstractPlutoDingetjes]]
 git-tree-sha1 = "6c3913f4e9bdf6ba3c08041a446fb1332716cbc2"
@@ -912,12 +973,6 @@ deps = ["TranscodingStreams", "Zstd_jll"]
 git-tree-sha1 = "da54a6cd93c54950c15adf1d336cfd7d71f51a56"
 uuid = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
 version = "0.8.7"
-
-[[deps.ColorSchemes]]
-deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "PrecompileTools", "Random"]
-git-tree-sha1 = "b0fd3f56fa442f81e0a47815c92245acfaaa4e34"
-uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.31.0"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -954,9 +1009,9 @@ version = "1.3.0+1"
 
 [[deps.DataStructures]]
 deps = ["OrderedCollections"]
-git-tree-sha1 = "e86f4a2805f7f19bec5129bc9150c38208e5dc23"
+git-tree-sha1 = "6fb53a69613a0b2b68a0d12671717d307ab8b24e"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.19.4"
+version = "0.19.5"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -995,10 +1050,10 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 version = "1.11.0"
 
 [[deps.FixedPointNumbers]]
-deps = ["Statistics"]
-git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
+deps = ["Random", "Statistics"]
+git-tree-sha1 = "59af96b98217c6ef4ae0dfe065ac7c20831d1a84"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.5"
+version = "0.8.6"
 
 [[deps.Format]]
 git-tree-sha1 = "9c68794ef81b08086aeb32eeaf33531668d5f5fc"
@@ -1064,12 +1119,6 @@ deps = ["AxisArrays", "ImageAxes", "ImageBase", "ImageCore"]
 git-tree-sha1 = "2a81c3897be6fbcde0802a0ebe6796d0562f63ec"
 uuid = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
 version = "0.9.10"
-
-[[deps.ImageShow]]
-deps = ["Base64", "ColorSchemes", "FileIO", "ImageBase", "ImageCore", "OffsetArrays", "StackViews"]
-git-tree-sha1 = "3b5344bcdbdc11ad58f3b1956709b5b9345355de"
-uuid = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
-version = "0.3.8"
 
 [[deps.Imath_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1287,9 +1336,9 @@ version = "0.3.3"
 
 [[deps.OpenEXR_jll]]
 deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "9ac7c730c53b3b5d9a73fb900ac4b4fc263774db"
+git-tree-sha1 = "4a33fd64a77949468187339d8b10c44a422082f1"
 uuid = "18a262bb-aa17-5467-a713-aee519bc75cb"
-version = "3.4.9+0"
+version = "3.4.12+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1297,15 +1346,15 @@ uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
 version = "3.5.4+0"
 
 [[deps.OrderedCollections]]
-git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
+git-tree-sha1 = "94ba93778373a53bfd5a0caaf7d809c445292ff4"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.8.1"
+version = "1.8.2"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]
-git-tree-sha1 = "cf181f0b1e6a18dfeb0ee8acc4a9d1672499626c"
+git-tree-sha1 = "32b657a0d57c310a1a172bfc8c8cf68c5e674323"
 uuid = "f57f5aa1-a3ce-4bc8-8ab9-96f992907883"
-version = "0.4.4"
+version = "0.4.5"
 
 [[deps.PaddedViews]]
 deps = ["OffsetArrays"]
@@ -1336,9 +1385,9 @@ version = "0.4.7"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Downloads", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "79436d2d6f29a5d5b4e4749043a3f190d55631a3"
+git-tree-sha1 = "e189d0623e7ce9c37389bac17e80aac3b0302e75"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.81"
+version = "0.7.83"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1498,6 +1547,14 @@ version = "1.11.0"
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
 
+[[deps.WasmMakie]]
+deps = ["Base64"]
+git-tree-sha1 = "de6c9a45585e892ac96fa7ad9fd3b1d3d61277ec"
+repo-rev = "main"
+repo-url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"
+uuid = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+version = "0.1.0"
+
 [[deps.WebP]]
 deps = ["CEnum", "ColorTypes", "FileIO", "FixedPointNumbers", "ImageCore", "libwebp_jll"]
 git-tree-sha1 = "aa1ca3c47f119fbdae8770c29820e5e6119b83f2"
@@ -1596,6 +1653,7 @@ version = "17.7.0+0"
 # ╟─d07fcdb0-7afc-4a25-b68a-49fd1e3405e7
 # ╟─9b49500c-0164-4556-a17b-7595e35c5ede
 # ╠═74b008f6-ed6b-11ea-291f-b3791d6d1b35
+# ╟─1d02d216-705e-4d99-b7bd-351310aadde0
 # ╟─ca1b507e-6017-11eb-34e6-6b85cd189002
 # ╟─e9ff96d8-6bc1-11eb-0f6a-234b9fae047e
 # ╟─9111db10-6bc3-11eb-38e5-cf3f58536914
@@ -1616,6 +1674,7 @@ version = "17.7.0+0"
 # ╠═34ffc3d8-601e-11eb-161c-6f9a07c5fd78
 # ╟─abaaa980-601e-11eb-0f71-8ff02269b775
 # ╠═aafe76a6-601e-11eb-1ff5-01885c5238da
+# ╟─9fec662f-7cd1-40db-8c45-25423473db6f
 # ╟─e86ed944-ee05-11ea-3e0f-d70fc73b789c
 # ╟─c99d2aa8-601e-11eb-3469-497a246db17c
 # ╟─11dff4ce-6bca-11eb-1056-c1345c796ed4
@@ -1632,6 +1691,7 @@ version = "17.7.0+0"
 # ╠═f08d02af-6e38-4ace-8b11-7af4930b64ea
 # ╟─f9244264-64c6-11eb-23a6-cfa76f8aff6d
 # ╠═bd22d09a-64c7-11eb-146f-67733b8be241
+# ╟─5a3109be-b90c-4145-a4d9-63378ad4414e
 # ╟─28860d48-64c8-11eb-240f-e1232b3638df
 # ╟─4ef99715-4d8d-4f9d-bf0b-8df9907a14cf
 # ╟─a510fc33-406e-4fb5-be83-9e4b5578717c
@@ -1649,10 +1709,12 @@ version = "17.7.0+0"
 # ╟─e11f0e47-02d9-48a6-9b1a-e313c18db129
 # ╠═9e447eab-14b6-45d8-83ab-1f7f1f1c70d2
 # ╠═c926435c-c648-419c-9951-ac8a1d4f3b92
+# ╟─d1174f21-5c74-4934-acdf-716671cfc2db
 # ╟─32e7e51c-dd0d-483d-95cb-e6043f2b2975
 # ╠═4b64e1f2-d0ca-4e22-a89d-1d9a16bd6788
 # ╠═85919db9-1444-4904-930f-ba572cff9460
 # ╠═2ac47b91-bbc3-49ae-9bf5-4def30ff46f4
+# ╟─93b18ee8-f11c-40e2-b292-562798100ba4
 # ╟─5a0cc342-64c9-11eb-1211-f1b06d652497
 # ╟─4504577c-64c8-11eb-343b-3369b6d10d8b
 # ╟─40886d36-64c9-11eb-3c69-4b68673a6dde
@@ -1663,8 +1725,10 @@ version = "17.7.0+0"
 # ╠═63e8d636-ee0b-11ea-173d-bd3327347d55
 # ╟─2cc2f84e-ee0d-11ea-373b-e7ad3204bb00
 # ╟─b8f26960-ee0a-11ea-05b9-3f4bc1099050
+# ╟─29a227fe-b6d3-404f-b3a5-b7707ceee690
 # ╠═5de3a22e-ee0b-11ea-230f-35df4ca3c96d
 # ╠═4e21e0c4-ee0b-11ea-3d65-b311ae3f98e9
+# ╟─22d4c031-d333-46a6-9a0e-13a2bd89b8c8
 # ╠═6dbf67ce-ee0b-11ea-3b71-abc05a64dc43
 # ╟─846b1330-ee0b-11ea-3579-7d90fafd7290
 # ╠═943103e2-ee0b-11ea-33aa-75a8a1529931
@@ -1684,6 +1748,7 @@ version = "17.7.0+0"
 # ╟─693af19c-64cc-11eb-31f3-57ab2fbae597
 # ╟─6361d102-64cc-11eb-31b7-fb631b632040
 # ╠═ae542fe4-64cc-11eb-29fc-73b7a66314a9
+# ╟─843b5dca-3c90-4090-b74f-cf0a69e53080
 # ╟─c29292b8-64cc-11eb-28db-b52c46e865e6
 # ╟─7b04331a-6bcb-11eb-34fa-1f5b151e5510
 # ╟─5319c03c-64cc-11eb-0743-a1612476e2d3

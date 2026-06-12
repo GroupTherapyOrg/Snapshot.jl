@@ -33,12 +33,43 @@ end
 begin
 	using PlutoUI
 	using DitherPunk
-	using ImageShow, ImageIO, Colors, ImageTransformations
+	using ImageIO, Colors, ImageTransformations
 	using TestImages
+	using WasmMakie
 end
 
 # ╔═╡ 9258ccd2-c6ef-4fff-b7bf-13f09dfd5b42
 md"# DitherPunk ❤️ Pluto!"
+
+# ╔═╡ 3e27e0ae-af1e-467b-88dd-682444bd12cf
+begin
+	# Display helpers: render image matrices through WasmMakie figures.
+	# Large images are stride-downsampled (uniform step, aspect preserved),
+	# then drawn with image! (flat column-major pixels, y up, crisp pixels).
+	function _wasmmakie_figure(m::AbstractMatrix; px::Int=256)
+		step = max(ceil(Int, size(m, 1) / px), ceil(Int, size(m, 2) / px))
+		mm = m[1:step:end, 1:step:end]
+		nrows, ncols = size(mm)
+		pixels = Vector{NTuple{4,Float64}}(undef, nrows * ncols)
+		for i in 1:nrows, j in 1:ncols
+			c = convert(RGBA{Float64}, mm[i, j])
+			pixels[j + (nrows - i) * ncols] =
+				(Float64(red(c)), Float64(green(c)), Float64(blue(c)), Float64(alpha(c)))
+		end
+		w = 520.0
+		h = max(48.0, round(w * nrows / ncols))
+		fig = Figure(size = (w, h))
+		ax = Axis(fig[1, 1])
+		hidedecorations!(ax)
+		hidespines!(ax)
+		image!(ax, (0.0, Float64(ncols)), (0.0, Float64(nrows)), pixels,
+			Int64(ncols), Int64(nrows); interpolate = false)
+		# no text is drawn (decorations hidden) → skip the per-cell fonts embed
+		HTML(WasmMakie.html_snippet(fig; fonts = false))
+	end
+	gray_figure(m; px::Int=256) = _wasmmakie_figure(Gray.(m); px = px)
+	rgb_figure(m; px::Int=256) = _wasmmakie_figure(m; px = px)
+end
 
 # ╔═╡ 43744742-b8c7-4506-8ed6-1729fcd19321
 
@@ -49,7 +80,10 @@ Take the following grayscale image of a lighthouse as an example. We want to dis
 """
 
 # ╔═╡ 1e9359f2-59c1-4910-b00f-81dc74f889ae
-lighthouse = Gray.(testimage("lighthouse")) # convert from color to gray
+lighthouse = Gray.(testimage("lighthouse")); # convert from color to gray
+
+# ╔═╡ b72d08fd-58b2-4e75-a5a6-e5be5d4438dd
+gray_figure(lighthouse)
 
 # ╔═╡ 53d3af8c-88b5-4409-bf6a-9e1b22ac34a0
 md"""
@@ -59,7 +93,7 @@ One simple approach is to simply round each pixel up or down to its closest colo
 """
 
 # ╔═╡ d62c910f-dccd-4976-8d05-efd3e13353d3
-map(pixel -> pixel > 0.5 ? Gray(1) : Gray(0), lighthouse)
+gray_figure(map(pixel -> pixel > 0.5 ? Gray(1) : Gray(0), lighthouse))
 
 # ╔═╡ 8a718f57-740b-43a8-9f05-6c699f982220
 md"""
@@ -68,7 +102,7 @@ Dithering solves this problem by adding some pleasant high frequency noise to ap
 """
 
 # ╔═╡ 0210462f-851b-4e2b-ba99-d7ade531fe11
-dither(lighthouse, Atkinson())
+gray_figure(dither(lighthouse, Atkinson()); px=400)
 
 # ╔═╡ 7de553b7-e19f-4482-9b5e-d4c8755a033a
 md"""
@@ -140,6 +174,9 @@ maxsize = maximum(size(img_raw));
 # ╔═╡ 7d1ced8c-8a33-4429-b8fb-f06eb4bc7b1b
 colorscheme = [colors...];
 
+# ╔═╡ 57a15a1a-32d8-4a75-9a65-18363a3c8f03
+rgb_figure(reshape(colorscheme, 1, :))
+
 # ╔═╡ c4799684-46b7-4783-99de-c8946e7067de
 img = let
 	ratio = width / maxsize
@@ -148,7 +185,7 @@ img = let
 end;
 
 # ╔═╡ 93e576e2-d5f0-44d9-8747-93ecefc51a8c
-dither(img, algorithm(), colorscheme)
+rgb_figure(dither(img, algorithm(), colorscheme); px=400)
 
 # ╔═╡ ea42e1fe-7f4d-4f72-8bf1-165ee4067474
 # this little snippet makes sure that the dithered image displays in a nice way
@@ -168,28 +205,31 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DitherPunk = "b8f752a5-abd5-43b6-a55b-e75efda20de0"
 ImageIO = "82e4d734-157c-48bb-816b-45c225c6df19"
-ImageShow = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
 ImageTransformations = "02fcd773-0e25-5acc-982a-7f6622650795"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
+WasmMakie = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+
+[sources]
+WasmMakie = {url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"}
 
 [compat]
 Colors = "~0.13.1"
 DitherPunk = "~3.1.0"
 ImageIO = "~0.6.9"
-ImageShow = "~0.3.8"
 ImageTransformations = "~0.10.2"
-PlutoUI = "~0.7.81"
+PlutoUI = "~0.7.83"
 TestImages = "~1.9.0"
+WasmMakie = "~0.1.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.4"
+julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "75f778d0f00e6904a8f6139fcd4efffab25aacc4"
+project_hash = "8abe6f237eafe7d10f53aacec4064de4046ace09"
 
 [[deps.AbstractPlutoDingetjes]]
 git-tree-sha1 = "6c3913f4e9bdf6ba3c08041a446fb1332716cbc2"
@@ -203,9 +243,9 @@ version = "0.4.5"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "28e1637322d4019ed2577cbec9268fab9b7da117"
+git-tree-sha1 = "7715e5b2b186c4d9b664d299d2c9e48b9a778c88"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "4.6.0"
+version = "4.6.1"
 weakdeps = ["SparseArrays", "StaticArrays"]
 
     [deps.Adapt.extensions]
@@ -343,9 +383,9 @@ version = "1.16.0"
 
 [[deps.DataStructures]]
 deps = ["OrderedCollections"]
-git-tree-sha1 = "e86f4a2805f7f19bec5129bc9150c38208e5dc23"
+git-tree-sha1 = "6fb53a69613a0b2b68a0d12671717d307ab8b24e"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.19.4"
+version = "0.19.5"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -407,10 +447,10 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 version = "1.11.0"
 
 [[deps.FixedPointNumbers]]
-deps = ["Statistics"]
-git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
+deps = ["Random", "Statistics"]
+git-tree-sha1 = "59af96b98217c6ef4ae0dfe065ac7c20831d1a84"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.5"
+version = "0.8.6"
 
 [[deps.Ghostscript_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Zlib_jll"]
@@ -483,12 +523,6 @@ deps = ["AxisArrays", "ImageAxes", "ImageBase", "ImageCore"]
 git-tree-sha1 = "2a81c3897be6fbcde0802a0ebe6796d0562f63ec"
 uuid = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
 version = "0.9.10"
-
-[[deps.ImageShow]]
-deps = ["Base64", "ColorSchemes", "FileIO", "ImageBase", "ImageCore", "OffsetArrays", "StackViews"]
-git-tree-sha1 = "3b5344bcdbdc11ad58f3b1956709b5b9345355de"
-uuid = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
-version = "0.3.8"
 
 [[deps.ImageTransformations]]
 deps = ["AxisAlgorithms", "CoordinateTransformations", "ImageBase", "ImageCore", "Interpolations", "OffsetArrays", "Rotations", "StaticArrays"]
@@ -638,15 +672,15 @@ version = "1.12.0"
 
 [[deps.LittleCMS_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll"]
-git-tree-sha1 = "70bd263e082a236c8c2661a474616d95ba59d2cf"
+git-tree-sha1 = "38928f7999753af13d4e13966ae15958ff3a917a"
 uuid = "d3a379c0-f9a3-5b72-a4c0-6bf4d2e8af0f"
-version = "2.19.0+0"
+version = "2.19.1+0"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "13ca9e2586b89836fd20cccf56e57e2b9ae7f38f"
+git-tree-sha1 = "bba2d9aa057d8f126415de240573e86a8f39d2a1"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.29"
+version = "1.0.1"
 
     [deps.LogExpFunctions.extensions]
     LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
@@ -740,9 +774,9 @@ version = "0.3.3"
 
 [[deps.OpenEXR_jll]]
 deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "9ac7c730c53b3b5d9a73fb900ac4b4fc263774db"
+git-tree-sha1 = "4a33fd64a77949468187339d8b10c44a422082f1"
 uuid = "18a262bb-aa17-5467-a713-aee519bc75cb"
-version = "3.4.9+0"
+version = "3.4.12+0"
 
 [[deps.OpenJpeg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libtiff_jll", "LittleCMS_jll", "libpng_jll"]
@@ -756,15 +790,15 @@ uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
 version = "3.5.4+0"
 
 [[deps.OrderedCollections]]
-git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
+git-tree-sha1 = "94ba93778373a53bfd5a0caaf7d809c445292ff4"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.8.1"
+version = "1.8.2"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]
-git-tree-sha1 = "cf181f0b1e6a18dfeb0ee8acc4a9d1672499626c"
+git-tree-sha1 = "32b657a0d57c310a1a172bfc8c8cf68c5e674323"
 uuid = "f57f5aa1-a3ce-4bc8-8ab9-96f992907883"
-version = "0.4.4"
+version = "0.4.5"
 
 [[deps.PaddedViews]]
 deps = ["OffsetArrays"]
@@ -789,9 +823,9 @@ version = "0.3.3"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Downloads", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "79436d2d6f29a5d5b4e4749043a3f190d55631a3"
+git-tree-sha1 = "e189d0623e7ce9c37389bac17e80aac3b0302e75"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.81"
+version = "0.7.83"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -973,9 +1007,9 @@ version = "1.8.0"
 
 [[deps.StatsBase]]
 deps = ["AliasTables", "DataAPI", "DataStructures", "IrrationalConstants", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "aceda6f4e598d331548e04cc6b2124a6148138e3"
+git-tree-sha1 = "c6f18e5a52a176a383f6f6c635e0f81feed1d6d4"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.34.10"
+version = "0.34.11"
 
 [[deps.StringDistances]]
 deps = ["Distances", "StatsAPI"]
@@ -1053,6 +1087,14 @@ version = "1.11.0"
 git-tree-sha1 = "68b452bea8e500151ee34e81b521c5d6c59ce114"
 uuid = "ebadf6b4-db70-5817-83da-4a19ad584e34"
 version = "0.2.2"
+
+[[deps.WasmMakie]]
+deps = ["Base64"]
+git-tree-sha1 = "de6c9a45585e892ac96fa7ad9fd3b1d3d61277ec"
+repo-rev = "main"
+repo-url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"
+uuid = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+version = "0.1.0"
 
 [[deps.WebP]]
 deps = ["CEnum", "ColorTypes", "FileIO", "FixedPointNumbers", "ImageCore", "libwebp_jll"]
@@ -1162,8 +1204,10 @@ version = "17.7.0+0"
 # ╔═╡ Cell order:
 # ╟─9258ccd2-c6ef-4fff-b7bf-13f09dfd5b42
 # ╠═5627c4c8-5c3c-11ec-3a25-fdc505adbe69
+# ╠═3e27e0ae-af1e-467b-88dd-682444bd12cf
 # ╟─43744742-b8c7-4506-8ed6-1729fcd19321
 # ╠═1e9359f2-59c1-4910-b00f-81dc74f889ae
+# ╠═b72d08fd-58b2-4e75-a5a6-e5be5d4438dd
 # ╟─53d3af8c-88b5-4409-bf6a-9e1b22ac34a0
 # ╠═d62c910f-dccd-4976-8d05-efd3e13353d3
 # ╟─8a718f57-740b-43a8-9f05-6c699f982220
@@ -1173,6 +1217,7 @@ version = "17.7.0+0"
 # ╟─d7569390-af8c-47b2-901a-b107f43d2b71
 # ╟─0c6aff98-350e-4935-834c-6b9aa9fa3a38
 # ╟─dc829cc3-213b-4f8f-b1e0-ad705be35edb
+# ╠═57a15a1a-32d8-4a75-9a65-18363a3c8f03
 # ╟─3ed9b4fd-2da0-419e-986c-16faa80ad536
 # ╟─ab69309f-6a08-4f9f-b503-7a9610b1994a
 # ╟─a4a610a0-2034-4548-b9b1-283eaba05b59

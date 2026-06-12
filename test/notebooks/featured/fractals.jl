@@ -30,7 +30,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 2e3a7a3a-2fa7-11ef-1b80-d793aa08ee42
-using PlutoUI, PlutoTeachingTools, PlutoImageCoordinatePicker
+using PlutoUI, PlutoTeachingTools, PlutoImageCoordinatePicker, WasmMakie
 
 # ╔═╡ 9f0f999c-4c4f-40a9-83b9-08b5b1cffa80
 using ImageShow, ImageIO, Colors
@@ -377,16 +377,19 @@ begin
 	end
 
 	# This goes over all the points in the image, considers the point an initial, check the sequence, colors accordingly depending on whether they diverge or not
-	function julia_fractal(depth, X, Y, c, f) 
-		img_matrix = zeros(Float32, img_size+1, img_size+1) 
+	# (flat column-major vector — index y + x*(img_size+1) — so the same code
+	# also runs inside the WebAssembly islands, where Matrix construction is
+	# not yet available)
+	function julia_fractal(depth, X, Y, c, f)
+		img = fill(0.0f0, (img_size + 1) * (img_size + 1))
 	    for x in X
 	        for y in Y
 	            z = f(x, y)
 				x_scaled, y_scaled = scale_tuple((x, y), 0, img_size)
-				img_matrix[y_scaled+1, x_scaled+1] = is_stable(depth, z, c)
+				img[y_scaled + 1 + x_scaled * (img_size + 1)] = is_stable(depth, z, c)
 	        end
 	    end
-		img_matrix
+		img
 	end
 	
 end
@@ -503,26 +506,35 @@ last(new_sequence)
 c_fractal_picker = @bind c_for_fractal ComplexNumberPicker(default=-.04+.72im);
 
 # ╔═╡ 7789450c-31d6-4286-9fd9-3e88b075b538
-PlutoTeachingTools.Columns(
-	# Left
-	c_fractal_picker,
+c_fractal_picker
 
-	# Right
-	let	
-		fractal = julia_fractal(
-			80, 
-			LinRange(-1.5,1.5,img_size + 1),
-			LinRange(-1.5,1.5,img_size + 1), 
-			c_for_fractal, Complex);
-		
-		colored_fractal = [
-			fractal[i, j] == 1 ? color1 : color2 
-			for i in 1:img_size, j in 1:img_size
-		]
-		
-		RGB.(colored_fractal)
+# ╔═╡ 8899561d-42e7-4397-a649-8800461c6649
+let
+	# coordinate vector built with an integer loop — LinRange/StepRangeLen
+	# iteration is not wasm-compilable yet (WASM_FINDINGS #7)
+	coords = Float64[]
+	for k in 0:img_size
+		push!(coords, -1.5 + 3.0 * k / img_size)
 	end
-)
+
+	fractal = julia_fractal(80, coords, coords, c_for_fractal, Complex)
+
+	c1 = (Float64(red(color1)), Float64(green(color1)), Float64(blue(color1)), 1.0)
+	c2 = (Float64(red(color2)), Float64(green(color2)), Float64(blue(color2)), 1.0)
+
+	# flat column-major RGBA pixels for WasmMakie's image! (x = i, y = j)
+	pixels = Vector{NTuple{4,Float64}}(undef, img_size * img_size)
+	for j in 1:img_size, i in 1:img_size
+		v = fractal[j + (i - 1) * (img_size + 1)]
+		pixels[i + (j - 1) * img_size] = v == 1.0f0 ? c1 : c2
+	end
+
+	fig = Figure(size = (340, 340))
+	ax = Axis(fig[1, 1])
+	hidedecorations!(ax)
+	image!(ax, (-1.5, 1.5), (-1.5, 1.5), pixels, img_size, img_size; interpolate = false)
+	fig
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -533,6 +545,10 @@ ImageShow = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
 PlutoImageCoordinatePicker = "79686372-6169-7274-6170-6568746b6366"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+WasmMakie = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+
+[sources]
+WasmMakie = {url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"}
 
 [compat]
 Colors = "~0.13.1"
@@ -540,16 +556,17 @@ ImageIO = "~0.6.9"
 ImageShow = "~0.3.8"
 PlutoImageCoordinatePicker = "~1.4.2"
 PlutoTeachingTools = "~0.4.7"
-PlutoUI = "~0.7.81"
+PlutoUI = "~0.7.83"
+WasmMakie = "~0.1.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.4"
+julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "174f8b3a7073dde8a35ff2e887a7814cfb24ef40"
+project_hash = "cf889091d5d93320bfa51032c43572a81e0770c8"
 
 [[deps.AbstractPlutoDingetjes]]
 git-tree-sha1 = "6c3913f4e9bdf6ba3c08041a446fb1332716cbc2"
@@ -626,9 +643,9 @@ version = "1.3.0+1"
 
 [[deps.DataStructures]]
 deps = ["OrderedCollections"]
-git-tree-sha1 = "e86f4a2805f7f19bec5129bc9150c38208e5dc23"
+git-tree-sha1 = "6fb53a69613a0b2b68a0d12671717d307ab8b24e"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.19.4"
+version = "0.19.5"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -667,10 +684,10 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 version = "1.11.0"
 
 [[deps.FixedPointNumbers]]
-deps = ["Statistics"]
-git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
+deps = ["Random", "Statistics"]
+git-tree-sha1 = "59af96b98217c6ef4ae0dfe065ac7c20831d1a84"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.5"
+version = "0.8.6"
 
 [[deps.Format]]
 git-tree-sha1 = "9c68794ef81b08086aeb32eeaf33531668d5f5fc"
@@ -959,9 +976,9 @@ version = "0.3.3"
 
 [[deps.OpenEXR_jll]]
 deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "9ac7c730c53b3b5d9a73fb900ac4b4fc263774db"
+git-tree-sha1 = "4a33fd64a77949468187339d8b10c44a422082f1"
 uuid = "18a262bb-aa17-5467-a713-aee519bc75cb"
-version = "3.4.9+0"
+version = "3.4.12+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -969,15 +986,15 @@ uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
 version = "3.5.4+0"
 
 [[deps.OrderedCollections]]
-git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
+git-tree-sha1 = "94ba93778373a53bfd5a0caaf7d809c445292ff4"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.8.1"
+version = "1.8.2"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]
-git-tree-sha1 = "cf181f0b1e6a18dfeb0ee8acc4a9d1672499626c"
+git-tree-sha1 = "32b657a0d57c310a1a172bfc8c8cf68c5e674323"
 uuid = "f57f5aa1-a3ce-4bc8-8ab9-96f992907883"
-version = "0.4.4"
+version = "0.4.5"
 
 [[deps.PaddedViews]]
 deps = ["OffsetArrays"]
@@ -1014,9 +1031,9 @@ version = "0.4.7"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Downloads", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "79436d2d6f29a5d5b4e4749043a3f190d55631a3"
+git-tree-sha1 = "e189d0623e7ce9c37389bac17e80aac3b0302e75"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.81"
+version = "0.7.83"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1176,6 +1193,14 @@ version = "1.11.0"
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
 
+[[deps.WasmMakie]]
+deps = ["Base64"]
+git-tree-sha1 = "de6c9a45585e892ac96fa7ad9fd3b1d3d61277ec"
+repo-rev = "main"
+repo-url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"
+uuid = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+version = "0.1.0"
+
 [[deps.WebP]]
 deps = ["CEnum", "ColorTypes", "FileIO", "FixedPointNumbers", "ImageCore", "libwebp_jll"]
 git-tree-sha1 = "aa1ca3c47f119fbdae8770c29820e5e6119b83f2"
@@ -1329,6 +1354,7 @@ version = "17.7.0+0"
 # ╟─3dc2f13d-0238-444d-b440-5e7e2df0618f
 # ╟─9c83bdc9-8796-47cf-9a83-65dda43099bf
 # ╟─7789450c-31d6-4286-9fd9-3e88b075b538
+# ╟─8899561d-42e7-4397-a649-8800461c6649
 # ╟─e7f0f154-ddf6-432e-bc6f-5654fa4c5a14
 # ╟─81afcd2c-28e9-4b2a-8dc0-828d5feec4f7
 # ╟─454f51c5-c11d-405b-b3e2-7ef289aec7db

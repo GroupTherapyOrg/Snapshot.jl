@@ -31,14 +31,104 @@ macro bind(def, element)
 end
 
 # ╔═╡ 1ff23021-4eb3-458d-a07e-0c5083eb4c4f
-using PlutoTurtles, PlutoUI
+using WasmMakie, PlutoUI
 
 # ╔═╡ 86e25a9c-b877-45cb-8a57-4643dd1fc266
 md"""
 # Turtle art!
 
-This notebook uses [PlutoTurtles.jl](https://github.com/JuliaPluto/PlutoTurtles.jl) to recreate some famous works of art!
+This notebook recreates some famous works of art with simple turtle code — and every drawing is a [WasmMakie.jl](https://github.com/GroupTherapyOrg/WasmMakie.jl) figure, so the interactive ones recompute right in your browser via WebAssembly.
 """
+
+# ╔═╡ aa000001-7474-4c1e-9000-000000000001
+# A tiny turtle, drawn with WasmMakie — same API as PlutoTurtles.jl
+# (forward!/backward!/right!/left!/penup!/pendown!/color!), but every
+# drawing is a Figure whose strokes can recompute inside a wasm island.
+begin
+	mutable struct Turtle
+		pos::NTuple{2,Float64}
+		heading::Float64                 # degrees, 0 = north, clockwise
+		pen::Bool
+		color::NTuple{4,Float64}
+		xs::Vector{Vector{Float64}}      # one polyline per pen stroke
+		ys::Vector{Vector{Float64}}
+		cols::Vector{NTuple{4,Float64}}
+	end
+	Turtle() = Turtle((0.0, 0.0), 0.0, true, (0.0, 0.0, 0.0, 1.0),
+		Vector{Float64}[], Vector{Float64}[], NTuple{4,Float64}[])
+
+	function forward!(t::Turtle, d)
+		x2 = t.pos[1] + Float64(d) * sind(t.heading)
+		y2 = t.pos[2] + Float64(d) * cosd(t.heading)
+		if t.pen
+			# extend the running stroke when contiguous + same color
+			if !isempty(t.xs) && t.cols[end] == t.color &&
+			   t.xs[end][end] == t.pos[1] && t.ys[end][end] == t.pos[2]
+				push!(t.xs[end], x2)
+				push!(t.ys[end], y2)
+			else
+				push!(t.xs, [t.pos[1], x2])
+				push!(t.ys, [t.pos[2], y2])
+				push!(t.cols, t.color)
+			end
+		end
+		t.pos = (x2, y2)
+		t
+	end
+	backward!(t::Turtle, d) = forward!(t, -d)
+	right!(t::Turtle, a) = (t.heading += Float64(a); t)
+	left!(t::Turtle, a) = (t.heading -= Float64(a); t)
+	penup!(t::Turtle) = (t.pen = false; t)
+	pendown!(t::Turtle) = (t.pen = true; t)
+
+	function color!(t::Turtle, c::String)
+		t.color =
+			c == "black"  ? (0.0, 0.0, 0.0, 1.0) :
+			c == "white"  ? (1.0, 1.0, 1.0, 1.0) :
+			c == "red"    ? (1.0, 0.0, 0.0, 1.0) :
+			c == "yellow" ? (1.0, 1.0, 0.0, 1.0) :
+			c == "blue"   ? (0.0, 0.0, 1.0, 1.0) :
+			(0.0, 0.0, 0.0, 1.0)
+		t
+	end
+
+	# hsl color directly (avoids string parsing) — h in degrees, s/l in 0–1
+	function color_hsl!(t::Turtle, h, s, l)
+		hf = mod(Float64(h), 360.0) / 60.0
+		c = (1.0 - abs(2.0 * l - 1.0)) * s
+		x = c * (1.0 - abs(mod(hf, 2.0) - 1.0))
+		m = l - c / 2.0
+		r, g, b =
+			hf < 1.0 ? (c, x, 0.0) :
+			hf < 2.0 ? (x, c, 0.0) :
+			hf < 3.0 ? (0.0, c, x) :
+			hf < 4.0 ? (0.0, x, c) :
+			hf < 5.0 ? (x, 0.0, c) : (c, 0.0, x)
+		t.color = (r + m, g + m, b + m, 1.0)
+		t
+	end
+
+	function turtle_drawing(f::Function; background::String = "white")
+		t = Turtle()
+		f(t)
+		fig = Figure(size = (320, 320))
+		ax = Axis(fig[1, 1])
+		hidedecorations!(ax)
+		hidespines!(ax)
+		ax.xmin = -15.0; ax.xmax = 15.0
+		ax.ymin = -15.0; ax.ymax = 15.0
+		if background != "white"
+			bg = background == "#000088" ? (0.0, 0.0, 8.0 / 15.0, 1.0) : (1.0, 1.0, 1.0, 1.0)
+			hspan!(ax, [-15.0], [15.0]; color = bg)
+		end
+		for k in 1:length(t.xs)
+			lines!(ax, t.xs[k], t.ys[k]; color = t.cols[k], linewidth = 1.5)
+		end
+		fig
+	end
+	turtle_drawing_fast(f::Function; background::String = "white") =
+		turtle_drawing(f; background)
+end
 
 # ╔═╡ 0d7fb9e7-3437-4ff9-9de6-1f3f8a93dfff
 md"""## "_The Starry Night_" 
@@ -63,65 +153,6 @@ Piet Mondriaan (1913)"""
 # ╔═╡ f30d72d7-7894-4229-8f25-509195563097
 @bind GO_mondriaan CounterButton("Another one!")
 
-# ╔═╡ ab4d46eb-d441-47c3-b061-2611b2e44009
-function draw_mondriaan(rng, turtle, width, height)
-	#propbability that we make a mondriaan split
-	p = if width * height < 8
-		0
-	else
-		((width * height) / 900) ^ 0.5
-	end
-
-	if rand(rng) < p
-		#split into halves
-		
-		split = rand(rng, width * 0.1 : width * 0.9)
-
-		#draw split
-		forward!(turtle, split)
-		right!(turtle, 90)
-		color!(turtle, "black")
-		pendown!(turtle)
-		forward!(turtle, height)
-		penup!(turtle)
-
-		#fill in left of split
-		right!(turtle, 90)
-		forward!(turtle, split)
-		right!(turtle, 90)
-		draw_mondriaan(rng, turtle, height, split)
-		
-		#fill in right of split
-		forward!(turtle, height)
-		right!(turtle, 90)
-		forward!(turtle, width)
-		right!(turtle, 90)
-		draw_mondriaan(rng, turtle, height, width - split)
-		
-		#walk back
-		right!(turtle, 90)
-		forward!(turtle, width)
-		right!(turtle, 180)
-		
-	else
-		#draw a colored square
-		square_color = rand(rng, ("white", "white", "white", "red", "yellow", "blue"))
-		color!(turtle, square_color)
-		for x in (.4:.4:width - .4) ∪ [width - .4]
-			forward!(turtle, x)
-			right!(turtle, 90)
-			forward!(turtle, .2)
-			pendown!(turtle)
-			forward!(turtle, height - .4)
-			penup!(turtle)
-			right!(turtle, 180)
-			forward!(turtle, height - .2)
-			right!(turtle, 90)
-			backward!(turtle, x)
-		end
-	end
-end
-
 # ╔═╡ ff2294a6-2bd0-461c-bc38-02f157d86660
 md"""## "_Een Boom_"
 Luka van der Plas (2020)"""
@@ -144,7 +175,7 @@ function lindenmayer(turtle, depth, angle, tilt, base)
 		size = base * .5 ^ (depth * 0.5)
 
 		pendown!(turtle)
-		color!(turtle, "hsl($(depth * 30), 80%, 50%)")
+		color_hsl!(turtle, depth * 30, 0.8, 0.5)
 		forward!(turtle, size * 8)
 		right!(turtle, tilt / 2)
 		lindenmayer(turtle, depth + 1, angle, tilt, base)
@@ -176,20 +207,41 @@ fonsi (2020)
 
 # ╔═╡ c668c791-9c3b-4eed-babe-9a484a88b68e
 turtle_drawing() do t
-	
-	for i in 0:.1:10
-		right!(t, angle)
-		forward!(t, i)
+
+	let i = 0.0
+		while i <= 10.0
+			right!(t, angle)
+			forward!(t, i)
+			i += 0.1
+		end
 	end
-	
+
 end
 
 # ╔═╡ 897cc639-5ab6-48fe-bdba-19aa4e8bad15
-import Random
+# A tiny deterministic PRNG (xorshift64*) — pure Julia, so the random art
+# recomputes identically inside the wasm islands. Seeded by the buttons.
+begin
+	mutable struct ArtRNG
+		state::UInt64
+	end
+	ArtRNG(seed::Integer) = ArtRNG(UInt64(seed + 1) * 0x9e3779b97f4a7c15 + 0x2545f4914f6cdd1d)
+
+	function nextfloat!(r::ArtRNG)
+		s = r.state
+		s ⊻= s << 13
+		s ⊻= s >> 7
+		s ⊻= s << 17
+		r.state = s
+		Float64(s >> 11) / 9.007199254740992e15   # [0, 1)
+	end
+	rand_between!(r::ArtRNG, lo, hi) = Float64(lo) + nextfloat!(r) * (Float64(hi) - Float64(lo))
+	rand_choice!(r::ArtRNG, xs) = xs[1 + Int(floor(nextfloat!(r) * length(xs)))]
+end
 
 # ╔═╡ 70402e12-22c2-47fd-99be-aa6cd15ce2c3
 starry_night = turtle_drawing_fast(background = "#000088") do t
-	rng = Random.MersenneTwister(GO_gogh + 7)
+	rng = ArtRNG(GO_gogh + 7)
 	
 	star_count = 100
 	
@@ -198,9 +250,9 @@ starry_night = turtle_drawing_fast(background = "#000088") do t
 	for i in 1:star_count
 		#move
 		penup!(t)
-		random_angle = rand(rng) * 360
+		random_angle = nextfloat!(rng) * 360
 		right!(t, random_angle)
-		random_distance = rand(rng, 1:8)
+		random_distance = rand_between!(rng, 1.0, 8.0)
 		forward!(t, random_distance)
 		
 		#draw star
@@ -210,11 +262,78 @@ starry_night = turtle_drawing_fast(background = "#000088") do t
 	end
 end
 
+# ╔═╡ ab4d46eb-d441-47c3-b061-2611b2e44009
+function draw_mondriaan(rng, turtle, width, height)
+	#propbability that we make a mondriaan split
+	p = if width * height < 8
+		0
+	else
+		((width * height) / 900) ^ 0.5
+	end
+
+	if nextfloat!(rng) < p
+		#split into halves
+		
+		split = rand_between!(rng, width * 0.1, width * 0.9)
+
+		#draw split
+		forward!(turtle, split)
+		right!(turtle, 90)
+		color!(turtle, "black")
+		pendown!(turtle)
+		forward!(turtle, height)
+		penup!(turtle)
+
+		#fill in left of split
+		right!(turtle, 90)
+		forward!(turtle, split)
+		right!(turtle, 90)
+		draw_mondriaan(rng, turtle, height, split)
+		
+		#fill in right of split
+		forward!(turtle, height)
+		right!(turtle, 90)
+		forward!(turtle, width)
+		right!(turtle, 90)
+		draw_mondriaan(rng, turtle, height, width - split)
+		
+		#walk back
+		right!(turtle, 90)
+		forward!(turtle, width)
+		right!(turtle, 180)
+		
+	else
+		#draw a colored square
+		square_color = rand_choice!(rng, ("white", "white", "white", "red", "yellow", "blue"))
+		color!(turtle, square_color)
+		stripe_xs = Float64[]
+		let sx = 0.4
+			while sx <= width - 0.4
+				push!(stripe_xs, sx)
+				sx += 0.4
+			end
+		end
+		(isempty(stripe_xs) || stripe_xs[end] != width - 0.4) && push!(stripe_xs, width - 0.4)
+		for x in stripe_xs
+			forward!(turtle, x)
+			right!(turtle, 90)
+			forward!(turtle, .2)
+			pendown!(turtle)
+			forward!(turtle, height - .4)
+			penup!(turtle)
+			right!(turtle, 180)
+			forward!(turtle, height - .2)
+			right!(turtle, 90)
+			backward!(turtle, x)
+		end
+	end
+end
+
 # ╔═╡ d400d8d6-de2c-4886-86b9-ffd9e5f4e073
 # turtle_drawing_fast() is the same as turtle_drawing(), but it does not show a little turtle taking the individual steps
 
 mondriaan = turtle_drawing_fast() do t	
-	rng = Random.MersenneTwister(GO_mondriaan + 7)
+	rng = ArtRNG(GO_mondriaan + 7)
 	size = 30
 	
 	#go to top left corner
@@ -239,22 +358,24 @@ end
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-PlutoTurtles = "67697473-756c-6b61-6172-6b407461726b"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+WasmMakie = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+
+[sources]
+WasmMakie = {url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"}
 
 [compat]
-PlutoTurtles = "~1.0.3"
-PlutoUI = "~0.7.82"
+PlutoUI = "~0.7.83"
+WasmMakie = "~0.1.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.4"
+julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "9bc8b62ad9dbd74e8f9d8ff9b2a06dfb82afbd57"
+project_hash = "528a15ccaaea2a8f2cfb8a3b8ef12bd3bc6e7ee4"
 
 [[deps.AbstractPlutoDingetjes]]
 git-tree-sha1 = "6c3913f4e9bdf6ba3c08041a446fb1332716cbc2"
@@ -283,16 +404,6 @@ weakdeps = ["StyledStrings"]
     [deps.ColorTypes.extensions]
     StyledStringsExt = "StyledStrings"
 
-[[deps.Compat]]
-deps = ["TOML", "UUIDs"]
-git-tree-sha1 = "9d8a54ce4b17aa5bdce0ea5c34bc5e7c340d16ad"
-uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.18.1"
-weakdeps = ["Dates", "LinearAlgebra"]
-
-    [deps.Compat.extensions]
-    CompatLinearAlgebraExt = "LinearAlgebra"
-
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
@@ -313,10 +424,10 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 version = "1.11.0"
 
 [[deps.FixedPointNumbers]]
-deps = ["Statistics"]
-git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
+deps = ["Random", "Statistics"]
+git-tree-sha1 = "59af96b98217c6ef4ae0dfe065ac7c20831d1a84"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.5"
+version = "0.8.6"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -402,17 +513,11 @@ deps = ["Artifacts", "Libdl"]
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
 version = "3.5.4+0"
 
-[[deps.PlutoTurtles]]
-deps = ["AbstractPlutoDingetjes", "Compat", "HypertextLiteral", "InteractiveUtils", "Markdown", "PlutoUI"]
-git-tree-sha1 = "25233aa903ffd950b4e7f12d94700aae9fc81aaa"
-uuid = "67697473-756c-6b61-6172-6b407461726b"
-version = "1.0.3"
-
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Downloads", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "0ecd70a51c13e150266e76a865f10a64a7f178a3"
+git-tree-sha1 = "e189d0623e7ce9c37389bac17e80aac3b0302e75"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.82"
+version = "0.7.83"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -453,11 +558,6 @@ version = "1.11.1"
 uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 version = "1.11.0"
 
-[[deps.TOML]]
-deps = ["Dates"]
-uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-version = "1.0.3"
-
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -482,6 +582,14 @@ version = "1.11.0"
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
 
+[[deps.WasmMakie]]
+deps = ["Base64"]
+git-tree-sha1 = "de6c9a45585e892ac96fa7ad9fd3b1d3d61277ec"
+repo-rev = "main"
+repo-url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"
+uuid = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
+version = "0.1.0"
+
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
@@ -501,6 +609,7 @@ version = "1.64.0+1"
 # ╔═╡ Cell order:
 # ╟─86e25a9c-b877-45cb-8a57-4643dd1fc266
 # ╠═1ff23021-4eb3-458d-a07e-0c5083eb4c4f
+# ╟─aa000001-7474-4c1e-9000-000000000001
 # ╟─0d7fb9e7-3437-4ff9-9de6-1f3f8a93dfff
 # ╟─abe23881-0354-4068-8115-451f7b3307c7
 # ╟─70402e12-22c2-47fd-99be-aa6cd15ce2c3
