@@ -285,22 +285,25 @@ whose canvas2d import calls the shim satisfies against a live canvas.
 Returns `(; render_fn, wm, w, h)` or `nothing` (not a figure cell).
 """
 function _canvas_probe_fn(sandbox::Module, p::CellPlan, initial_values, arg_tuple)
+    _dbg = get(ENV, "PI_DBG_CANVAS", "") == "1"
+    _say(s) = _dbg && println(stderr, "CANVASDBG[", first(string(p.cell_id), 8), "] ", s)
     fe = p.fn_expr
-    (fe isa Expr && fe.head === :function && length(fe.args) == 2) || return nothing
+    (fe isa Expr && fe.head === :function && length(fe.args) == 2) || (_say("gate1 fn_expr shape"); return nothing)
     body = fe.args[2]
-    (body isa Expr && body.head === :block && !isempty(body.args)) || return nothing
+    (body isa Expr && body.head === :block && !isempty(body.args)) || (_say("gate2 body shape"); return nothing)
     ret = body.args[end]
-    (ret isa Expr && ret.head === :return && length(ret.args) == 1) || return nothing
+    (ret isa Expr && ret.head === :return && length(ret.args) == 1) || (_say("gate3 return shape"); return nothing)
     call = ret.args[1]
     (call isa Expr && call.head === :call && length(call.args) == 2 &&
-        call.args[1] === _html_body) || return nothing
+        call.args[1] === _html_body) || (_say("gate4 html_body call: " * first(string(ret), 80)); return nothing)
     val_sym = call.args[2]
 
     raw_expr = Expr(:function, fe.args[1],
                     Expr(:block, body.args[1:end-1]..., :(return $val_sym)))
     vf = try
         Core.eval(sandbox, raw_expr)
-    catch
+    catch e
+        _say("gate5 raw eval: " * first(sprint(showerror, e), 120))
         return nothing
     end
     rt = try
@@ -308,13 +311,24 @@ function _canvas_probe_fn(sandbox::Module, p::CellPlan, initial_values, arg_tupl
     catch
         Any
     end
-    (rt isa DataType && nameof(rt) === :Figure &&
-        string(nameof(parentmodule(rt))) == "WasmMakie") || return nothing
-    wm = parentmodule(rt)
+    # C-P11: inference goes abstract for branchy cells (ternaries over package
+    # calls etc.) and the probe used to miss real Figures — falling through to
+    # the string body whose _html_body(::Figure) fallback is a designed trap.
+    # The RUNTIME value at the initial bond values is the truth (we need it
+    # for the canvas dims anyway).
+    fig0 = try
+        Base.invokelatest(vf, initial_values...)
+    catch e
+        _say("probe invoke threw: " * first(sprint(showerror, e), 200))
+        nothing
+    end
+    vt = fig0 === nothing ? rt : typeof(fig0)
+    (vt isa DataType && nameof(vt) === :Figure &&
+        string(nameof(parentmodule(vt))) == "WasmMakie") || (_say("gate6 value type: vt=" * string(vt) * " rt=" * string(rt)); return nothing)
+    wm = parentmodule(vt)
 
     # native dims at initial bond values (the shim sizes the <canvas>)
     w, h = try
-        fig0 = Base.invokelatest(vf, initial_values...)
         (Int64(round(Float64(getfield(fig0, :width)))),
          Int64(round(Float64(getfield(fig0, :height)))))
     catch
