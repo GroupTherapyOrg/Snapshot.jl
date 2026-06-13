@@ -8,18 +8,18 @@ the rest decorated). Canvas (WasmMakie figure) cells ship via E-004.
 
 | notebook | island | partial | fallback | groups | s |
 |---|---|---|---|---|---|
-| Interactivity with HTML.jl | 3 | 1 | 2 | 6 | 70.2 |
-| Basic mathematics.jl | 0 | 0 | 1 | 1 | 14.9 |
-| CollatzConjecture.jl | 0 | 2 | 4 | 6 | 286.5 |
-| newton.jl | 0 | 1 | 4 | 5 | 483.2 |
-| PlutoUI.jl.jl | 19 | 2 | 5 | 26 | 130.9 |
-| fractals.jl | 0 | 1 | 4 | 5 | 42.4 |
-| convolution_1d.jl | 0 | 1 | 0 | 1 | 138.1 |
-| convolution_2d.jl | 1 | 0 | 3 | 4 | 158.8 |
-| images.jl | 0 | 1 | 4 | 5 | 74.2 |
-| dither.jl | 0 | 0 | 1 | 1 | 22.7 |
-| turtles-art.jl | 0 | 0 | 4 | 4 | 8.8 |
-| Titration.jl | 0 | 0 | 1 | 1 | 51.8 |
+| Interactivity with HTML.jl | 3 | 1 | 2 | 6 | 60.9 |
+| Basic mathematics.jl | 0 | 0 | 1 | 1 | 12.7 |
+| CollatzConjecture.jl | 0 | 2 | 4 | 6 | 163.1 |
+| newton.jl | 0 | 1 | 4 | 5 | 428.6 |
+| PlutoUI.jl.jl | 19 | 2 | 5 | 26 | 127.3 |
+| fractals.jl | 0 | 1 | 4 | 5 | 150.0 |
+| convolution_1d.jl | 0 | 1 | 0 | 1 | 129.2 |
+| convolution_2d.jl | 1 | 0 | 3 | 4 | 141.2 |
+| images.jl | 0 | 1 | 4 | 5 | 91.8 |
+| dither.jl | 0 | 0 | 1 | 1 | 26.5 |
+| turtles-art.jl | 0 | 0 | 4 | 4 | 9.0 |
+| Titration.jl | 0 | 0 | 1 | 1 | 59.1 |
 
 ## Degradation reasons (deduped per notebook)
 
@@ -50,177 +50,91 @@ emitted code at the failing offset:
 
 **CollatzConjecture.jl**
 - dependent cell re-defines a bond (bond-defines-bond) — unsupported in v0 ×14
-- WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 1 failed to validate
-
-Caused by:
-    0: type mismatch: expected i64, found i32 (at offset 0x111c)
-
-
-emitted code at the failing offset:
-(;@1105  ;)                                                                                    local.set 28
-(;@1107  ;)                                                                                    br 0 (;@40;)
-(;@1109  ;)                                                                                  end
-(;@110a  ;)                                                                                  local.get 28
-(;@110c  ;)                                                                                  i32.eqz
-(;@110d  ;)                                                                                  br_if 0 (;@39;)
-(;@110f  ;)                                                                                  local.get 95
-(;@1111  ;)                                                                                  local.get 96
-(;@1113  ;)                                                                                  local.get 97
-(;@1115  ;)                         
-- sandbox eval failed: syntax: type of "record" declared in inner scope ×6
-- unsupported output mime image/svg+xml in v0 (text/plain & md-text/html only) ×6
-- WasmTarget compile failed: WasmCompileError: cannot compile `#35` at none:0
+- canvas render compile failed: WasmCompileError: cannot compile `Method`
+  unsupported type: cyclic struct constant of type Method (object graph references itself)
+  → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap. ×9
+- canvas render compile failed: WasmCompileError: cannot compile `#77` at none:0
   unsupported operation (a stub here would compute a wrong result): objectid / identity-hash (jl_object_id)
   → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap.
+- sandbox eval failed: syntax: type of "record" declared in inner scope ×6
+- unsupported output mime image/svg+xml in v0 (text/plain & md-text/html only) ×6
+- no cells survived initial-body verification ×4
+- WasmTarget compile failed: WasmCompileError: cannot compile `Method`
+  unsupported type: cyclic struct constant of type Method (object graph references itself)
+  → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap. ×8
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 1 failed to validate
-
-Caused by:
-    0: type mismatch: expected i64 but nothing on stack (at offset 0xed7)
-
-
-emitted code at the failing offset:
-(;@ec2   ;)                      i32.eq
-(;@ec3   ;)                    else
-(;@ec4   ;)                      i32.const 0
-(;@ec6   ;)                    end
-(;@ec7   ;)                    local.set 177
-(;@eca   ;)                    local.get 177
-(;@ecd   ;)                    i32.eqz
-(;@ece   ;)                    br_if 0 (;@8;)
-(;@ed0   ;)                    ref.null 22
-(;@ed2   ;)                    local.set 19
-(;@ed4   ;)                    br 1 (;@7;)
-(;@ed6   ;)                  end
-(;@ed7   ;)                  i64.mul
-(;@ed8   ;)                  drop
-(;@ed9   ;)                  ref.null 22
-- WasmTarget compile failed: WasmCompileError: cannot compile `setindex!` at dict.jl:369
-  unsupported operation (a stub here would compute a wrong result): objectid / identity-hash (jl_object_id)
-  → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap. ×3
-- module assembly (compile_multi) failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 8 failed to validate
 
 Caused by:
-    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x754)
+    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x4f6)
 
 
 emitted code at the failing offset:
-(;@6a3   ;)  (export " ×3
-- WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 1 failed to validate
-
-Caused by:
-    0: type mismatch: expected i64, found i32 (at offset 0x1097)
-
-
-emitted code at the failing offset:
-(;@1080  ;)                                                                                    local.set 22
-(;@1082  ;)                                                                                    br 0 (;@40;)
-(;@1084  ;)                                                                                  end
-(;@1085  ;)                                                                                  local.get 22
-(;@1087  ;)                                                                                  i32.eqz
-(;@1088  ;)                                                                                  br_if 0 (;@39;)
-(;@108a  ;)                                                                                  local.get 89
-(;@108c  ;)                                                                                  local.get 90
-(;@108e  ;)                                                                                  local.get 91
-(;@1090  ;)                         
-- WasmTarget compile failed: WasmCompileError: cannot compile `#26` at none:0
+(;@4ab   ;)  (global (;84;) (mut (ref 21)) struct.new_default 21)
+(;@4b2   ;)  (global (;85;) (mut (ref 23)) struct.new_default 23)
+(;@4b9   ;)  (global (;86;) (mut (ref 23)) struct.new_default 23)
+(;@4c3   ;)  (export "#45" (func $"#func9 #45"))
+(;@4c9   ;)  (export "sym_in" (func $sym_in))
+(;@4d2   ;)  (export "sym_in_1" (func $sym_in_1))
+(;@4df   ;)  (start 12)
+(;@4e8   ;)  (func (;8;) (type 13) (param (ref null 12)) (result (ref extern))
+(;@4e9   ;)    (local i32 (ref null 6) i32)
+(;@4f0   ;)    local.get 0
+(;@4f2   ;)    array.len
+(;@4f4   ;)    local.tee 1
+(;@4f6   ;)    array.new_default 6
+(;@4f9   ;)    local.set 2
+(;@4fb   ;)    i32.const 0
+- canvas render compile failed: WasmCompileError: cannot compile `#68` at none:0
   unsupported operation (a stub here would compute a wrong result): objectid / identity-hash (jl_object_id)
   → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap. ×2
-- WasmTarget compile failed: StackOverflowError: ×8
-- module assembly (compile_multi) failed: WasmValidationError: wasm-tools rejected the emitted compiled module
+- wasm call failed: [object WebAssembly.Exception] ×4
+- WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 8 failed to validate
 
 Caused by:
-    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x6f2)
+    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x4e3)
 
 
 emitted code at the failing offset:
-(;@650   ;)  (export " ×3
+(;@498   ;)  (global (;82;) (mut (ref 20)) struct.new_default 20)
+(;@49f   ;)  (global (;83;) (mut (ref 22)) struct.new_default 22)
+(;@4a6   ;)  (global (;84;) (mut (ref 22)) struct.new_default 22)
+(;@4b0   ;)  (export "#45" (func $"#func9 #45"))
+(;@4b6   ;)  (export "sym_in" (func $sym_in))
+(;@4bf   ;)  (export "sym_in_1" (func $sym_in_1))
+(;@4cc   ;)  (start 12)
+(;@4d5   ;)  (func (;8;) (type 13) (param (ref null 12)) (result (ref extern))
+(;@4d6   ;)    (local i32 (ref null 6) i32)
+(;@4dd   ;)    local.get 0
+(;@4df   ;)    array.len
+(;@4e1   ;)    local.tee 1
+(;@4e3   ;)    array.new_default 6
+(;@4e6   ;)    local.set 2
+(;@4e8   ;)    i32.const 0
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 1 failed to validate
-
-Caused by:
-    0: type mismatch: expected i64 but nothing on stack (at offset 0x1074)
-
-
-emitted code at the failing offset:
-(;@105f  ;)                      i32.eq
-(;@1060  ;)                    else
-(;@1061  ;)                      i32.const 0
-(;@1063  ;)                    end
-(;@1064  ;)                    local.set 215
-(;@1067  ;)                    local.get 215
-(;@106a  ;)                    i32.eqz
-(;@106b  ;)                    br_if 0 (;@8;)
-(;@106d  ;)                    ref.null 19
-(;@106f  ;)                    local.set 24
-(;@1071  ;)                    br 1 (;@7;)
-(;@1073  ;)                  end
-(;@1074  ;)                  i64.mul
-(;@1075  ;)                  drop
-(;@1076  ;)                  ref.null 19
-- module assembly (compile_multi) failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 8 failed to validate
 
 Caused by:
-    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x6d2)
+    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x4d2)
 
 
 emitted code at the failing offset:
-(;@63e   ;)  (export " ×3
-- WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 1 failed to validate
-
-Caused by:
-    0: type mismatch: expected i64, found i32 (at offset 0x107a)
-
-
-emitted code at the failing offset:
-(;@1063  ;)                                                                                    local.set 20
-(;@1065  ;)                                                                                    br 0 (;@40;)
-(;@1067  ;)                                                                                  end
-(;@1068  ;)                                                                                  local.get 20
-(;@106a  ;)                                                                                  i32.eqz
-(;@106b  ;)                                                                                  br_if 0 (;@39;)
-(;@106d  ;)                                                                                  local.get 87
-(;@106f  ;)                                                                                  local.get 88
-(;@1071  ;)                                                                                  local.get 89
-(;@1073  ;)                         
-- module assembly (compile_multi) failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 8 failed to validate
-
-Caused by:
-    0: expected array type at index 6, found (func (param (ref null (id 6)) i32 i32) (result (ref extern))) (at offset 0x6c9)
-
-
-emitted code at the failing offset:
-(;@63e   ;)  (export " ×3
-- WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 1 failed to validate
-
-Caused by:
-    0: type mismatch: expected i64 but nothing on stack (at offset 0x106b)
-
-
-emitted code at the failing offset:
-(;@1056  ;)                      i32.eq
-(;@1057  ;)                    else
-(;@1058  ;)                      i32.const 0
-(;@105a  ;)                    end
-(;@105b  ;)                    local.set 215
-(;@105e  ;)                    local.get 215
-(;@1061  ;)                    i32.eqz
-(;@1062  ;)                    br_if 0 (;@8;)
-(;@1064  ;)                    ref.null 19
-(;@1066  ;)                    local.set 24
-(;@1068  ;)                    br 1 (;@7;)
-(;@106a  ;)                  end
-(;@106b  ;)                  i64.mul
-(;@106c  ;)                  drop
-(;@106d  ;)                  ref.null 19
+(;@487   ;)  (global (;81;) (mut (ref 20)) struct.new_default 20)
+(;@48e   ;)  (global (;82;) (mut (ref 22)) struct.new_default 22)
+(;@495   ;)  (global (;83;) (mut (ref 22)) struct.new_default 22)
+(;@49f   ;)  (export "#45" (func $"#func9 #45"))
+(;@4a5   ;)  (export "sym_in" (func $sym_in))
+(;@4ae   ;)  (export "sym_in_1" (func $sym_in_1))
+(;@4bb   ;)  (start 12)
+(;@4c4   ;)  (func (;8;) (type 13) (param (ref null 12)) (result (ref extern))
+(;@4c5   ;)    (local i32 (ref null 6) i32)
+(;@4cc   ;)    local.get 0
+(;@4ce   ;)    array.len
+(;@4d0   ;)    local.tee 1
+(;@4d2   ;)    array.new_default 6
+(;@4d5   ;)    local.set 2
+(;@4d7   ;)    i32.const 0 ×2
 
 **newton.jl**
 - no cells survived initial-body verification
@@ -237,18 +151,15 @@ emitted code at the failing offset:
 **PlutoUI.jl.jl**
 - Node verification failed globally: node failed: [object WebAssembly.Exception]
  ×4
-- no cells survived initial-body verification
-- wasm call failed: [object WebAssembly.Exception] ×2
+- no cells survived initial-body verification ×2
+- wasm call failed: [object WebAssembly.Exception] ×3
 - extraction not ok ×2
 - bond my_functions value type Vector{Function} is outside the bridge universe ×2
-- no cells compiled
 - tree body: tree leaf kind fields unsupported
-- WasmTarget compile failed: Unsupported function call: Main.var"##PlutoIslandCompile#863".DownloadButton (type: GlobalRef)
-- WasmTarget compile failed: Unsupported function call: Main.var"##PlutoIslandCompile#874".Resource (type: GlobalRef)
+- WasmTarget compile failed: TypeError: in <:, expected Type, got Vararg{SubString{String}}
 
 **fractals.jl**
 - no cells survived initial-body verification ×3
-- initial body mismatch: wasm "" != original "0.9 + 0.4im"
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 1 failed to validate
 
@@ -270,6 +181,7 @@ emitted code at the failing offset:
 (;@36d   ;)                                                    struct.new 1
 (;@370   ;)                                                    local.get 0
 (;@372   ;)                                                   
+- initial body mismatch: wasm "" != original "0.9 + 0.4im"
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 1 failed to validate
 
@@ -291,18 +203,8 @@ emitted code at the failing offset:
 (;@3df   ;)                                                        struct.new 1
 (;@3e2   ;)                                                        local.get 0
 (;@3e4   ;)   
-- module assembly (compile_multi) failed: WasmValidationError: wasm-tools rejected the emitted compiled module
-error: func 14 failed to validate
-
-Caused by:
-    0: type mismatch: expected (ref null $type), found structref (at offset 0x806)
-
-
-emitted code at the failing offset:
-(;@7ef   ;)    struct.new 15
-(;@7f2   ;)    local.set 25
-(;@7f4  ×2
-- WasmTarget compile failed: Unsupported function call: Main.var"##PlutoIslandCompile#947".red (type: GlobalRef)
+- Node verification failed globally: node failed: WebAssembly.compile(): Compiling function #80:"_mk_ColorTypes_RGB_FixedPointNumbers_N0f8_" failed: struct.new[1] expected type (ref null 30), found local.get of type structref @+21668
+ ×3
 - wasm call failed: unreachable ×3
 - wasm call failed: [object WebAssembly.Exception] ×2
 
@@ -310,79 +212,79 @@ emitted code at the failing offset:
 - WasmTarget compile failed: WasmCompileError: cannot compile `#5` at none:0
   unsupported operation (a stub here would compute a wrong result): objectid / identity-hash (jl_object_id)
   → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap.
+- wasm call failed: dereferencing a null pointer ×2
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 1 failed to validate
 
 Caused by:
-    0: type mismatch: expected (ref null $type), found i32 (at offset 0x54c)
+    0: type mismatch: expected (ref null $type), found i32 (at offset 0x54d)
 
 
 emitted code at the failing offset:
-(;@533   ;)                      i32.const 1
-(;@535   ;)                      local.set 17
-(;@537   ;)                      br 0 (;@9;)
-(;@539   ;)                    end
-(;@53a   ;)                    local.get 17
-(;@53c   ;)                    i32.eqz
-(;@53d   ;)                    br_if 0 (;@8;)
-(;@53f   ;)                    i32.const 1
-(;@541   ;)                    local.set 19
-(;@543   ;)                    br 1 (;@7;)
-(;@545   ;)                  end
-(;@546   ;)                  i32.const -257977718
-(;@54c   ;)                  local.tee 111
-(;@54e   ;)                  array.len
-(;@550   ;)                  local.set 113
-- wasm call failed: dereferencing a null pointer ×2
+(;@534   ;)                      i32.const 1
+(;@536   ;)                      local.set 17
+(;@538   ;)                      br 0 (;@9;)
+(;@53a   ;)                    end
+(;@53b   ;)                    local.get 17
+(;@53d   ;)                    i32.eqz
+(;@53e   ;)                    br_if 0 (;@8;)
+(;@540   ;)                    i32.const 1
+(;@542   ;)                    local.set 19
+(;@544   ;)                    br 1 (;@7;)
+(;@546   ;)                  end
+(;@547   ;)                  i32.const -257977718
+(;@54d   ;)                  local.tee 111
+(;@54f   ;)                  array.len
+(;@551   ;)                  local.set 113
 - wasm call failed: [object WebAssembly.Exception]
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 9 failed to validate
 
 Caused by:
-    0: type mismatch: expected (ref null $type), found i32 (at offset 0x1497)
+    0: type mismatch: expected (ref null $type), found i32 (at offset 0x392d)
 
 
 emitted code at the failing offset:
-(;@147e  ;)                                                                                                    i32.const 1
-(;@1480  ;)                                                                                                    local.set 17
-(;@1482  ;)                                                                                                    br 0 (;@264;)
-(;@1484  ;)                                                                                                    end
-(;@1485  ;)                                                                                                    local.get 17
-(;@1487  ;)                                                                                                    i32.eqz
-(;@1488  ;)                                                                                                    br_if 0 (;@263;)
-(;@148a  ;)                                                                                                    i
+(;@3914  ;)                                                                                                    i32.const 1
+(;@3916  ;)                                                                                                    local.set 84
+(;@3918  ;)                                                                                                    br 0 (;@98;)
+(;@391a  ;)                                                                                                    end
+(;@391b  ;)                                                                                                    local.get 84
+(;@391d  ;)                                                                                                    i32.eqz
+(;@391e  ;)                                                                                                    br_if 0 (;@97;)
+(;@3920  ;)                                                                                                    i32
 - WasmTarget compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 1 failed to validate
 
 Caused by:
-    0: type mismatch: expected (ref null $type), found i32 (at offset 0x6678)
+    0: type mismatch: expected (ref null $type), found i32 (at offset 0x416b)
 
 
 emitted code at the failing offset:
-(;@665f  ;)                                                                                                    i32.const 1
-(;@6661  ;)                                                                                                    local.set 105
-(;@6663  ;)                                                                                                    br 0 (;@364;)
-(;@6665  ;)                                                                                                    end
-(;@6666  ;)                                                                                                    local.get 105
-(;@6668  ;)                                                                                                    i32.eqz
-(;@6669  ;)                                                                                                    br_if 0 (;@363;)
-(;@666b  ;)                                                                                                   
+(;@4152  ;)                                                                                                    i32.const 1
+(;@4154  ;)                                                                                                    local.set 38
+(;@4156  ;)                                                                                                    br 0 (;@530;)
+(;@4158  ;)                                                                                                    end
+(;@4159  ;)                                                                                                    local.get 38
+(;@415b  ;)                                                                                                    i32.eqz
+(;@415c  ;)                                                                                                    br_if 0 (;@529;)
+(;@415e  ;)                                                                                                    i
 - canvas render compile failed: WasmValidationError: wasm-tools rejected the emitted compiled module
 error: func 1 failed to validate
 
 Caused by:
-    0: type mismatch: expected (ref null $type), found i32 (at offset 0x723f)
+    0: type mismatch: expected (ref null $type), found i32 (at offset 0x4d39)
 
 
 emitted code at the failing offset:
-(;@7226  ;)                                                                                                    i32.const 1
-(;@7228  ;)                                                                                                    local.set 105
-(;@722a  ;)                                                                                                    br 0 (;@364;)
-(;@722c  ;)                                                                                                    end
-(;@722d  ;)                                                                                                    local.get 105
-(;@722f  ;)                                                                                                    i32.eqz
-(;@7230  ;)                                                                                                    br_if 0 (;@363;)
-(;@7232  ;)                                                                                                   
+(;@4d20  ;)                                                                                                    i32.const 1
+(;@4d22  ;)                                                                                                    local.set 38
+(;@4d24  ;)                                                                                                    br 0 (;@530;)
+(;@4d26  ;)                                                                                                    end
+(;@4d27  ;)                                                                                                    local.get 38
+(;@4d29  ;)                                                                                                    i32.eqz
+(;@4d2a  ;)                                                                                                    br_if 0 (;@529;)
+(;@4d2c  ;)                                                                                                    i
 
 **convolution_2d.jl**
 - extraction not ok ×24
@@ -394,7 +296,9 @@ emitted code at the failing offset:
 - extraction not ok ×2
 - bond myface1 value type Matrix{ColorTypes.RGB{FixedPointNumbers.N0f8}} is outside the bridge universe ×2
 - no cells compiled ×2
-- WasmTarget compile failed: StackOverflowError:
+- WasmTarget compile failed: WasmCompileError: cannot compile `Method`
+  unsupported type: cyclic struct constant of type Method (object graph references itself)
+  → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap.
 - no cells survived initial-body verification
 - wasm call failed: unreachable
 
@@ -409,19 +313,24 @@ emitted code at the failing offset:
 
 **turtles-art.jl**
 - no cells compiled ×4
-- sandbox eval failed: UndefVarError: `#1665#Turtle` not defined in `Main.var"##PlutoIslandCompile#1231"`
+- sandbox eval failed: UndefVarError: `#1680#ArtRNG` not defined in `Main.var"##PlutoIslandCompile#1235"`
 Suggestion: check for spelling errors or missing imports.
-- sandbox eval failed: UndefVarError: `#1719#Turtle` not defined in `Main.var"##PlutoIslandCompile#1232"`
+- sandbox eval failed: UndefVarError: `#1734#ArtRNG` not defined in `Main.var"##PlutoIslandCompile#1236"`
 Suggestion: check for spelling errors or missing imports.
-- sandbox eval failed: UndefVarError: `#1772#Turtle` not defined in `Main.var"##PlutoIslandCompile#1233"`
+- sandbox eval failed: UndefVarError: `#1787#Turtle` not defined in `Main.var"##PlutoIslandCompile#1237"`
 Suggestion: check for spelling errors or missing imports.
-- sandbox eval failed: UndefVarError: `#1815#Turtle` not defined in `Main.var"##PlutoIslandCompile#1234"`
+- sandbox eval failed: UndefVarError: `#1830#Turtle` not defined in `Main.var"##PlutoIslandCompile#1238"`
 Suggestion: check for spelling errors or missing imports.
 
 **Titration.jl**
 - no cells compiled
-- WasmTarget compile failed: StackOverflowError: ×4
+- WasmTarget compile failed: WasmCompileError: cannot compile `Method`
+  unsupported type: cyclic struct constant of type Method (object graph references itself)
+  → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap. ×3
 - dependent cell re-defines a bond (bond-defines-bond) — unsupported in v0
+- canvas render compile failed: WasmCompileError: cannot compile `Method`
+  unsupported type: cyclic struct constant of type Method (object graph references itself)
+  → pass `strict=false` to emit a runtime-trap stub here instead, or file this construct as a coverage gap.
 - sandbox eval failed: syntax: multiple type declarations for "a"
 - unsupported output mime application/vnd.pluto.table+object in v0 (text/plain & md-text/html only) ×2
 
