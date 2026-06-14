@@ -1091,7 +1091,6 @@ version = "0.2.2"
 [[deps.WasmMakie]]
 deps = ["Base64"]
 git-tree-sha1 = "de6c9a45585e892ac96fa7ad9fd3b1d3d61277ec"
-repo-rev = "main"
 repo-url = "https://github.com/GroupTherapyOrg/WasmMakie.jl"
 uuid = "782397d3-b2e0-4093-86f4-3070b4a5c6bd"
 version = "0.1.0"

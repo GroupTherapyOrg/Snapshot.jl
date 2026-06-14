@@ -4,3 +4,6 @@ Manifest.toml
 docs/dist/
 docs/Manifest.toml
 docs/node_modules/
+
+# Pluto auto-backup files (e.g. "notebook backup 1.jl")
+*backup [0-9]*.jl

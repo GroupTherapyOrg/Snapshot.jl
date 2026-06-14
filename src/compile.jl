@@ -140,6 +140,13 @@ function compile_group(
                 f = cv.render_fn
                 canvas_desc = (w=cv.w, h=cv.h, wm=cv.wm)
             end
+        elseif p.body_kind === :string && p.mime == "image/png"
+            # C-P1: matrix-of-color cells render through the island_img surface
+            iv = _image_probe_fn(sandbox, p, g.initial_values, arg_tuple)
+            if iv !== nothing
+                f = iv.render_fn
+                canvas_desc = (w=iv.w, h=iv.h, wm=:island_img)
+            end
         end
 
         try
@@ -202,7 +209,9 @@ function compile_group(
                 WasmTarget.NumType[WasmTarget.F64, WasmTarget.F64],
                 WasmTarget.NumType[WasmTarget.F64])
             import_stubs = Any[]
-            for sp in Base.invokelatest(getfield(canvas_wm, :import_specs))
+            _specs = canvas_wm === :island_img ? IMG_IMPORT_SPECS :
+                     Base.invokelatest(getfield(canvas_wm, :import_specs))
+            for sp in _specs
                 params = WasmTarget.NumType[q === :F64 ? WasmTarget.F64 : WasmTarget.I64 for q in sp.params]
                 ret = WasmTarget.NumType[sp.ret === :F64 ? WasmTarget.F64 : WasmTarget.I64]
                 idx = WasmTarget.add_import!(cmod, sp.mod, sp.name, params, ret)
@@ -225,8 +234,10 @@ function compile_group(
         ok=true, cell_failures=failures, arg_descs,
         transforms=isempty(g.transforms) ? Any[nothing for _ in g.bond_names] : g.transforms,
         canvas_glue=canvas_wm === nothing ? nothing :
+            canvas_wm === :island_img ? IMG_GLUE_JS :
             String(Base.invokelatest(getfield(canvas_wm, :js_glue))),
         canvas_fonts=canvas_wm === nothing ? nothing :
+            canvas_wm === :island_img ? "[]" :
             String(Base.invokelatest(getfield(canvas_wm, :font_faces_json))))
 
     if verify_node && initial_bodies !== nothing

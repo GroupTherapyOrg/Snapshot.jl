@@ -86,6 +86,180 @@ function _is_preamble_expr(ex)
     false
 end
 
+"Is this a NAMED top-level function/method definition — `function f(…) … end`,
+short-form `f(x) = …`, or with a `where`? (Anonymous `(x)->…` and plain
+assignments `x = …` are NOT.) Such definitions belong at top level: inlined
+into a recompute-function body Julia lowers them to a gensym local closure
+(`#NNNN#f`) that shadows the global (constructors self-recurse / `UndefVar`).
+They are hoisted to the preamble UNLESS they close over a bond (see
+`_split_preamble`)."
+function _is_funcdef_expr(ex)
+    ex isa Expr || return false
+    ex.head === :function && return true
+    if ex.head === :(=)
+        lhs = ex.args[1]
+        while lhs isa Expr && lhs.head === :where
+            lhs = lhs.args[1]
+        end
+        return lhs isa Expr && lhs.head === :call
+    end
+    false
+end
+
+"Does `ex` reference any symbol in `names` (recursive)? Used to keep
+bond-closing definitions in the body, where the bond is a parameter."
+function _refs_any(ex, names::Set{Symbol})
+    isempty(names) && return false
+    ex isa Symbol && return ex in names
+    ex isa Expr || return false
+    for a in ex.args
+        _refs_any(a, names) && return true
+    end
+    false
+end
+
+"Parameter names a function-def signature binds (they SHADOW outer names, so a
+def with `f(n) = …` does NOT close over a bond named `n`)."
+function _funcdef_params(def::Expr)
+    sig = def.args[1]
+    while sig isa Expr && sig.head === :where
+        sig = sig.args[1]
+    end
+    params = Symbol[]
+    sig isa Expr && sig.head === :call || return params
+    for a in sig.args[2:end]
+        _collect_param_names!(params, a)
+    end
+    params
+end
+function _collect_param_names!(acc, a)
+    if a isa Symbol
+        push!(acc, a)
+    elseif a isa Expr
+        if a.head === :(::)
+            a.args[1] isa Symbol && push!(acc, a.args[1])
+        elseif a.head in (:kw, :(...))
+            _collect_param_names!(acc, a.args[1])
+        elseif a.head === :parameters
+            for p in a.args; _collect_param_names!(acc, p); end
+        end
+    end
+end
+
+"A named def hoists unless it references a bond it does NOT itself shadow as a
+parameter (a `f(n)=…` with bond `n` is fine to hoist — `n` is the param)."
+_funcdef_hoistable(def::Expr, bonds::Set{Symbol}) =
+    !_refs_any(def, setdiff(bonds, Set(_funcdef_params(def))))
+
+"Rewrite a type-annotated top-level assignment `x::T = v` → `x = convert(T, v)`.
+Top-level `x::T = v` is legal global-binding syntax in Pluto, but once inlined
+into a recompute-function body `x` is a local: the annotation is then either
+illegal (the name is used outside the block — \"type of `x` declared in inner
+scope\") or collides with another cell's/branch's decl (\"multiple type
+declarations for `x`\"). `x::T = v` binds `x` to `convert(T, v)` — so the
+`convert` form preserves the value AND its type (e.g. `n::Int64 = 100.0` stays
+`Int64(100)`, not `Float64`) without a local type declaration. Leaves
+everything else untouched."
+function _strip_toplevel_type_annot(ex)
+    ex isa Expr || return ex
+    if ex.head === :(=) && ex.args[1] isa Expr &&
+       ex.args[1].head === :(::) && ex.args[1].args[1] isa Symbol
+        name, T, v = ex.args[1].args[1], ex.args[1].args[2], ex.args[2]
+        return Expr(:(=), name, Expr(:call, :convert, T, v))
+    end
+    # Recurse into SAME-SCOPE control flow so branch-local `x::T = v` (e.g. a
+    # value set with the same type across `if`/`elseif` arms) is caught too —
+    # once inlined those arms share the recompute fn's scope and collide. Do
+    # NOT descend into new scopes (`let`/`for`/`while`/`function`/`->`): a typed
+    # local there is genuinely isolated and legal.
+    if ex.head in (:if, :elseif, :block, :begin, :&&, :||, :try)
+        return Expr(ex.head, map(_strip_toplevel_type_annot, ex.args)...)
+    end
+    ex
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Export-time partial evaluation of bond-INDEPENDENT upstream
+#
+# The recompute fn inlines the upstream closure as CODE. But an upstream cell
+# that does NOT depend on the group's bonds produces the SAME value for every
+# bond setting — so its producer code is dead weight that still has to compile.
+# When that producer pulls heavy library machinery (objectid/Method/show via
+# symbolic diff, image loads, Dicts), inlining it sinks the whole group. If the
+# produced VALUE is a simple constant, we evaluate it once in the workspace and
+# bake the literal instead — the producer code is never compiled. Non-bakeable
+# values (functions, matrices, structs, huge arrays) fall back to inlining, so
+# this is strictly an optimization: it can only remove a compile burden, never
+# add one.
+# ─────────────────────────────────────────────────────────────────────────────
+
+"Can `v` be baked into the recompute fn as a literal constant? Conservative:
+scalars / strings / (named)tuples of those. Excludes functions, matrices,
+structs, and VECTORS — a baked vector constant adds an array type to the module
+and surfaces a WasmTarget `compile_multi` type-index collision (array vs bridge
+accessor func types — gap recorded; conv1d/Collatz). Re-allow vectors once that
+WT bug is fixed."
+function _bakeable_const(v)
+    v isa Union{Bool,Int8,Int16,Int32,Int64,UInt8,UInt16,UInt32,UInt64,
+                Float16,Float32,Float64,Char} && return true
+    v isa AbstractString && return true
+    v isa Tuple && return all(_bakeable_const, v)
+    v isa NamedTuple && return all(_bakeable_const, values(v))
+    false
+end
+
+"If every global this bond-independent upstream cell defines is a bakeable
+constant, return `[var = <literal>, …]` (the producer code is then dropped);
+otherwise `nothing` → inline the producer as before. Bails on functions so a
+body-defined closure is never lost."
+function _try_bake_cell(session::ServerSession, notebook::Notebook, up::Cell, topology)
+    defs = collect(topology.nodes[up].definitions)
+    isempty(defs) && return nothing
+    baked = Any[]
+    for v in defs
+        val = try
+            Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook), v)
+        catch
+            return nothing
+        end
+        (val isa Function || val isa Type) && return nothing
+        _bakeable_const(val) || return nothing
+        push!(baked, Expr(:(=), v, QuoteNode(val)))
+    end
+    baked
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Baked finite-domain transforms
+#
+# A finite-domain widget (Select/Slider of options) sends a small client KEY;
+# `transform_bond_value` maps that key to the value the notebook sees. When that
+# transformed value is OUTSIDE the bridge universe (e.g. a `Function` chosen
+# from `Slider([sin, cos, sqrt])`), we cannot marshal it into wasm. But the key
+# IS marshallable — so type the wasm arg by the key and BAKE the key⇒value
+# lookup into the recompute fn as a conditional. WasmTarget compiles a
+# function-typed local selected by a branch (spike: `k==1 ? sin : cos` then
+# `fn(x)` validates), so this turns function-valued bonds into real islands.
+# ─────────────────────────────────────────────────────────────────────────────
+
+"Can this transformed value be baked into the fn body as a literal selection?
+Functions are the target case (they reference cleanly and WasmTarget calls
+them); large/heap values (Matrices) are intentionally excluded — embedding them
+as constants is heavy and trips WasmTarget's color-type codegen."
+_bakeable(tv) = tv isa Function
+
+"Build `keyarg == k₁ ? v₁ : keyarg == k₂ ? v₂ : … : vₙ` from a raw⇒transformed
+table, with the transformed VALUES (functions) spliced in as objects and the
+raw keys as literals."
+function _bake_select_expr(keyarg::Symbol, table)
+    expr = table[end][2]                                   # default: last value
+    for i in (length(table) - 1):-1:1
+        rk, tv = table[i]
+        expr = Expr(:if, Expr(:call, :(==), keyarg, rk), tv, expr)
+    end
+    expr
+end
+
 "Top-level `Pkg.<setup>(…)` calls (the nbpkg-disabling escape hatch for
 unregistered packages, e.g. `Pkg.activate(...)`) — environment setup is the
 HOST's concern (`compile_group(env_dir=…)` activates the notebook env around
@@ -102,22 +276,25 @@ end
 "Split a cell's parsed expr into (preamble_exprs, body_exprs).
 `:toplevel` wrappers (e.g. from a trailing `;` in the cell) flatten like
 `:block`s — their contents are ordinary statements."
-function _split_preamble(ex)
+function _split_preamble(ex, bond_names::Set{Symbol}=Set{Symbol}())
     pre, body = Expr[], Any[]
     exprs = (ex isa Expr && ex.head in (:block, :toplevel)) ? ex.args : [ex]
     for sub in exprs
         sub === nothing && continue
         sub isa LineNumberNode && continue
         if sub isa Expr && sub.head in (:block, :toplevel)
-            spre, sbody = _split_preamble(sub)
+            spre, sbody = _split_preamble(sub, bond_names)
             append!(pre, spre)
             append!(body, sbody)
         elseif _is_pkg_setup_expr(sub)
             continue
         elseif _is_preamble_expr(sub)
             push!(pre, sub)
+        elseif _is_funcdef_expr(sub) && _funcdef_hoistable(sub, bond_names)
+            # named def that does NOT close over a bond → hoist to top level
+            push!(pre, sub)
         else
-            push!(body, sub)
+            push!(body, _strip_toplevel_type_annot(sub))
         end
     end
     (pre, body)
@@ -280,6 +457,7 @@ function _plan_cell(
     bond_names::Vector{Symbol},
     arg_types::Vector{DataType},
     original_state::Dict,
+    bakes::Vector=Any[nothing for _ in bond_names],
 )::Tuple{CellPlan,Vector{Expr}}
     id = cell.cell_id
     export_name = "cellbody_" * replace(string(id), "-" => "")[1:12]
@@ -300,15 +478,24 @@ function _plan_cell(
     ex = _parse_cell(cell)
     ex === nothing && return fail("cell failed to parse")
 
-    # Gather upstream code (topo order), splitting out preamble exprs
+    # Gather upstream code (topo order), splitting out preamble exprs.
+    # `bonds` are recompute-fn parameters: a definition that closes over one
+    # stays in the body (where the bond is in scope), everything else hoists.
+    bonds = Set(bond_names)
+    # cells downstream of THIS group's bonds are bond-DEPENDENT; everything else
+    # in the upstream closure is bond-independent and eligible for export-time
+    # value-baking (partial evaluation).
+    dep_set = Set(_dependent_cells(topology, bond_names))
     preamble = Expr[]
     stmts = Any[]
     for up in _upstream_closure(topology, cell)
         upex = _parse_cell(up)
         upex === nothing && return fail("upstream cell $(up.cell_id) failed to parse")
-        pre, body = _split_preamble(upex)
+        pre, body = _split_preamble(upex, bonds)
         append!(preamble, pre)
-        append!(stmts, body)
+        # bond-independent + all-bakeable → bake the values, drop the producer
+        baked = up in dep_set ? nothing : _try_bake_cell(session, notebook, up, topology)
+        append!(stmts, baked === nothing ? body : baked)
     end
 
     # C-P12: `using` cells are not reliably in the upstream closure —
@@ -327,7 +514,7 @@ function _plan_cell(
     end
 
     # The target cell itself → value capture + body strategy
-    pre_t, body_t = _split_preamble(ex)
+    pre_t, body_t = _split_preamble(ex, bonds)
     append!(preamble, pre_t)
     val = gensym(:cellval)
 
@@ -364,6 +551,11 @@ function _plan_cell(
         # synthetic groups and the oracle judges real values
         _capture_value!(stmts, body_t, val) || return fail("empty cell body")
         :($(_plain_body)($val))
+    elseif mime == "image/png"
+        # C-P1: matrix-of-color cells — the probe in compile.jl replaces the
+        # honest _png_body fallback with a pixel-pushing render wrapper
+        _capture_value!(stmts, body_t, val) || return fail("empty cell body")
+        :($(_png_body)($val))
     elseif mime == "application/vnd.pluto.tree+object"
         _capture_value!(stmts, body_t, val) || return fail("empty cell body")
         # raw value out; compile-time discovers the concrete type and attaches
@@ -374,8 +566,22 @@ function _plan_cell(
         return fail("unsupported output mime $(mime) in v0 (text/plain & md-text/html only)")
     end
 
-    args = [Expr(:(::), n, t) for (n, t) in zip(bond_names, arg_types)]
-    fn_expr = Expr(:function, Expr(:tuple, args...), Expr(:block, stmts..., :(return $body_string_expr)))
+    # Baked bonds take the raw client KEY as their parameter (named distinctly)
+    # and rebind the bond name from a spliced key⇒value selection at the top of
+    # the body; non-baked bonds are typed parameters as usual.
+    args = Expr[]
+    bake_inject = Any[]
+    for (n, t, bake) in zip(bond_names, arg_types, bakes)
+        if bake === nothing
+            push!(args, Expr(:(::), n, t))
+        else
+            keyarg = Symbol("__", n, "_key")
+            push!(args, Expr(:(::), keyarg, t))
+            push!(bake_inject, Expr(:(=), n, _bake_select_expr(keyarg, bake)))
+        end
+    end
+    fn_expr = Expr(:function, Expr(:tuple, args...),
+                   Expr(:block, bake_inject..., stmts..., :(return $body_string_expr)))
 
     (CellPlan(; cell_id=id, mime, export_name, fn_expr, ok=true, body_kind), preamble)
 end
@@ -544,6 +750,7 @@ function extract_groups(
         synthetic_initials = false
         domains = Any[]
         transforms = Any[]
+        bakes = Any[]
         for n in bond_names
             fetch_failed = false
             v_synthetic = false   # v holds a RAW client value (not the workspace's transformed one)
@@ -567,6 +774,7 @@ function extract_groups(
                     # cell output, else rendered fresh from the workspace's bond
                     # registry (output-suppressed `x = @bind …;` cells have none)
                     wi = _widget_introspect(original_state, topology, n)
+                    h = nothing
                     if wi === nothing
                         h = _bond_element_html(session, notebook, n)
                         h === nothing || (wi = _introspect_widget_html(h))
@@ -574,6 +782,16 @@ function extract_groups(
                     if wi !== nothing
                         v = wi.initial
                         bond_domain = wi.domain
+                        synthetic_initials = true
+                        v_synthetic = true
+                    elseif h !== nothing && occursin("button", lowercase(h))
+                        # counter/button widget: custom JS with a `<button>` that
+                        # sends a click COUNT (Int, starts 0) — no `<input>` to
+                        # introspect. Synthesize a small Int domain; the oracle
+                        # verifies it and the compiled body works for any Int the
+                        # widget sends at runtime.
+                        v = Int64(0)
+                        bond_domain = Any[Int64(0), Int64(1), Int64(2)]
                         synthetic_initials = true
                         v_synthetic = true
                     else
@@ -621,7 +839,24 @@ function extract_groups(
                 hit = findfirst(p -> isequal(p[1], v), bond_transform)
                 hit === nothing || (v = bond_transform[hit][2])
             end
+            # BAKE: transformed value not bridge-marshallable, but a finite
+            # transform with marshallable keys exists → take the raw KEY as the
+            # arg and bake the key⇒value lookup into the fn body. The shim/oracle
+            # must then send the raw key (transform=nothing) — wasm does the map.
+            bake = nothing
+            if !WasmTarget.Bridge.args_supported(typeof(v)) &&
+               bond_transform !== nothing &&
+               all(p -> _bakeable(p[2]), bond_transform) &&
+               all(p -> WasmTarget.Bridge.args_supported(typeof(p[1])), bond_transform)
+                hit = findfirst(p -> isequal(p[2], v), bond_transform)
+                if hit !== nothing
+                    bake = bond_transform
+                    v = bond_transform[hit][1]   # initial becomes the raw key
+                    bond_transform = nothing     # wasm bakes; no client transform
+                end
+            end
             push!(transforms, bond_transform)
+            push!(bakes, bake)
             push!(domains, bond_domain)
             push!(initial_values, v)
             push!(arg_types, typeof(v))
@@ -636,7 +871,7 @@ function extract_groups(
         preamble = Expr[]
         if isempty(reasons)
             for cell in _dependent_cells(topology, bond_names)
-                plan, pre = _plan_cell(session, notebook, topology, cell, bond_names, arg_types, original_state)
+                plan, pre = _plan_cell(session, notebook, topology, cell, bond_names, arg_types, original_state, bakes)
                 push!(plans, plan)
                 append!(preamble, pre)
             end
