@@ -145,7 +145,9 @@ function _wasm_bodies(
     const fs = require('fs');
     const bytes = fs.readFileSync(process.argv[2]);
     (async () => {
-      const mod = await WebAssembly.compile(bytes);
+      // builtins: WasmTarget emits wasm:js-string imports for string production
+      // (axis labels, string(::Complex/::Float64)); the engine provides them.
+      const mod = await WebAssembly.compile(bytes, { builtins: ['js-string'] });
       const imports = {};
       // canvas recorder (mirrors WasmMakie's wasm_stream_check.js): wrap the
       // group's OWN glue against a mock ctx so glue-side state still runs
@@ -173,6 +175,7 @@ function _wasm_bodies(
         }
       }
       for (const imp of WebAssembly.Module.imports(mod)) {
+        if (imp.module === 'wasm:js-string') continue;   // provided by builtins
         (imports[imp.module] ||= {})[imp.name] =
           imp.module === 'Math' ? Math[imp.name]
           : (imp.module === 'canvas2d' && canvas2d) ? canvas2d[imp.name]

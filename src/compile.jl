@@ -458,9 +458,11 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
     const fs = require('fs');
     const bytes = fs.readFileSync(process.argv[2]);
     (async () => {
-      const mod = await WebAssembly.compile(bytes);
+      // builtins: WasmTarget emits wasm:js-string imports for string production.
+      const mod = await WebAssembly.compile(bytes, { builtins: ['js-string'] });
       const imports = {};
       for (const imp of WebAssembly.Module.imports(mod)) {
+        if (imp.module === 'wasm:js-string') continue;   // provided by builtins
         (imports[imp.module] ||= {})[imp.name] = imp.module === 'Math' ? Math[imp.name] : (() => 0);
       }
       const ex = (await WebAssembly.instantiate(mod, imports)).exports;
