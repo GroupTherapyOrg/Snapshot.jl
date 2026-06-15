@@ -347,10 +347,15 @@ end
 const _SLOT = "QQXISLANDSLOT"   # survives markdown rendering verbatim
 
 """
-Replace every `\$(expr)` / `\$var` interpolation in the RAW source of an
-md\"…\" cell with a sentinel, returning (sentineled_code, slot_exprs).
+Replace `\$(expr)` / `\$var` interpolations in the RAW source of an md\"…\" cell
+with a sentinel, returning (sentineled_code, slot_exprs). `should(expr)` decides
+PER interpolation whether to sentinelize it (→ a compiled `string(slot)` hole) or
+leave it verbatim in the source (→ baked natively into the rendered skeleton). The
+default sentinelizes everything; bond-aware callers pass a reactivity predicate so
+bond-INDEPENDENT interpolations (constants, static nested markdown) bake correctly
+in-context instead of being mis-rendered through `string()`.
 """
-function _sentinelize_interpolations(code::String)
+function _sentinelize_interpolations(code::String, should::Function=(_ -> true))
     slots = Expr[]
     out = IOBuffer()
     i = firstindex(code)
@@ -371,8 +376,12 @@ function _sentinelize_interpolations(code::String)
                 end
                 inner = code[nextind(code, j):prevind(code, k)]
                 ex = Meta.parse(inner; raise=false)
-                push!(slots, ex isa Expr || ex isa Symbol ? Expr(:block, ex) : Expr(:block, ex))
-                print(out, _SLOT, length(slots), "QQ")
+                if should(ex)
+                    push!(slots, Expr(:block, ex))
+                    print(out, _SLOT, length(slots), "QQ")
+                else
+                    print(out, code[i:k])   # "$(…)" verbatim → bakes natively
+                end
                 i = nextind(code, k)
                 continue
             elseif code[j] == '_' || isletter(code[j])
@@ -381,8 +390,12 @@ function _sentinelize_interpolations(code::String)
                     k = nextind(code, k)
                 end
                 name = code[j:prevind(code, k)]
-                push!(slots, Expr(:block, Symbol(name)))
-                print(out, _SLOT, length(slots), "QQ")
+                if should(Symbol(name))
+                    push!(slots, Expr(:block, Symbol(name)))
+                    print(out, _SLOT, length(slots), "QQ")
+                else
+                    print(out, code[i:prevind(code, k)])   # "$name" verbatim
+                end
                 i = k
                 continue
             end
@@ -413,6 +426,12 @@ function _md_skeleton(session::ServerSession, notebook::Notebook, sentineled_cod
         return nothing
     end
     html isa String || return nothing
+    _split_sentinels(html, n_slots)
+end
+
+"Split rendered `html` on the `n_slots` ordered sentinels into `n_slots+1`
+static segments; `nothing` if any sentinel didn't survive rendering verbatim."
+function _split_sentinels(html::AbstractString, n_slots::Int)
     segments = String[]
     rest = html
     for k in 1:n_slots
@@ -424,6 +443,145 @@ function _md_skeleton(session::ServerSession, notebook::Notebook, sentineled_cod
     end
     push!(segments, String(rest))
     segments
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Generalized HTML skeleton — interactive-feedback cells (Tier-3)
+#
+# The flat md"…" path above renders ONE markdown macrocall. Interactive feedback
+# cells are richer: `if <bond-cond> correct(md"…\$x…") else keep_working(md"…") end`
+# (the PlutoTeachingTools correct/almost/keep_working/hint admonition pattern). The
+# markdown STRUCTURE switches on bond arithmetic and, within a branch, is fixed —
+# only scalars interpolate. So we never COMPILE markdown: render each branch's
+# skeleton ONCE in the live workspace (full Markdown stdlib, native), bake the HTML
+# around sentinels, and compile only the branch conditions + `string(scalar)`.
+# Bond-INDEPENDENT interpolations (incl. constant nested admonitions) stay baked in
+# the skeleton; bond-DEPENDENT markdown-valued slots recurse. The differential
+# oracle is the backstop for any rendering the splice doesn't reproduce.
+# ─────────────────────────────────────────────────────────────────────────────
+
+"Names that vary with the group's bonds: the bonds themselves plus everything any
+bond-dependent (downstream) cell defines. An interpolation touching one of these
+is recomputed; everything else is constant and bakes into the skeleton."
+function _reactive_names(topology, bond_names::Vector{Symbol}, dep_cells)::Set{Symbol}
+    names = Set{Symbol}(bond_names)
+    for c in dep_cells
+        for d in topology.nodes[c].definitions
+            push!(names, d)
+        end
+    end
+    names
+end
+
+"Unwrap `_sentinelize_interpolations`' `:block`-wrapped slot to its inner expr."
+_slot_inner(slot) = (slot isa Expr && slot.head === :block && length(slot.args) == 1) ?
+                    slot.args[1] : slot
+
+"Reactive if `ex` references a reactive name directly OR through a `\$…`
+interpolation inside an md\"…\" literal (those live as TEXT in the macrocall's
+string arg, invisible to a plain AST walk — so peer into them)."
+function _expr_is_reactive(ex, reactive::Set{Symbol})
+    _refs_any(ex, reactive) && return true
+    if _is_md_cell(ex)
+        idx = findlast(a -> a isa AbstractString, (ex::Expr).args)
+        idx === nothing && return false
+        _, sl = _sentinelize_interpolations(String(ex.args[idx]))
+        return any(s -> _expr_is_reactive(_slot_inner(s), reactive), sl)
+    end
+    if ex isa Expr
+        return any(a -> _expr_is_reactive(a, reactive), ex.args)
+    end
+    false
+end
+
+"Does this slot value render as nested MARKDOWN (md\"…\" or a wrapper call whose
+arg is md\"…\", e.g. `correct(md\"…\")`) — needing HTML rendering, not `string()`?"
+function _is_markdownish(ex)
+    ex = _slot_inner(ex)
+    _is_md_cell(ex) && return true
+    if ex isa Expr && ex.head === :call && length(ex.args) >= 2
+        return any(a -> _is_md_cell(_slot_inner(a)), ex.args[2:end])
+    end
+    false
+end
+
+"Bond-aware-sentinelize every md\"…\" literal inside `ex` (in document order),
+returning (rewritten_ast, slots). Reactive interpolations become sentineled slots;
+bond-independent ones stay verbatim and bake when the leaf is rendered."
+function _sentinelize_md_ast(ex, reactive::Set{Symbol})
+    slots = Expr[]
+    walk(e) = begin
+        if _is_md_cell(e)
+            args = copy((e::Expr).args)
+            idx = findlast(a -> a isa AbstractString, args)
+            if idx !== nothing
+                s2, sl = _sentinelize_interpolations(String(args[idx]),
+                                                     inner -> _expr_is_reactive(inner, reactive))
+                args[idx] = s2
+                append!(slots, sl)
+            end
+            Expr(e.head, args...)
+        elseif e isa Expr
+            Expr(e.head, map(walk, e.args)...)
+        else
+            e
+        end
+    end
+    (walk(ex), slots)
+end
+
+"Render one leaf (md\"…\" or wrapper(md\"…\")) to a body-string expr via the
+render-once-splice skeleton. `nothing` if it has no reactive slot (caller bakes it
+whole) or a sentinel didn't survive rendering verbatim."
+function _leaf_html_expr(session::ServerSession, notebook::Notebook, leaf, reactive::Set{Symbol})
+    sent_ast, slots = _sentinelize_md_ast(leaf, reactive)
+    isempty(slots) && return nothing
+    render_expr = :(repr(MIME"text/html"(), $sent_ast))
+    html = try
+        Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook), render_expr)
+    catch
+        return nothing
+    end
+    html isa String || return nothing
+    segs = _split_sentinels(html, length(slots))
+    segs === nothing && return nothing
+    parts = Any[segs[1]]
+    for (k, slot) in enumerate(slots)
+        push!(parts, _slot_str_expr(session, notebook, slot, reactive))
+        push!(parts, segs[k + 1])
+    end
+    foldl((a, b) -> :($a * $b), parts)
+end
+
+"A reactive slot → its body-string expr: recurse the skeleton for a markdown-valued
+slot (nested admonition with a reactive inner), else `string(scalar)`."
+function _slot_str_expr(session::ServerSession, notebook::Notebook, slot, reactive::Set{Symbol})
+    inner = _slot_inner(slot)
+    if _is_markdownish(inner)
+        sub = _leaf_html_expr(session, notebook, inner, reactive)
+        sub === nothing || return sub
+    end
+    :(string($inner))
+end
+
+"Turn a text/html cell body expr into a body-string expr: `if/elseif/else` becomes a
+conditional over per-branch skeletons (conditions stay, compiled to wasm); leaves go
+through `_leaf_html_expr`. `nothing` if any branch can't be skeletonized."
+function _html_skeleton_expr(session::ServerSession, notebook::Notebook, ex, reactive::Set{Symbol})
+    if ex isa Expr && ex.head in (:if, :elseif)
+        thenx = _html_skeleton_expr(session, notebook, ex.args[2], reactive)
+        thenx === nothing && return nothing
+        elsex = length(ex.args) >= 3 ?
+                _html_skeleton_expr(session, notebook, ex.args[3], reactive) : ""
+        elsex === nothing && return nothing
+        return Expr(:if, ex.args[1], thenx, elsex)
+    elseif ex isa Expr && ex.head === :block
+        reals = filter(a -> !(a isa LineNumberNode), ex.args)
+        length(reals) == 1 && return _html_skeleton_expr(session, notebook, reals[1], reactive)
+        return nothing   # multi-statement branch: not a pure render leaf
+    else
+        return _leaf_html_expr(session, notebook, ex, reactive)
+    end
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -519,20 +677,16 @@ function _plan_cell(
     val = gensym(:cellval)
 
     body_kind = :string
-    body_string_expr = if mime == "text/html" && length(body_t) == 1 && _is_md_cell(body_t[1])
-        sentineled, slots = _sentinelize_interpolations(cell.code)
-        isempty(slots) && return fail("md cell with no interpolations should never re-run — why is it in the chain?")
-        segments = _md_skeleton(session, notebook, sentineled, length(slots))
-        segments === nothing && return fail("md skeleton render/split failed (non-verbatim slot?)")
-        # seg₀ * string(slot₁) * seg₁ * … — as a LEFT-FOLD of binary `*`:
-        # n-ary string `*` with ≥4 operands currently traps in WasmTarget
-        # (`unreachable`); binary chains compile fine. See WASM_FINDINGS.md.
-        parts = Any[segments[1]]
-        for (k, slot) in enumerate(slots)
-            push!(parts, :(string($slot)))
-            push!(parts, segments[k + 1])
-        end
-        foldl((a, b) -> :($a * $b), parts)
+    # Generalized HTML skeleton: handles flat md"…", wrapper(md"…"), and
+    # `if/elseif/else` feedback cells uniformly — renders markdown structure once
+    # in the workspace, compiling only branch conditions + `string(scalar)` slots.
+    # The left-folded binary `*` chains it builds compile fine (n-ary string `*`
+    # with ≥4 operands traps in WasmTarget — WASM_FINDINGS.md).
+    reactive = _reactive_names(topology, bond_names, dep_set)
+    skeleton = (mime == "text/html" && length(body_t) == 1) ?
+               _html_skeleton_expr(session, notebook, body_t[1], reactive) : nothing
+    body_string_expr = if skeleton !== nothing
+        skeleton
     elseif mime == "text/plain"
         _capture_value!(stmts, body_t, val) || return fail("empty cell body")
         # Pluto's text/plain body is repr-flavoured: bare Strings render WITH

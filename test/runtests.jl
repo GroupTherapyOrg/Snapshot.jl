@@ -64,6 +64,46 @@ let
     Pluto.SessionActions.shutdown(session, nb2)
 end
 
+# ─── feedback notebook: `if/elseif/else` of wrapper(md"…") cells + a nested-md
+#     cell — the generalized md-skeleton (markdown structure rendered once &
+#     baked; only branch conditions + string(scalar) compiled) ───────────────
+let
+    nbf = Pluto.SessionActions.open(session, joinpath(@__DIR__, "notebooks", "feedback_pared.jl"); run_async=false)
+    stf = Pluto.notebook_to_js(nbf)
+    connf = bound_variable_connections_graph(session, nbf)
+    @testset "feedback cells (branch + nested md skeleton)" begin
+        gs = extract_groups(session, nbf; connections=connf, original_state=stf)
+        @test length(gs) == 1
+        g = gs[1]
+        @test g.ok
+        @test g.bond_names == [:x]
+        @test length(g.cell_plans) == 2
+        @test all(p -> p.ok, g.cell_plans)
+
+        # The admonition STRUCTURE is baked into the skeleton, so each fn is pure
+        # string ops (no correct/keep_working/Markdown machinery) — it evals in a
+        # bare sandbox and reproduces the original body at the initial value.
+        sandbox = Module(:FeedbackSandbox)
+        for p in g.cell_plans
+            f = Core.eval(sandbox, p.fn_expr)
+            @test Base.invokelatest(f, g.initial_values...) ==
+                  stf["cell_results"][p.cell_id]["output"]["body"]
+        end
+
+        # compile + oracle: 12 samples over x∈1:100 hit BOTH if-branches; the
+        # generated wasm must match real notebook re-runs on each.
+        if HAS_NODE
+            island = compile_group(g; verify_node=false)
+            @test island.ok
+            @test isempty(island.cell_failures)
+            res = differential_oracle(session, nbf, stf, connf, g, island; samples=12)
+            @test res.ok
+            @test res.samples_run == 12
+        end
+    end
+    Pluto.SessionActions.shutdown(session, nbf)
+end
+
 if HAS_NODE
     initial_bodies = Dict{String,Any}(
         string(id) => cr["output"]["body"] for (id, cr) in original_state["cell_results"]
