@@ -104,6 +104,36 @@ let
     Pluto.SessionActions.shutdown(session, nbf)
 end
 
+# ─── pieces notebook: a no-initial-value range bond → the feedback cell ERRORS at
+#     the initial state (stacktrace mime) and has a bond-DEPENDENT nested
+#     admonition `$(keep_working(md"…$(Int(n…))…"))`. Exercises the stacktrace-mime
+#     skeleton gate + in-place nested-md sentinelization (Basic-mathematics :n). ──
+let
+    nbp = Pluto.SessionActions.open(session, joinpath(@__DIR__, "notebooks", "pieces_pared.jl"); run_async=false)
+    stp = Pluto.notebook_to_js(nbp)
+    connp = bound_variable_connections_graph(session, nbp)
+    @testset "feedback cells (stacktrace-mime + nested bond-dependent md)" begin
+        gs = extract_groups(session, nbp; connections=connp, original_state=stp)
+        @test length(gs) == 1
+        g = gs[1]
+        @test g.ok
+        @test g.bond_names == [:n]
+        @test length(g.cell_plans) == 1
+        @test all(p -> p.ok, g.cell_plans)
+        if HAS_NODE
+            island = compile_group(g; verify_node=false)
+            @test island.ok
+            @test isempty(island.cell_failures)
+            # 12 samples over n∈0:50 hit both `if` branches AND render the nested
+            # admonition as a proper block (no <p>-wrapped <div> mismatch).
+            res = differential_oracle(session, nbp, stp, connp, g, island; samples=12)
+            @test res.ok
+            @test res.samples_run == 12
+        end
+    end
+    Pluto.SessionActions.shutdown(session, nbp)
+end
+
 if HAS_NODE
     initial_bodies = Dict{String,Any}(
         string(id) => cr["output"]["body"] for (id, cr) in original_state["cell_results"]

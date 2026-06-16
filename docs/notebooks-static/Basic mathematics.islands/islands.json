@@ -1,1 +1,1 @@
-{"bond_graph":{"n":["n"]},"fallback_warnings":true,"groups":[],"version":1}
+{"bond_graph":{"n":["n"]},"fallback_warnings":true,"groups":[{"bonds":[{"desc":{"k":"int","s":true,"w":64},"initial":25,"name":"n","transform":null}],"canvas_fonts":null,"canvas_glue":null,"cells":[{"desc":null,"fn":"cellbody_e80986c6d509","id":"e80986c6-d509-11ea-12e3-f79a54b5ab31","kind":"string"}],"wasm":"group_0.wasm"}],"version":1}

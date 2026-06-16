@@ -24,18 +24,6 @@
     "title": "two groups"
   },
   {
-    "degraded": 1,
-    "description": "Learn mathematics in Julia using pizzas! 🍕",
-    "hash": "c7e322f8c2045f73194eb0b54151a4d6a44531edca7568ac0f4fbb4df51ae3ee",
-    "html": "Basic mathematics.html",
-    "image": "https://user-images.githubusercontent.com/6933510/174066114-bc76964d-6ed1-491a-baa0-5063e3b08a17.png",
-    "islands": 0,
-    "seconds": 13.8,
-    "slug": "Basic mathematics",
-    "status": "static",
-    "title": "Basic mathematics"
-  },
-  {
     "degraded": 4,
     "description": "Explore this cool math problem and create your own visualization!",
     "hash": "55315f8bedf3ff7f6c7f94f7d8f0e775e44880aa1a716318d800eaa6b19fb993",
@@ -166,5 +154,17 @@
     "slug": "turtles-art",
     "status": "interactive",
     "title": "Turtles – showcase"
+  },
+  {
+    "islands": 1,
+    "status": "interactive",
+    "image": "https://user-images.githubusercontent.com/6933510/174066114-bc76964d-6ed1-491a-baa0-5063e3b08a17.png",
+    "hash": "c7e322f8c2045f73194eb0b54151a4d6a44531edca7568ac0f4fbb4df51ae3ee",
+    "degraded": 0,
+    "html": "Basic mathematics.html",
+    "slug": "Basic mathematics",
+    "title": "Basic mathematics",
+    "description": "Learn mathematics in Julia using pizzas! 🍕",
+    "seconds": 43.0
   }
 ]

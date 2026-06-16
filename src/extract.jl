@@ -355,8 +355,8 @@ default sentinelizes everything; bond-aware callers pass a reactivity predicate 
 bond-INDEPENDENT interpolations (constants, static nested markdown) bake correctly
 in-context instead of being mis-rendered through `string()`.
 """
-function _sentinelize_interpolations(code::String, should::Function=(_ -> true))
-    slots = Expr[]
+function _sentinelize_interpolations(code::String, should::Function=(_ -> true);
+                                     slots::Vector=Expr[])
     out = IOBuffer()
     i = firstindex(code)
     n = lastindex(code)
@@ -377,8 +377,19 @@ function _sentinelize_interpolations(code::String, should::Function=(_ -> true))
                 inner = code[nextind(code, j):prevind(code, k)]
                 ex = Meta.parse(inner; raise=false)
                 if should(ex)
-                    push!(slots, Expr(:block, ex))
-                    print(out, _SLOT, length(slots), "QQ")
+                    if _is_markdownish(ex)
+                        # reactive NESTED markdown (e.g. `keep_working(md"…$(f(n))…")`):
+                        # keep the wrapper VERBATIM so markdown renders it as a proper
+                        # block (a sentinel here would land inside a `<p>` and the
+                        # spliced admonition `<div>` wouldn't match native), and
+                        # recurse into its inner md so only the inner scalars become
+                        # holes. `slots` is shared so sentinel numbering stays global
+                        # and in document order.
+                        print(out, "\$(", _nested_md_resentinelize(inner, should, slots), ")")
+                    else
+                        push!(slots, Expr(:block, ex))
+                        print(out, _SLOT, length(slots), "QQ")
+                    end
                 else
                     print(out, code[i:k])   # "$(…)" verbatim → bakes natively
                 end
@@ -404,6 +415,25 @@ function _sentinelize_interpolations(code::String, should::Function=(_ -> true))
         i = nextind(code, i)
     end
     (String(take!(out)), slots)
+end
+
+"Rewrite the SOURCE of a markdown-valued interpolation (e.g. `keep_working(md\"…\")`)
+so its FIRST nested md\"…\" / md\\\"\\\"\\\"…\\\"\\\"\\\" literal has its own
+interpolations bond-aware-sentinelized in place. Inner slots are appended to the
+shared `slots` (global, document-order numbering). The wrapper call is left intact
+so the rendered skeleton keeps the admonition as a proper block element."
+function _nested_md_resentinelize(src::AbstractString, should::Function, slots::Vector)
+    s = String(src)
+    for (re, qo, qc) in ((r"md\"\"\"(.*?)\"\"\""s, "md\"\"\"", "\"\"\""),
+                         (r"md\"((?:\\.|[^\"\\])*)\""s, "md\"", "\""))
+        m = match(re, s)
+        m === nothing && continue
+        inner2, _ = _sentinelize_interpolations(String(m.captures[1]), should; slots=slots)
+        a = m.offset - 1
+        b = m.offset + ncodeunits(m.match)   # first byte past the match
+        return s[1:a] * qo * inner2 * qc * (b > ncodeunits(s) ? "" : s[b:end])
+    end
+    s
 end
 
 "Is this cell a plain md\"…\" macrocall cell?"
@@ -553,16 +583,12 @@ function _leaf_html_expr(session::ServerSession, notebook::Notebook, leaf, react
     foldl((a, b) -> :($a * $b), parts)
 end
 
-"A reactive slot → its body-string expr: recurse the skeleton for a markdown-valued
-slot (nested admonition with a reactive inner), else `string(scalar)`."
-function _slot_str_expr(session::ServerSession, notebook::Notebook, slot, reactive::Set{Symbol})
-    inner = _slot_inner(slot)
-    if _is_markdownish(inner)
-        sub = _leaf_html_expr(session, notebook, inner, reactive)
-        sub === nothing || return sub
-    end
-    :(string($inner))
-end
+"A reactive slot → its body-string expr. After bond-aware sentinelization every
+remaining slot is a SCALAR leaf (reactive nested markdown keeps its wrapper verbatim
+and is recursed in-place during sentinelization, so it never reaches here), so this
+is just `string(scalar)`."
+_slot_str_expr(session::ServerSession, notebook::Notebook, slot, reactive::Set{Symbol}) =
+    :(string($(_slot_inner(slot))))
 
 "Turn a text/html cell body expr into a body-string expr: `if/elseif/else` becomes a
 conditional over per-branch skeletons (conditions stay, compiled to wasm); leaves go
@@ -683,7 +709,17 @@ function _plan_cell(
     # The left-folded binary `*` chains it builds compile fine (n-ary string `*`
     # with ≥4 operands traps in WasmTarget — WASM_FINDINGS.md).
     reactive = _reactive_names(topology, bond_names, dep_set)
-    skeleton = (mime == "text/html" && length(body_t) == 1) ?
+    # Also attempt the skeleton for cells that ERRORED at the initial bond value
+    # (stacktrace mime). A no-initial-value bond (e.g. a raw `html"<input
+    # type=range>"`) leaves the workspace bond `missing`, so a feedback cell like
+    # `if pieces(n) == … md"…" else md"…" end` throws `if missing` and renders as
+    # a stacktrace at the initial state — but its markdown STRUCTURE skeletonizes
+    # fine (each branch leaf renders with the bond interpolations sentinelized; the
+    # bond is never evaluated). Without this the cell falls to _plain_body →
+    # `string(::MD)` → Markdown.plain dynamic dispatch, which traps (unreachable)
+    # in wasm. If the skeleton can't render, we fall through to the mime handling.
+    skeleton = (length(body_t) == 1 &&
+                mime in ("text/html", "application/vnd.pluto.stacktrace+object")) ?
                _html_skeleton_expr(session, notebook, body_t[1], reactive) : nothing
     body_string_expr = if skeleton !== nothing
         skeleton
