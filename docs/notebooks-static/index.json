@@ -24,6 +24,18 @@
     "title": "two groups"
   },
   {
+    "islands": 1,
+    "status": "interactive",
+    "image": "https://user-images.githubusercontent.com/6933510/174066114-bc76964d-6ed1-491a-baa0-5063e3b08a17.png",
+    "hash": "c7e322f8c2045f73194eb0b54151a4d6a44531edca7568ac0f4fbb4df51ae3ee",
+    "degraded": 0,
+    "html": "Basic mathematics.html",
+    "slug": "Basic mathematics",
+    "title": "Basic mathematics",
+    "description": "Learn mathematics in Julia using pizzas! 🍕",
+    "seconds": 43.0
+  },
+  {
     "degraded": 4,
     "description": "Explore this cool math problem and create your own visualization!",
     "hash": "55315f8bedf3ff7f6c7f94f7d8f0e775e44880aa1a716318d800eaa6b19fb993",
@@ -72,28 +84,28 @@
     "title": "Simulating titrations"
   },
   {
-    "degraded": 1,
-    "description": "Learn about the cool concept of convolution on continuous functions!",
-    "hash": "23cde2600436f02f6c54e9464841e423c23b0294cff4158cc1a01c5e75edc1bb",
-    "html": "convolution_1d.html",
-    "image": "https://github.com/JuliaPluto/featured/assets/6933510/65dadde7-6381-4cda-ad71-7bbba4b1db97",
     "islands": 0,
-    "seconds": 243.5,
-    "slug": "convolution_1d",
     "status": "static",
-    "title": "Convolutions"
+    "image": "https://github.com/JuliaPluto/featured/assets/6933510/65dadde7-6381-4cda-ad71-7bbba4b1db97",
+    "hash": "23cde2600436f02f6c54e9464841e423c23b0294cff4158cc1a01c5e75edc1bb",
+    "degraded": 1,
+    "html": "convolution_1d.html",
+    "slug": "convolution_1d",
+    "title": "Convolutions",
+    "description": "Learn about the cool concept of convolution on continuous functions!",
+    "seconds": 157.2
   },
   {
-    "degraded": 3,
-    "description": "Learn how convolutions are used as filters in image processing!",
-    "hash": "4e8863a5b0cde03e68cb727b165e38b9aa584157d20ca3e658eee546fd663a9e",
-    "html": "convolution_2d.html",
-    "image": "https://github.com/JuliaPluto/featured/assets/6933510/4215e7d0-53c4-4ee7-a26d-48d36457d194",
     "islands": 1,
-    "seconds": 177.8,
-    "slug": "convolution_2d",
     "status": "interactive",
-    "title": "Images and Filtering"
+    "image": "https://github.com/JuliaPluto/featured/assets/6933510/4215e7d0-53c4-4ee7-a26d-48d36457d194",
+    "hash": "4e8863a5b0cde03e68cb727b165e38b9aa584157d20ca3e658eee546fd663a9e",
+    "degraded": 3,
+    "html": "convolution_2d.html",
+    "slug": "convolution_2d",
+    "title": "Images and Filtering",
+    "description": "Learn how convolutions are used as filters in image processing!",
+    "seconds": 431.4
   },
   {
     "degraded": 1,
@@ -118,18 +130,6 @@
     "slug": "fractals",
     "status": "interactive",
     "title": "Fractals and Fractal Art"
-  },
-  {
-    "degraded": 4,
-    "description": "How can an image be stored as an array of colored pixels? Can we transform this data?",
-    "hash": "b4c36a2cde614f00f082cb89843c7a79c277b317ab687729a3c98a1452b918d0",
-    "html": "images.html",
-    "image": "https://user-images.githubusercontent.com/6933510/136196634-2294d0a7-e79a-40d0-bbb8-81da70f4d398.png",
-    "islands": 1,
-    "seconds": 307.8,
-    "slug": "images",
-    "status": "interactive",
-    "title": "Images as arrays"
   },
   {
     "degraded": 4,
@@ -158,13 +158,13 @@
   {
     "islands": 1,
     "status": "interactive",
-    "image": "https://user-images.githubusercontent.com/6933510/174066114-bc76964d-6ed1-491a-baa0-5063e3b08a17.png",
-    "hash": "c7e322f8c2045f73194eb0b54151a4d6a44531edca7568ac0f4fbb4df51ae3ee",
-    "degraded": 0,
-    "html": "Basic mathematics.html",
-    "slug": "Basic mathematics",
-    "title": "Basic mathematics",
-    "description": "Learn mathematics in Julia using pizzas! 🍕",
-    "seconds": 43.0
+    "image": "https://user-images.githubusercontent.com/6933510/136196634-2294d0a7-e79a-40d0-bbb8-81da70f4d398.png",
+    "hash": "b4c36a2cde614f00f082cb89843c7a79c277b317ab687729a3c98a1452b918d0",
+    "degraded": 4,
+    "html": "images.html",
+    "slug": "images",
+    "title": "Images as arrays",
+    "description": "How can an image be stored as an array of colored pixels? Can we transform this data?",
+    "seconds": 173.5
   }
 ]
