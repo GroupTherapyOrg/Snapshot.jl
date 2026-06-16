@@ -158,7 +158,9 @@
     const load_group = (group) => {
         group._instance ??= (async () => {
             const wasm_resp = await orig_fetch(new URL(group.wasm, assets_base))
-            const mod = await WebAssembly.compileStreaming(wasm_resp)
+            // builtins: WasmTarget emits wasm:js-string imports for string
+            // production (axis labels, string(::Complex/::Float64)).
+            const mod = await WebAssembly.compileStreaming(wasm_resp, { builtins: ['js-string'] })
             // canvas provider (E-004): groups with figure cells carry their
             // own glue (canvas2d_imports/canvas2d_load_fonts from the
             // notebook's WasmMakie). Imports are fixed at instantiation, so
@@ -182,6 +184,7 @@
             }
             const imports = {}
             for (const imp of WebAssembly.Module.imports(mod)) {
+                if (imp.module === "wasm:js-string") continue   // provided by builtins
                 ;(imports[imp.module] ||= {})[imp.name] =
                     imp.module === "Math" ? Math[imp.name]
                     : imp.module === "canvas2d" && canvas2d ? canvas2d[imp.name]
