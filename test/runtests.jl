@@ -134,6 +134,32 @@ let
     Pluto.SessionActions.shutdown(session, nbp)
 end
 
+# ─── matrix bond: Matrix{Float64} crosses the bridge (rows×cols + row-major
+#     element stream). Unlocks convolution filter / image-matrix bonds (C-P3). ──
+let
+    nbm = Pluto.SessionActions.open(session, joinpath(@__DIR__, "notebooks", "matbond_pared.jl"); run_async=false)
+    stm = Pluto.notebook_to_js(nbm)
+    connm = bound_variable_connections_graph(session, nbm)
+    @testset "matrix bond (Matrix{Float64} bridge)" begin
+        gs = extract_groups(session, nbm; connections=connm, original_state=stm)
+        @test length(gs) == 1
+        g = gs[1]
+        @test g.ok
+        @test g.arg_types == [Matrix{Float64}]
+        @test all(p -> p.ok, g.cell_plans)
+        if HAS_NODE
+            island = compile_group(g; verify_node=false)
+            @test island.ok
+            # samples are varied-SIZE matrices (2×3, 2×2) — dims + values must
+            # round-trip (size/getindex/sum all checked in the cell body).
+            res = differential_oracle(session, nbm, stm, connm, g, island; samples=3)
+            @test res.ok
+            @test res.samples_run == 3
+        end
+    end
+    Pluto.SessionActions.shutdown(session, nbm)
+end
+
 if HAS_NODE
     initial_bodies = Dict{String,Any}(
         string(id) => cr["output"]["body"] for (id, cr) in original_state["cell_results"]
