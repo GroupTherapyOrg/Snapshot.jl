@@ -52,7 +52,11 @@ function _samples(g)
 end
 
 session = Pluto.ServerSession()
-session.options.evaluation.workspace_use_distributed = false
+# NOTE: use DISTRIBUTED workspaces (Pluto default) — each notebook runs in its own
+# embedded package env, so notebook-specific deps (PlutoUI/ForwardDiff/Makie/…)
+# load and its @bind cells produce live bonds. Running cells in the host env
+# (workspace_use_distributed=false) made every package-using notebook extract 0
+# groups. (Matches tools/island_survey.jl.)
 
 records = Any[]
 flush!() = open(OUT, "w") do io; JSON.print(io, records, 2) end
