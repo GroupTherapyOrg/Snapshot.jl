@@ -240,7 +240,7 @@ end
 # (grey-pill ghost markers are now translucent grey circles — see draw_point)
 
 # ╔═╡ 0dd8235c-c09b-49ae-b02a-4bbb285970a6
-happyX = findlast(treatment_in .> 0)
+happyX = findlast(>(0), treatment_in)
 
 # ╔═╡ df178bb8-3b81-4c4b-ba94-3ad945e63007
 begin
