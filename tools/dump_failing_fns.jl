@@ -19,6 +19,7 @@ session = Pluto.ServerSession()
 notebook = Pluto.SessionActions.open(session, path; run_async=false)
 original_state = Pluto.notebook_to_js(notebook)
 groups = M.extract_groups(session, notebook; original_state)
+println("EXTRACTED groups=", length(groups), " (ok=", count(g->g.ok, groups), ")")
 
 nb_env = notebook.nbpkg_ctx === nothing ? nothing :
     try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
@@ -43,9 +44,10 @@ for (gi, g) in enumerate(groups)
             WasmTarget.compile(f, argt)
         catch e
             msg = first(sprint(showerror, e), 220)
-            (occursin("Validation", string(typeof(e))) || occursin("validate", msg) ||
-             occursin("expected", msg) || occursin("CompileError", string(typeof(e)))) || continue
+            # Dump EVERY compile failure (KeyError, MethodError, Validation, …) — the
+            # old narrow validation-only filter silently skipped KeyError(Memory{…}) etc.
             println("\n========================================================")
+            println("ETYPE: ", typeof(e))
             println("GROUP $gi bonds=", g.bond_names, "  arg_types=", argt)
             println("CELL ", p.cell_id, "  mime=", p.mime)
             println("ERROR: ", msg)
