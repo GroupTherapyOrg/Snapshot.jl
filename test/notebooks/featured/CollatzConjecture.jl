@@ -48,7 +48,6 @@ end
 begin
 	# Notebook related packages
 	using PlutoUI
-	import PlutoUI: combine
 	using HypertextLiteral:@htl
 	using Parameters
 	md"""
@@ -133,6 +132,11 @@ md"""
 The sequence of values that you go through when iterating a number is often called the hailstone sequence, as the numbers go up and down through the sequence. 
 """
 
+# ╔═╡ e57da7e5-32bb-48a2-af27-5ac671cabdae
+md"""
+Starting value = $(@bind hailstone_start_value Slider(1:1:1000, default=15, show_value=true))
+"""
+
 # ╔═╡ 75b9294e-43a4-48c4-b493-5d40027f3cd6
 md"## All Paths Lead to One"
 
@@ -143,6 +147,11 @@ We can visualize the path that *every* number takes by overlaying many hailstone
 sequences at once. Each line is one starting value; watch how, no matter where they
 begin, they all tumble down into the same ``4 \rightarrow 2 \rightarrow 1`` cycle.
 
+"""
+
+# ╔═╡ 43c4fd8d-bb44-43cd-91dd-d221629d1fd9
+md"""
+Overlay paths for 1 … N = $(@bind graph_start_value Slider(1:1:60, default=12, show_value=true))
 """
 
 # ╔═╡ 6f68b20d-67e5-4872-a23b-1840bbbb06ec
@@ -164,6 +173,11 @@ Here is a plot to show the total stopping times of the numbers for up to 1000.
 
 
 
+# ╔═╡ 0fd7242c-46a1-4929-9c53-3c45768893b4
+md"""
+Upper bound = $(@bind stopping_ub Slider(100:100:3000, default=1000, show_value=true))
+"""
+
 # ╔═╡ d0672735-8007-4a69-9fa5-0f40ac0685ea
 md"# Interactive Visualization"
 
@@ -175,6 +189,133 @@ Filename:
 				
 			</div>
 """)
+
+# ╔═╡ 1b48b435-e959-477f-a8d2-3507da73fc28
+md"""
+The interactive visualization above runs live in your browser as a WebAssembly
+island — drag the sliders to explore. (Exporting the rendered image to a
+standalone HTML file is only available when running this notebook in a full
+Pluto session.)
+"""
+
+# ╔═╡ 0865f8a3-a959-481b-a9ae-adbca78a2749
+window_size_sliders = @htl("""
+<div class="slider_group_inner">
+	<div><p>Window Size:</p></div>
+	<div>Height: $(@bind window_height NumberField(100.0:1.0:10000.0, default=700.0))</div>
+	<div>Width: $(@bind window_width NumberField(100.0:1.0:10000.0, default=500.0))</div>
+</div>
+""");
+
+# ╔═╡ 8a64e9e3-477e-4a7e-97f7-61cf5e428731
+md"The window size controls feed the interactive visualization below."
+
+# ╔═╡ 01cc5e4f-d94b-4211-b268-9ce0640cd23f
+colors_sliders = @htl("""
+<div class="slider_group_inner">
+	<div><p>Color Options:</p></div>
+	<div>Stroke Color: $(@bind stroke_color ColorPicker(default=RGB{N0f8}(
+		reinterpret(N0f8, UInt8(230)),
+		reinterpret(N0f8, UInt8(130)),
+		reinterpret(N0f8, UInt8(130)))))</div>
+	<div>Background: $(@bind background_color ColorPicker(default=RGB(0,0,0)))</div>
+</div>
+""");
+
+# ╔═╡ 5ba5f885-1de1-4058-91bf-35e1b05d1941
+viz_sliders = @htl("""
+<div class="slider_group_inner">
+	<div><p>Visualization Options:</p></div>
+	<div>Numbers of trajectories: $(@bind num_traject Slider(10.0:10.0:300.0, default=80.0, show_value=true))</div>
+	<div>Step: $(@bind line_length Slider(1:1:150, default=20, show_value=true))</div>
+	<div>Rotation Angle (in degrees): $(@bind turn_scale Slider(0.0:0.1:180.0, default=10.0, show_value=true))</div>
+</div>
+""");
+
+# ╔═╡ 7dbfb4dc-c9d0-464d-83b2-18db90d76878
+viz_specs_sliders = @htl("""
+<div class="slider_group_inner">
+	<div><p>Image Options:</p></div>
+	<div>Image Rotation (in degrees): $(@bind init_angle Slider(0.0:0.1:360.0, default=20.0, show_value=true))</div>
+	<div>Starting point (X): $(@bind x_start Slider(0.0:0.1:window_width, default=window_width/2, show_value=true))</div>
+	<div>Starting point (Y): $(@bind y_start Slider(0.0:0.1:window_height, default=window_height, show_value=true))</div>
+	<div>Stroke Width: $(@bind stroke_width Slider(1.0:0.1:50.0, default=5.0, show_value=true))</div>
+</div>
+""");
+
+# ╔═╡ f680e7ea-8e3a-41ac-ab92-a27c05103864
+viz_extra_sliders = @htl("""
+<div class="slider_group_inner">
+	<div><p>Extra Options:</p></div>
+	<div>Random Color: $(@bind random_shade CheckBox(default=false))</div>
+	<div>Vary Shade: $(@bind vary_shade CheckBox(default=false))</div>
+	<div>In Edmund Harris's style: $(@bind edmund_style CheckBox(default=false))</div>
+	<div>In Chris's style: $(@bind chris_style CheckBox(default=false))</div>
+</div>
+""");
+
+# ╔═╡ 50a423ad-ca90-4015-9ef6-577f60e4efe7
+begin
+	@htl("""
+	<div class="slider_group sidebar-left">
+		<div class="on_big_show">
+			<div class="slider_group_inner">
+				$viz_sliders
+			</div>
+
+		</div>	
+	</div>
+	
+	<div class="slider_group sidebar-right">
+		<div class="on_small_show">
+			<div class="slider_group_inner ">
+				$viz_sliders
+			</div>
+		</div>
+	
+		<div class="slider_group_inner">
+			$viz_specs_sliders
+		</div>
+	
+		<div class="slider_group_inner">
+			$colors_sliders
+		</div>
+	
+		<div class="slider_group_inner">
+			$viz_extra_sliders
+		</div>
+	</div>
+	<div class="sidebar-bottom">
+		<div class="on_tiny_show">
+			<div class="slider_group">
+				<div class="slider_group_inner">
+					$viz_sliders
+				</div>
+			
+				<div class="slider_group_inner ">
+					$viz_sliders
+				</div>
+			</div>
+		
+			<div class="slider_group">
+				<div class="slider_group_inner">
+					$viz_specs_sliders
+				</div>
+			
+				<div class="slider_group_inner">
+					$colors_sliders
+				</div>
+				<div class="slider_group_inner">
+					$viz_extra_sliders
+				</div>
+			</div>
+		</div>
+		<div>
+				
+		</div>
+	</div>
+	""")
+end
 
 # ╔═╡ b56a1328-194c-4e1c-a033-9ca6e0ab3eeb
 md"---"
@@ -214,6 +355,17 @@ md"""
 !!! info "Try it"
 	The classic Collatz problem is ``P = 2``, ``a = 3``, ``b = 1``. Move the sliders to
 	pick a different ``(P, a, b)`` and watch how the trajectories change.
+"""
+
+# ╔═╡ f21f1e3e-a3ab-458e-a101-ce824731f0b6
+md"""
+Collatz Parameters (P, a, b):
+
+P = $(@bind collatz_P Slider(2:1:10, default=2, show_value=true))
+
+a = $(@bind collatz_a Slider(1:1:10, default=3, show_value=true))
+
+b = $(@bind collatz_b Slider(1:1:10, default=1, show_value=true))
 """
 
 # ╔═╡ af0c36ee-0534-4143-b59b-4ee041ef0f04
@@ -409,6 +561,152 @@ function collatz_hailstone(n0::Int64, P::Int64, a::Int64, b::Int64, maxlen::Int6
 	return out
 end
 
+# ╔═╡ 66fe673a-7679-4c55-bf59-146a8dd1241c
+begin
+	hail_x = Float64[]
+	hail_y = Float64[]
+	let
+		seq = collatz_hailstone(
+			Int64(hailstone_start_value),
+			Int64(collatz_P),
+			Int64(collatz_a),
+			Int64(collatz_b),
+			Int64(1000))
+		i = 1
+		for v in seq
+			push!(hail_x, Float64(i))
+			push!(hail_y, Float64(v))
+			i += 1
+		end
+	end
+
+	fig_hail = Figure(size = (640, 420))
+	ax_hail = Axis(fig_hail[1, 1];
+		title = "Hailstone sequence of: " * string(hailstone_start_value),
+		xlabel = "Iterations",
+		ylabel = "Value")
+	lines!(ax_hail, hail_x, hail_y; color = (0.678, 0.847, 0.902, 1.0))
+	scatter!(ax_hail, hail_x, hail_y; markersize = 12.0, color = (0.678, 0.847, 0.902, 1.0))
+
+	fig_hail
+end
+
+# ╔═╡ 3550fe19-261e-4069-9bf6-6417dcaac102
+begin
+	# Every starting number from 1 up to `graph_start_value` traces its own hailstone
+	# path. Overlaying them shows the central pedagogy of the Collatz graph: no
+	# matter where you begin, every path funnels down into the 4 → 2 → 1 cycle.
+	# Each trajectory is computed with the pure-integer kernel and drawn with
+	# WasmMakie `lines!`, so the whole figure ships as a live wasm island.
+	fig_conv = Figure(size = (700, 460))
+	ax_conv = Axis(fig_conv[1, 1];
+		title = "Hailstone paths for 1 … " * string(graph_start_value),
+		xlabel = "Iterations",
+		ylabel = "Value")
+
+	top = Int64(graph_start_value)
+	n0 = Int64(1)
+	while n0 <= top
+		seq = collatz_hailstone(
+			n0,
+			Int64(collatz_P),
+			Int64(collatz_a),
+			Int64(collatz_b),
+			Int64(1000))
+		cx = Float64[]
+		cy = Float64[]
+		i = 1
+		for v in seq
+			push!(cx, Float64(i))
+			push!(cy, Float64(v))
+			i += 1
+		end
+		shade = Float64(n0 % 7) / 7.0
+		lines!(ax_conv, cx, cy;
+			color = (0.25 + 0.5 * shade, 0.45, 0.85 - 0.4 * shade, 0.55),
+			linewidth = 1.5)
+		n0 += 1
+	end
+	fig_conv
+end
+
+# ╔═╡ 6d225dce-3362-4f5d-bba9-0b5312f6be5a
+begin
+	# num_traject, turn_scale, line_length, init_angle, x_start, y_start,
+	# stroke_width, stroke_color, background_color, random_shade, vary_shade,
+	# edmund_style and chris_style all come directly from the plain PlutoUI
+	# bonds above — no combine-NamedTuple unpacking needed.
+
+	# Trajectories from the pure-integer kernel (reversed so they grow outward
+	# from 1), one per starting number — fully wasm-compilable.
+	viz_trajectories = Vector{Vector{Int64}}()
+	let
+		Pv = Int64(collatz_P)
+		av = Int64(collatz_a)
+		bv = Int64(collatz_b)
+		n0 = Int64(1)
+		ntop = Int64(round(Int, num_traject))
+		while n0 <= ntop
+			push!(viz_trajectories, reverse(collatz_hailstone(n0, Pv, av, bv, Int64(1000))))
+			n0 += 1
+		end
+	end
+
+	# Turtle-walk each sequence in pure Julia (WasmMakie draws the paths):
+	# start at (x_start, y_start) heading init_angle+180°, turn by parity,
+	# step line_length — the same rules draw_hailstone_sequence used.
+	interactive_viz = let
+		fig = Figure(size = (Float64(window_width), Float64(window_height)))
+		ax = Axis(fig[1, 1])
+		hidedecorations!(ax)
+		hidespines!(ax)
+
+		base_r = Float64(red(stroke_color))
+		base_g = Float64(green(stroke_color))
+		base_b = Float64(blue(stroke_color))
+
+		for (t_i, seq) in enumerate(viz_trajectories)
+			xs = Float64[]
+			ys = Float64[]
+			x = Float64(x_start)
+			y = Float64(y_start)
+			θ = Float64(init_angle) + 180.0
+			push!(xs, x)
+			push!(ys, y)
+			for v in seq
+				if chris_style
+					θ += (mod(v, 3) == 1 ? turn_scale : -turn_scale)
+				elseif mod(v, 2) == 0
+					θ += turn_scale
+				else
+					θ -= edmund_style ? turn_scale / 2 : turn_scale
+				end
+				x += line_length * cosd(θ)
+				y += line_length * sind(θ)
+				push!(xs, x)
+				push!(ys, y)
+			end
+
+			# deterministic stand-ins for rand()/randn() shades — identical
+			# in the native run and the wasm island
+			col = if random_shade
+				(Float64(mod(t_i * 37, 97)) / 97.0,
+				 Float64(mod(t_i * 53, 89)) / 89.0,
+				 Float64(mod(t_i * 71, 83)) / 83.0, 0.6)
+			elseif vary_shade
+				shade = (Float64(mod(t_i, 7)) - 3.0) * 0.08
+				(clamp(base_r + shade, 0.0, 1.0),
+				 clamp(base_g + shade, 0.0, 1.0),
+				 clamp(base_b + shade, 0.0, 1.0), 0.6)
+			else
+				(base_r, base_g, base_b, 0.6)
+			end
+			lines!(ax, xs, ys; color = col, linewidth = Float64(stroke_width))
+		end
+		fig
+	end
+end
+
 # ╔═╡ a3b1c2d4-0002-4001-8001-000000000002
 """
 	collatz_stopping_time(n0, P, a, b, maxlen)
@@ -428,6 +726,35 @@ function collatz_stopping_time(n0::Int64, P::Int64, a::Int64, b::Int64, maxlen::
 		end
 	end
 	return steps
+end
+
+# ╔═╡ 45ca6e2a-6a58-475e-9c02-4925e71625bd
+begin
+	# Total stopping time for every starting point from 1 to the chosen upper
+	# bound, computed with the pure-integer kernel and collected into flat
+	# Float64 vectors — no Dict, no caching, fully wasm-compilable.
+	st_x = Float64[]
+	st_y = Float64[]
+	let
+		ub = Int64(stopping_ub)
+		Pv = Int64(collatz_P)
+		av = Int64(collatz_a)
+		bv = Int64(collatz_b)
+		n0 = Int64(1)
+		while n0 <= ub
+			push!(st_x, Float64(n0))
+			push!(st_y, Float64(collatz_stopping_time(n0, Pv, av, bv, Int64(1000))))
+			n0 += 1
+		end
+	end
+
+	fig_st = Figure(size = (640, 420))
+	ax_st = Axis(fig_st[1, 1];
+		title = "Total stopping time of numbers up to " * string(stopping_ub),
+		xlabel = "Starting point",
+		ylabel = "Stopping time")
+	scatter!(ax_st, st_x, st_y; markersize = 4.0)
+	fig_st
 end
 
 # ╔═╡ 4c991173-d9ff-4ba9-b217-8f9aafbbd631
@@ -957,575 +1284,31 @@ md"### HTML Functions"
 md"### Interactivity extensions"
 
 # ╔═╡ 43479204-cd12-40b4-a65f-16bf54aaddfe
-@with_kw struct SliderParameter{T} 
-	lb::T = 0.0
-	ub::T = 100.0
-	step::T = 1.0
-	default::T = lb
-	label::String 
-	alias::Symbol = Symbol(label)
-	function SliderParameter{T}(lb::T,ub::T,step::T,default::T, label::String, alias::Symbol) where T
-		 if ub < lb error("Invalid Bounds") end 
-		 return new{typeof(default)}(lb,ub,step,default,label,alias)
-	end
-end
+md"All interactive controls now use plain PlutoUI bonds (`@bind x Slider(...)`), which serialize correctly as WebAssembly island bonds."
 
 # ╔═╡ 31a7994d-13e0-440a-8279-5f19d7d0933f
-@with_kw struct NumberFieldParameter{T}
-	lb::T = 0
-	ub::T = 100
-	step::T = 1
-	default::T = lb
-	label::String
-	alias::Symbol = Symbol(label)
-	function NumberFieldParameter(lb,ub,step,default, label, alias) 
-		 if ub < lb error("Invalid Bounds") end 
-		 return new{typeof(default)}(lb,ub,step,default,label,alias)
-	end
-end
+md"_(NumberField controls use plain `@bind x NumberField(...)` bonds.)_"
 
 # ╔═╡ 25d2291f-f422-41e4-aa61-9000e13d34ad
-@with_kw struct CheckBoxParameter
-	label::String 
-	default::Bool = false
-	alias::Symbol = Symbol(label)
-end
+md"_(CheckBox controls use plain `@bind x CheckBox(...)` bonds.)_"
 
 # ╔═╡ 1255f4cc-7448-40f6-83ba-0cca1637d1cf
-@with_kw struct ColorParameter
-	label::String 
-	default::RGB = RGB(0,0,0)
-	alias::Symbol = Symbol(label)
-end
+md"_(ColorPicker controls use plain `@bind x ColorPicker(...)` bonds.)_"
 
 # ╔═╡ 7dac4da8-0877-4d07-b4d2-2164faeccfde
-function format_sliderParameter( params::Vector{SliderParameter{T}};title::String,) where T
-	
-	return combine() do Child
-		
-		mds = [
-			@htl("""
-			<div>
-			<p>$(param.label)
-			</div>
-			<div>
-				$(Child(param.alias, PlutoUI.Slider(param.lb:param.step:param.ub, default = param.default, show_value = true))) 
-			</div>
-			
-			""")
-			
-			for param in params
-		]
-		md"""
-		#### $title
-		$(mds)
-		"""
-	end
-end
+md"_(slider layout is built inline in each control cell.)_"
 
 # ╔═╡ 4dd44fbd-f26a-4b72-a580-842209b44f27
-function format_sliderParameter( params::Vector{SliderParameter};title::String,)
-	
-	return combine() do Child
-		
-		mds = [
-			@htl("""
-			<div>
-			<p>$(param.label)
-			</div>
-			<div>
-				$(Child(param.alias, PlutoUI.Slider(param.lb:param.step:param.ub, default = param.default, show_value = true))) 
-			</div>
-			
-			""")
-			for param in params
-		]
-		md"""
-		#### $title
-		$(mds)
-		"""
-	end
-end
-
-# ╔═╡ e57da7e5-32bb-48a2-af27-5ac671cabdae
-@bind hailstone_params format_sliderParameter(title="Hailstone Sequence Parameters:",[
-	SliderParameter(lb=1,ub=1000,default=15,step=1,alias=:start_value,label="Starting Value")]
-	)
-
-# ╔═╡ 43c4fd8d-bb44-43cd-91dd-d221629d1fd9
-@bind graph_parameters format_sliderParameter(title="Convergence View:",[
-	SliderParameter(lb=1,ub=60,default=12,step=1,alias=:start_value,label="Overlay paths for 1 … N")
-])
-
-# ╔═╡ 0fd7242c-46a1-4929-9c53-3c45768893b4
-@bind stopping_parameters format_sliderParameter(title="Stopping Time Plot Parameters",
-	[SliderParameter(lb=100, ub=3000, step=100, default=1000,alias=:ub, label="Upper Bound")]
-
-)
-
-# ╔═╡ 5ba5f885-1de1-4058-91bf-35e1b05d1941
-viz_sliders = @bind viz_parameters format_sliderParameter(
-			title = "Visualization Options:", 
-			[
-				SliderParameter(
-					lb = 10.0,
-					ub = 300.0,
-					default = 80.0,
-			 		step = 10.0,
-					alias = :num_traject,
-					label = "Numbers of trajectories"
-				),
-				SliderParameter(
-					lb = 1,
-					ub = 150, 
-					default = 20,
-					step = 1,
-					alias=:line_length, 
-					label="Step"),
-				SliderParameter(
-					lb = 0.0,
-					ub = 180.0, 
-					default = 10.0,
-					step = 0.1, 
-					alias = :turn_scale, 
-					label = "Rotation Angle (in degrees)"
-				),
-			]
-		);
-
-# ╔═╡ f21f1e3e-a3ab-458e-a101-ce824731f0b6
-@bind collatz_parameters format_sliderParameter(title="Collatz Parameters (P, a, b):",[
-	SliderParameter(lb=2,ub=10,step=1,default=2,label="P"),
-	SliderParameter(lb=1,ub=10,step=1,default=3,label="a"),
-	SliderParameter(lb=1,ub=10,step=1,default=1,label="b"),
-])
-
-# ╔═╡ 66fe673a-7679-4c55-bf59-146a8dd1241c
-begin
-	hail_x = Float64[]
-	hail_y = Float64[]
-	let
-		seq = collatz_hailstone(
-			Int64(hailstone_params.start_value),
-			Int64(collatz_parameters.P),
-			Int64(collatz_parameters.a),
-			Int64(collatz_parameters.b),
-			Int64(1000))
-		i = 1
-		for v in seq
-			push!(hail_x, Float64(i))
-			push!(hail_y, Float64(v))
-			i += 1
-		end
-	end
-
-	fig_hail = Figure(size = (640, 420))
-	ax_hail = Axis(fig_hail[1, 1];
-		title = "Hailstone sequence of: " * string(hailstone_params.start_value),
-		xlabel = "Iterations",
-		ylabel = "Value")
-	lines!(ax_hail, hail_x, hail_y; color = (0.678, 0.847, 0.902, 1.0))
-	scatter!(ax_hail, hail_x, hail_y; markersize = 12.0, color = (0.678, 0.847, 0.902, 1.0))
-
-	fig_hail
-end
-
-# ╔═╡ 3550fe19-261e-4069-9bf6-6417dcaac102
-begin
-	# Every starting number from 1 up to `start_value` traces its own hailstone
-	# path. Overlaying them shows the central pedagogy of the Collatz graph: no
-	# matter where you begin, every path funnels down into the 4 → 2 → 1 cycle.
-	# Each trajectory is computed with the pure-integer kernel and drawn with
-	# WasmMakie `lines!`, so the whole figure ships as a live wasm island.
-	fig_conv = Figure(size = (700, 460))
-	ax_conv = Axis(fig_conv[1, 1];
-		title = "Hailstone paths for 1 … " * string(graph_parameters.start_value),
-		xlabel = "Iterations",
-		ylabel = "Value")
-
-	top = Int64(graph_parameters.start_value)
-	n0 = Int64(1)
-	while n0 <= top
-		seq = collatz_hailstone(
-			n0,
-			Int64(collatz_parameters.P),
-			Int64(collatz_parameters.a),
-			Int64(collatz_parameters.b),
-			Int64(1000))
-		cx = Float64[]
-		cy = Float64[]
-		i = 1
-		for v in seq
-			push!(cx, Float64(i))
-			push!(cy, Float64(v))
-			i += 1
-		end
-		shade = Float64(n0 % 7) / 7.0
-		lines!(ax_conv, cx, cy;
-			color = (0.25 + 0.5 * shade, 0.45, 0.85 - 0.4 * shade, 0.55),
-			linewidth = 1.5)
-		n0 += 1
-	end
-	fig_conv
-end
-
-# ╔═╡ 45ca6e2a-6a58-475e-9c02-4925e71625bd
-begin
-	# Total stopping time for every starting point from 1 to the chosen upper
-	# bound, computed with the pure-integer kernel and collected into flat
-	# Float64 vectors — no Dict, no caching, fully wasm-compilable.
-	st_x = Float64[]
-	st_y = Float64[]
-	let
-		ub = Int64(stopping_parameters.ub)
-		Pv = Int64(collatz_parameters.P)
-		av = Int64(collatz_parameters.a)
-		bv = Int64(collatz_parameters.b)
-		n0 = Int64(1)
-		while n0 <= ub
-			push!(st_x, Float64(n0))
-			push!(st_y, Float64(collatz_stopping_time(n0, Pv, av, bv, Int64(1000))))
-			n0 += 1
-		end
-	end
-
-	fig_st = Figure(size = (640, 420))
-	ax_st = Axis(fig_st[1, 1];
-		title = "Total stopping time of numbers up to " * string(stopping_parameters.ub),
-		xlabel = "Starting point",
-		ylabel = "Stopping time")
-	scatter!(ax_st, st_x, st_y; markersize = 4.0)
-	fig_st
-end
+md"_(slider layout is built inline in each control cell.)_"
 
 # ╔═╡ 5977a13d-93b8-4e51-8484-5b1882100c49
-function format_numberFieldParameter( params::Vector{NumberFieldParameter{T}};title::String,) where T
-	
-	return combine() do Child
-		
-		mds = [
-			@htl("""
-			<div>
-			<p>$(param.label)
-			</div>
-			<div>
-				$(Child(param.alias, PlutoUI.NumberField(param.lb:param.step:param.ub, default = param.default)) ) 
-			</div>
-			
-			""")
-			for param in params
-		]
-		md"""
-		#### $title
-		$(mds)
-		"""
-	end
-end
-
-# ╔═╡ 0865f8a3-a959-481b-a9ae-adbca78a2749
-begin
-	window_size_sliders = @bind window_size_parameters format_numberFieldParameter(
-		title="Window Size",
-	[
-		NumberFieldParameter(
-			lb=100.0,
-			ub=10000.0,
-			default=700.0,
-			alias = :window_height, 
-			label = "Height", 
-		),
-		NumberFieldParameter(
-			lb=100.0,
-			ub=10000.0,
-			default=500.0,
-			alias=:window_width, 
-			label="Width")
-	]
-	)
-end
-
-
-# ╔═╡ 8a64e9e3-477e-4a7e-97f7-61cf5e428731
-@unpack window_height,window_width = window_size_parameters;
-
-# ╔═╡ 7dbfb4dc-c9d0-464d-83b2-18db90d76878
-viz_specs_sliders = @bind viz_specs_parameters format_sliderParameter(
-			title = "Image Options:", 
-			[
-				SliderParameter(
-					lb = 0.0,
-					ub = 360.0,
-					default = 20.0,
-					step = 0.1,
-					alias = :init_angle, 
-					label = "Image Rotation (in degrees)"
-				),
-				SliderParameter(
-					lb = 0.0,
-					ub = window_width, 
-					default = window_width/2, 
-					step = 0.1, 
-					alias = :x_start, 
-					label = "Starting point (X)"
-				),
-				SliderParameter(
-					lb = 0.0, 
-					ub = window_height,
-					default = window_height, 
-					step = 0.1, 
-					alias = :y_start, 
-					label = "Starting point (Y)"
-				),
-				SliderParameter(
-					lb = 1.0, 
-					ub = 50.0,
-					default = 5.0, 
-					step = 0.1, 
-					alias = :stroke_width, 
-					label = "Stroke Width"
-				),
-			]
-		);
+md"_(NumberField layout is built inline in each control cell.)_"
 
 # ╔═╡ a7885279-3f73-4c5d-aeef-061dea1ce930
-function format_checkBoxParameter( params::Vector{CheckBoxParameter};title::String)
-	
-	return combine() do Child
-		
-		mds = [
-			@htl("""
-			<div>
-			<p>$(param.label)
-			</div>
-			<div>
-				$(Child(param.alias, PlutoUI.CheckBox(default=param.default)) ) 
-			</div>
-			
-			""")
-			
-			for param in params
-		]
-		
-		md"""
-		#### $title
-		$(mds)
-		"""
-	end
-end
-
-# ╔═╡ f680e7ea-8e3a-41ac-ab92-a27c05103864
-viz_extra_sliders = @bind viz_extra_options format_checkBoxParameter(
-			title="Extra Options",
-			[
-				CheckBoxParameter(
-					alias=:random_shade, 
-					label="Random Color"
-				),
-				CheckBoxParameter(
-					alias=:vary_shade, 
-					label="Vary Shade"
-				),
-				CheckBoxParameter(
-					alias=:edmund_style, 
-					label="In Edmund Harris's style"
-				),
-				CheckBoxParameter(
-					alias=:chris_style, 
-					label="In Chris's style"
-				),
-			], 
-		);
+md"_(CheckBox layout is built inline in each control cell.)_"
 
 # ╔═╡ 2d98aed3-9a51-4225-b914-a20b19f43908
-function format_colorPicker( params::Vector{ColorParameter};title::String)
-	
-	return combine() do Child
-		
-		mds = [
-			@htl("""
-			<div>
-			<p>$(param.label)
-			</div>
-			<div>
-				$(Child(param.alias, PlutoUI.ColorPicker(default=param.default))) 
-			</div>
-			
-			""")
-			
-			for param in params
-		]
-		
-		md"""
-		#### $title
-		$(mds)
-		"""
-	end
-end
-
-# ╔═╡ 01cc5e4f-d94b-4211-b268-9ce0640cd23f
-colors_sliders = @bind viz_colors_options format_colorPicker(
-		title="Color Options",
-	[
-		ColorParameter(
-		alias = :stroke_color, 
-		label = "Stroke Color", 
-		default = RGB{N0f8}(
-			reinterpret(N0f8, UInt8(230)),
-			reinterpret(N0f8, UInt8(130)),
-			reinterpret(N0f8, UInt8(130)))
-		),
-		ColorParameter(
-			alias=:background_color, 
-			label="Background")
-	]
-	
-);
-
-# ╔═╡ 50a423ad-ca90-4015-9ef6-577f60e4efe7
-begin
-	@htl("""
-	<div class="slider_group sidebar-left">
-		<div class="on_big_show">
-			<div class="slider_group_inner">
-				$viz_sliders
-			</div>
-
-		</div>	
-	</div>
-	
-	<div class="slider_group sidebar-right">
-		<div class="on_small_show">
-			<div class="slider_group_inner ">
-				$viz_sliders
-			</div>
-		</div>
-	
-		<div class="slider_group_inner">
-			$viz_specs_sliders
-		</div>
-	
-		<div class="slider_group_inner">
-			$colors_sliders
-		</div>
-	
-		<div class="slider_group_inner">
-			$viz_extra_sliders
-		</div>
-	</div>
-	<div class="sidebar-bottom">
-		<div class="on_tiny_show">
-			<div class="slider_group">
-				<div class="slider_group_inner">
-					$viz_sliders
-				</div>
-			
-				<div class="slider_group_inner ">
-					$viz_sliders
-				</div>
-			</div>
-		
-			<div class="slider_group">
-				<div class="slider_group_inner">
-					$viz_specs_sliders
-				</div>
-			
-				<div class="slider_group_inner">
-					$colors_sliders
-				</div>
-				<div class="slider_group_inner">
-					$viz_extra_sliders
-				</div>
-			</div>
-		</div>
-		<div>
-				
-		</div>
-	</div>
-	""")
-end
-
-# ╔═╡ 6d225dce-3362-4f5d-bba9-0b5312f6be5a
-begin
-	@unpack ( num_traject, turn_scale, line_length ) = viz_parameters
-	@unpack ( init_angle, x_start, y_start, stroke_width) = viz_specs_parameters
-	@unpack ( stroke_color, background_color ) = viz_colors_options
-	@unpack ( random_shade, vary_shade, edmund_style, chris_style ) = viz_extra_options
-
-	# Trajectories from the pure-integer kernel (reversed so they grow outward
-	# from 1), one per starting number — fully wasm-compilable.
-	viz_trajectories = Vector{Vector{Int64}}()
-	let
-		Pv = Int64(collatz_parameters.P)
-		av = Int64(collatz_parameters.a)
-		bv = Int64(collatz_parameters.b)
-		n0 = Int64(1)
-		ntop = Int64(round(Int, num_traject))
-		while n0 <= ntop
-			push!(viz_trajectories, reverse(collatz_hailstone(n0, Pv, av, bv, Int64(1000))))
-			n0 += 1
-		end
-	end
-
-	# Turtle-walk each sequence in pure Julia (WasmMakie draws the paths):
-	# start at (x_start, y_start) heading init_angle+180°, turn by parity,
-	# step line_length — the same rules draw_hailstone_sequence used.
-	interactive_viz = let
-		fig = Figure(size = (Float64(window_width), Float64(window_height)))
-		ax = Axis(fig[1, 1])
-		hidedecorations!(ax)
-		hidespines!(ax)
-
-		base_r = Float64(red(stroke_color))
-		base_g = Float64(green(stroke_color))
-		base_b = Float64(blue(stroke_color))
-
-		for (t_i, seq) in enumerate(viz_trajectories)
-			xs = Float64[]
-			ys = Float64[]
-			x = Float64(x_start)
-			y = Float64(y_start)
-			θ = Float64(init_angle) + 180.0
-			push!(xs, x)
-			push!(ys, y)
-			for v in seq
-				if chris_style
-					θ += (mod(v, 3) == 1 ? turn_scale : -turn_scale)
-				elseif mod(v, 2) == 0
-					θ += turn_scale
-				else
-					θ -= edmund_style ? turn_scale / 2 : turn_scale
-				end
-				x += line_length * cosd(θ)
-				y += line_length * sind(θ)
-				push!(xs, x)
-				push!(ys, y)
-			end
-
-			# deterministic stand-ins for rand()/randn() shades — identical
-			# in the native run and the wasm island
-			col = if random_shade
-				(Float64(mod(t_i * 37, 97)) / 97.0,
-				 Float64(mod(t_i * 53, 89)) / 89.0,
-				 Float64(mod(t_i * 71, 83)) / 83.0, 0.6)
-			elseif vary_shade
-				shade = (Float64(mod(t_i, 7)) - 3.0) * 0.08
-				(clamp(base_r + shade, 0.0, 1.0),
-				 clamp(base_g + shade, 0.0, 1.0),
-				 clamp(base_b + shade, 0.0, 1.0), 0.6)
-			else
-				(base_r, base_g, base_b, 0.6)
-			end
-			lines!(ax, xs, ys; color = col, linewidth = Float64(stroke_width))
-		end
-		fig
-	end
-end
-
-# ╔═╡ 1b48b435-e959-477f-a8d2-3507da73fc28
-@htl("""
-$(PlutoUI.DownloadButton("<!doctype html><html><body>" * html_snippet(interactive_viz) * "</body></html>", (filename == "" ? "MyCoolVisualization" : filename) * ".html"))
-"""
-)
+md"_(ColorPicker layout is built inline in each control cell.)_"
 
 # ╔═╡ d9aaaadc-7d94-4e85-a1cb-c137e869ad2f
 md"### Extras"
