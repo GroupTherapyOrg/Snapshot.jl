@@ -263,17 +263,17 @@ starry_night = turtle_drawing_fast(background = "#000088") do t
 end
 
 # ╔═╡ ab4d46eb-d441-47c3-b061-2611b2e44009
-function draw_mondriaan(rng, turtle, width, height)
+function draw_mondriaan(rng::ArtRNG, turtle::Turtle, width::Float64, height::Float64)
 	#propbability that we make a mondriaan split
-	p = if width * height < 8
-		0
+	p = if width * height < 8.0
+		0.0
 	else
-		((width * height) / 900) ^ 0.5
+		((width * height) / 900.0) ^ 0.5
 	end
 
 	if nextfloat!(rng) < p
 		#split into halves
-		
+
 		split = rand_between!(rng, width * 0.1, width * 0.9)
 
 		#draw split
@@ -332,17 +332,17 @@ end
 # ╔═╡ d400d8d6-de2c-4886-86b9-ffd9e5f4e073
 # turtle_drawing_fast() is the same as turtle_drawing(), but it does not show a little turtle taking the individual steps
 
-mondriaan = turtle_drawing_fast() do t	
+mondriaan = turtle_drawing_fast() do t
 	rng = ArtRNG(GO_mondriaan + 7)
-	size = 30
-	
+	size = 30.0
+
 	#go to top left corner
 	penup!(t)
 	forward!(t, size / 2)
 	left!(t, 90)
 	forward!(t, size / 2)
 	right!(t, 180)
-		
+
 	#draw painting
 	draw_mondriaan(rng, t, size, size)
 	

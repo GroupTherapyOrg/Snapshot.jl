@@ -463,7 +463,11 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
       const imports = {};
       for (const imp of WebAssembly.Module.imports(mod)) {
         if (imp.module === 'wasm:js-string') continue;   // provided by builtins
-        (imports[imp.module] ||= {})[imp.name] = imp.module === 'Math' ? Math[imp.name] : (() => 0);
+        // Stub returns `false`, not 0: a wasm import declared to return i64 needs a
+        // BigInt/Boolean/String at the boundary (ToBigInt(Number) throws "Cannot convert
+        // 0 to a BigInt"). `false` satisfies BOTH i64 (→0n) and numeric (→0) result types,
+        // so canvas/plot cells with an i64-returning helper import no longer trap here.
+        (imports[imp.module] ||= {})[imp.name] = imp.module === 'Math' ? Math[imp.name] : (() => false);
       }
       const ex = (await WebAssembly.instantiate(mod, imports)).exports;
       const readStr = (ref) => {

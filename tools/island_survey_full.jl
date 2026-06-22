@@ -32,6 +32,7 @@ const ORDER = [
     "dither.jl",
     "turtles-art.jl",
     "Titration.jl",
+    "eeg_features.jl",
 ]
 
 pattern = isempty(ARGS) ? "" : ARGS[1]

@@ -179,7 +179,10 @@ function _wasm_bodies(
         (imports[imp.module] ||= {})[imp.name] =
           imp.module === 'Math' ? Math[imp.name]
           : (imp.module === 'canvas2d' && canvas2d) ? canvas2d[imp.name]
-          : (() => 0);
+          // `false`, not 0: an i64-returning import needs BigInt/Boolean/String at the
+          // boundary (ToBigInt(Number) throws "Cannot convert 0 to a BigInt"). `false`
+          // works for BOTH i64 (→0n) and numeric (→0) results — fixes canvas/plot cells.
+          : (() => false);
       }
       const ex = (await WebAssembly.instantiate(mod, imports)).exports;
       const readStr = (ref) => {

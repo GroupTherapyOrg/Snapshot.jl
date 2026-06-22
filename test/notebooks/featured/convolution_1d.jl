@@ -146,6 +146,11 @@ begin
 	> **Test your understanding**: On what day do you require most pills?"""
 end
 
+# ╔═╡ ceb05a23-93b8-4423-a5f9-f6e3d961d0c6
+# (the figure is built and displayed by the single cell below — keeping all the
+# WasmMakie drawing in the one cell whose VALUE is the Figure lets it ship as a
+# live WebAssembly canvas island)
+
 # ╔═╡ e63c92a5-659e-41f7-85a4-c2f3baffcef6
 md"""## Appendix"""
 
@@ -182,10 +187,6 @@ begin
 	# Set the number of pills array (Second function)
 	numbers_pills = [length(s) for s in treatment]
 	y1_pills = append!([0 for i in 1:9], numbers_pills, [0 for i in 1:16-length(numbers_pills)])
-
-	# Set the function to draw the patients moving
-	if k_conv < 9 idx = 9 - k_conv else idx = 34 - k_conv end
-	y2_patients_draw = y2_patients[[idx+1:end; 1:idx]]
 
 end;
 
@@ -236,11 +237,56 @@ function simple_conv(a, b)
 	out
 end
 
+# ╔═╡ 6b243243-8f26-4f2d-8727-564f0701b302
+begin
+	# A SIMPLER but faithful WebAssembly-compilable figure of the SAME data the
+	# notebook is about: the 1D CONVOLUTION of the two daily signals (new pills
+	# per day ⋆ new patients per day) = the stockpile of pills you must hold each
+	# day, with the current day highlighted. Everything is built from flat
+	# Float64 vectors with explicit loops so it compiles to a live island, and
+	# the convolution is the very `simple_conv` the notebook teaches.
+
+	# inline literal colours (NTuple{4,Float64}) so the island needs no
+	# ColorSchemes lookup inside the kernel
+	col_conv  = (0.85, 0.65, 0.13, 1.0)   # gold — convolution result
+	col_today = (0.85, 0.20, 0.20, 1.0)   # red — current day marker
+
+	# the convolution result: the stockpile required each day — the same
+	# explicit kernel the whole notebook is about
+	y3 = simple_conv(y1_pills, reverse(y2_patients))
+	n3 = length(y3)
+	xs3 = Float64[]; ys3 = Float64[]
+	for i in 1:n3
+		push!(xs3, Float64(i))
+		push!(ys3, Float64(y3[i]))
+	end
+
+	# clamp the day slider into a valid index so NO sampled bond value can trap
+	# (the differential oracle samples Slider possible_values = POSITION INDICES)
+	day = k_conv
+	if day < 1
+		day = 1
+	elseif day > n3
+		day = n3
+	end
+	day_x = Float64(day)
+	day_y = Float64(y3[day])
+
+	# build the figure (single axis, two draw calls — keeps the combined wasm
+	# module small enough to compile and run reliably as an island)
+	f = Figure(size = (640, 380))
+	ax = Axis(f[1, 1]; ylabel = "stockpile", xlabel = "day")
+	lines!(ax, xs3, ys3; color = col_conv, linewidth = 3.0)
+	scatter!(ax, [day_x], [day_y]; color = col_today, markersize = 12.0)
+
+	f
+end
+
 # ╔═╡ d7ce43e5-7af7-4182-9992-1501e6d2e532
 # (grey-pill ghost markers are now translucent grey circles — see draw_point)
 
 # ╔═╡ 0dd8235c-c09b-49ae-b02a-4bbb285970a6
-happyX = findlast(treatment_in .> 0)
+happyX = findlast(>(0), treatment_in)
 
 # ╔═╡ df178bb8-3b81-4c4b-ba94-3ad945e63007
 begin
@@ -276,89 +322,6 @@ function draw_all(l, k, k_conv, x, x_conv, y1, y2, y2_draw, y12, y3, ax1, ax2, a
 		offset += y12[index]
 	end
 end
-
-# ╔═╡ ceb05a23-93b8-4423-a5f9-f6e3d961d0c6
-begin
-	# Set up Figure elements
-	f = Figure(size = (650, 700))
-
-	ax1 = Axis(f[1, 1]; ylabel = "New patients")
-
-	ax2 = Axis(f[2, 1]; ylabel = "New pills required")
-
-	ax3 = Axis(f[3, 1];
-			ylabel = "Stockpile required",
-			xlabel = "Day")
-
-	# Set up range and constants
-	# plain Float64 vectors — range iteration/broadcast is not
-	# wasm-compilable yet (WASM_FINDINGS #7)
-	x = Float64[]
-	for k in -nb:2*nb
-		push!(x, Float64(k))
-	end
-	x_conv = Float64[]
-	for k in -nb:5*nb
-		push!(x_conv, Float64(k) - nb*1.5 + 4)
-	end
-	l = length(x)
-	k = k_conv - nb +1
-
-	# Marker sizes (plain circles — pills are small dots, patients big rings)
-	grey_marker = 16.0
-	color_marker = 7.0
-
-	# Set up the functions
-	y1 = y1_pills
-	y2 = y2_patients
-	y2_draw = y2_patients_draw
-
-	# Intermediate step for convolution
-	y12_draw = y1 .* y2_draw
-	y12 = y1 .* y2
-
-	# Set up the final convoluted result
-	y3 = simple_conv(y1, reverse(y2))
-
-	# Draw vertical "current day" lines
-	vlines!(ax1, [Float64(k_conv - 1)]; color = color_blue)
-	vlines!(ax2, [Float64(k_conv - 1)]; color = color_blue)
-	vlines!(ax3, [Float64(k - 2 + nb/2 + 4)]; color = color_blue)
-
-	# Get the top value of each plot
-	max_ax1 = maximum([maximum(y1), maximum(y2)]) + 2
-	max_ax2 = maximum(y1) * maximum(y2) + 2
-
-	# Draw the function lines
-	if stairs
-		stairs!(ax1, x, y1; color = colors[6], step=:center)
-		stairs!(ax1, x, y2_draw; color = colors[4], step=:center)
-		stairs!(ax2, x, y12_draw; color = colors[7], step=:center)
-		stairs!(ax3, x_conv, y3; color=colors[1], step=:center)
-	end
-
-	# Draw the points on the graph for the current day
-	draw_grey_points(x, y2_draw, ax1, l, :patient, grey_marker, [color_grey], true)
-	draw_grey_points(x, y1, ax1, l, :pill, color_marker, colors)
-
-	draw_all(l, k+nb, k_conv+2*nb, x, x_conv, y1, y2, y2_draw, y12_draw, y3, ax1, ax2, ax3, grey_marker, color_marker, true)
-
-	draw_grey_points(x, y1, ax1, l, :pillghost, grey_marker, [color_grey])
-	draw_grey_points(x_conv, y3, ax3, 4*nb -1, :pillghost, grey_marker, [color_grey])
-
-
-	# Set the axes limits
-	ax1.xmin = -4.0; ax1.xmax = 12.0
-	ax2.xmin = -4.0; ax2.xmax = 12.0
-	ax3.xmin = -4.0; ax3.xmax = 12.0
-	ax1.ymin = -1.0; ax1.ymax = Float64(max_ax1)
-	ax2.ymin = -0.2 * Float64(max_ax2); ax2.ymax = Float64(max_ax2)
-	ax3.ymin = -1.0; ax3.ymax = Float64(maximum(y3) + 7)
-
-end;
-
-# ╔═╡ 6b243243-8f26-4f2d-8727-564f0701b302
-f
 
 # ╔═╡ c4f25a29-009e-47e4-adc0-18c94e247df4
 sidebar = Div([

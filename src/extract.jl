@@ -106,6 +106,23 @@ function _is_funcdef_expr(ex)
     false
 end
 
+"A docstring'd definition — `\"…\" function f … end` or `@doc \"…\" f(x)=…` — parses
+as a `@doc` macrocall wrapping the funcdef. Unwrap it to the bare def so it hoists to
+the preamble like any funcdef; otherwise it falls to the body path, where `@doc`
+expansion in local scope drops the def's RETURN (silently wrong island output). The
+docstring is irrelevant to compilation, so it is discarded."
+function _unwrap_docstring(ex)
+    (ex isa Expr && ex.head === :macrocall && length(ex.args) >= 2) || return ex
+    m = ex.args[1]
+    isdoc = (m === Symbol("@doc")) ||
+            (m isa GlobalRef && m.name === Symbol("@doc")) ||
+            (m isa Expr && m.head === :. && length(m.args) == 2 &&
+             m.args[2] isa QuoteNode && m.args[2].value === Symbol("@doc"))
+    isdoc || return ex
+    inner = ex.args[end]
+    _is_funcdef_expr(inner) ? inner : ex
+end
+
 "Does `ex` reference any symbol in `names` (recursive)? Used to keep
 bond-closing definitions in the body, where the bond is a parameter."
 function _refs_any(ex, names::Set{Symbol})
@@ -282,6 +299,7 @@ function _split_preamble(ex, bond_names::Set{Symbol}=Set{Symbol}())
     for sub in exprs
         sub === nothing && continue
         sub isa LineNumberNode && continue
+        sub = _unwrap_docstring(sub)   # `@doc "…" function f…` → bare funcdef (hoistable)
         if sub isa Expr && sub.head in (:block, :toplevel)
             spre, sbody = _split_preamble(sub, bond_names)
             append!(pre, spre)
