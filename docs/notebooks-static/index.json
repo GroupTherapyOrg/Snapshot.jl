@@ -36,18 +36,6 @@
     "seconds": 43.0
   },
   {
-    "degraded": 2,
-    "description": "Explore this cool math problem and create your own visualization!",
-    "hash": "6eba5110c7d56ae9426755b30e9397de09523878887866ecdcf694fae90f5ec9",
-    "html": "CollatzConjecture.html",
-    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Collatz_Conjecture_Vizualization.png/500px-Collatz_Conjecture_Vizualization.png",
-    "islands": 3,
-    "seconds": 803.3,
-    "slug": "CollatzConjecture",
-    "status": "interactive",
-    "title": "Visualizing the Collatz Conjecture "
-  },
-  {
     "degraded": 0,
     "description": "Write your own interactive controls with HTML!",
     "hash": "1e99d96a45b6708003ea541f06e95654b6f7651726b17aa7b2bcbec71ea1541a",
@@ -178,5 +166,17 @@
     "slug": "turtles-art",
     "status": "interactive",
     "title": "Turtles – showcase"
+  },
+  {
+    "islands": 1,
+    "status": "interactive",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Collatz_Conjecture_Vizualization.png/500px-Collatz_Conjecture_Vizualization.png",
+    "hash": "77f6c6595e8a0deafd93633f64c54b6a21747951ff7331e31ef64553462ebd55",
+    "degraded": 5,
+    "html": "CollatzConjecture.html",
+    "slug": "CollatzConjecture",
+    "title": "Visualizing the Collatz Conjecture ",
+    "description": "Explore this cool math problem and create your own visualization!",
+    "seconds": 522.0
   }
 ]
