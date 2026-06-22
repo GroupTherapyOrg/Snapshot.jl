@@ -345,7 +345,37 @@ Markdown.BlockQuote(
 ) |> Markdown.MD
 
 # ╔═╡ 9c83bdc9-8796-47cf-9a83-65dda43099bf
-md"**👇 Click anywhere to choose the value of c!**"
+md"**👇 Drag the sliders to choose the constant ``c = c_x + i\,c_y``, zoom, and detail!**"
+
+# ╔═╡ 454f51c5-c11d-405b-b3e2-7ef289aec7db
+md"""
+``c_x = `` $(@bind julia_cx Slider(-1.0:0.02:1.0; default = -0.04, show_value = true))
+
+``c_y = `` $(@bind julia_cy Slider(-1.0:0.02:1.0; default = 0.72, show_value = true))
+
+zoom $(@bind julia_zoom Slider(1:8; default = 1, show_value = true)) · detail $(@bind julia_iter Slider(10:5:120; default = 60, show_value = true))
+"""
+
+# ╔═╡ b1f0c1a2-7e44-4a0d-9f2e-1c0a5d6e3b71
+md"""## Bonus: the Mandelbrot set
+
+The **Julia set** above fixes one constant ``c`` and sweeps the *starting*
+point ``z_0`` across the plane. The **Mandelbrot set** does the opposite: it
+starts every pixel at ``z_0 = 0`` and uses the pixel's own coordinate as
+``c``. The result is the single most famous fractal in mathematics — and the
+same simple loop ``z \\leftarrow z^2 + c`` draws it.
+
+Pan with the centre sliders and zoom in to find miniature copies of the whole
+shape hiding along its edge."""
+
+# ╔═╡ c2a1b3d4-8f55-4b1e-a03f-2d1b6e7f4c82
+md"""
+centre ``x`` $(@bind mb_cx Slider(-2.0:0.02:1.0; default = -0.5, show_value = true))
+
+centre ``y`` $(@bind mb_cy Slider(-1.25:0.02:1.25; default = 0.0, show_value = true))
+
+zoom $(@bind mb_zoom Slider(1:8; default = 1, show_value = true)) · detail $(@bind mb_iter Slider(10:5:120; default = 60, show_value = true))
+"""
 
 # ╔═╡ e7f0f154-ddf6-432e-bc6f-5654fa4c5a14
 md"If you're interested to dive deep into the code, take a look below, it's so simple and straighforward and yet we can create so many beautiful things with it!"
@@ -354,44 +384,138 @@ md"If you're interested to dive deep into the code, take a look below, it's so s
 md"# Appendix"
 
 # ╔═╡ 98d7894e-3a9f-4df4-b282-fe4566d3c0f7
-function scale_tuple(tuple, new_min, new_max)
-    return (Int(round((tuple[1] + 1.5) / 3 * (new_max - new_min) + new_min)),
-            Int(round((tuple[2] + 1.5) / 3 * (new_max - new_min) + new_min)))
+# Escape-time → RGBA. Concrete Float64 in/out: an in-set pixel (never escaped)
+# is black; an escaped pixel gets a smooth analytic colour from a small sin
+# palette. `t` is the escape-fraction (iterations / max) in [0, 1].
+function escape_color(escaped::Bool, t::Float64)
+	if !escaped
+		return (0.0, 0.0, 0.0, 1.0)
+	end
+	r = 0.5 + 0.5 * sin(3.0 + 6.2831853 * t)
+	g = 0.5 + 0.5 * sin(1.0 + 6.2831853 * t)
+	b = 0.5 + 0.5 * sin(5.0 + 6.2831853 * t)
+	return (r, g, b, 1.0)
 end
 
 # ╔═╡ 81afcd2c-28e9-4b2a-8dc0-828d5feec4f7
 begin
-	f(z, c) = z*z + c
-	img_size = 300
-
-	# This checks for each point if it diverges
-	function is_stable(iterations, z, c)
-	    for _ in 1:iterations
-	        # This can be set to a bigger value as check to stop divergence check
-			if abs(z) > 5 
-	            return 0
+	# Julia-set escape-time field as a *flat column-major* Vector of RGBA pixels
+	# (length nn*nn). Everything is plain Float64 / Int64 — no Complex, no
+	# Any-typed containers, no Matrix literals — so the exact same code runs
+	# inside the WebAssembly island. The square z = x + iy iterates
+	#   z ← z² + c,  c = cx + i·cy  (a FIXED constant for the whole picture).
+	# All params are clamped (grid ≥ 2, max_iter ≥ 1, half-width > 0) so the
+	# kernel never traps for any sampled bond combo; the native side applies the
+	# identical clamps, so the differential oracle matches bit-for-bit.
+	function julia_field(n::Int64, max_iter::Int64, cx::Float64, cy::Float64,
+	                     ctr_x::Float64, ctr_y::Float64, half::Float64)
+		nn = n < 2 ? Int64(2) : (n > 200 ? Int64(200) : n)
+		mi = max_iter < 1 ? Int64(1) : max_iter
+		h  = half <= 0.0 ? 1.0e-6 : half
+		pix = Vector{NTuple{4,Float64}}(undef, nn * nn)
+		lo_x = ctr_x - h
+		lo_y = ctr_y - h
+		step = (2.0 * h) / Float64(nn - 1)
+		for j in 1:nn
+			zy0 = lo_y + step * Float64(j - 1)
+			for i in 1:nn
+				zx = lo_x + step * Float64(i - 1)
+				zy = zy0
+				it = Int64(0)
+				escaped = false
+				while it < mi
+					zx2 = zx * zx
+					zy2 = zy * zy
+					if zx2 + zy2 > 4.0
+						escaped = true
+						break
+					end
+					new_zx = zx2 - zy2 + cx
+					zy = 2.0 * zx * zy + cy
+					zx = new_zx
+					it += 1
+				end
+				t = Float64(it) / Float64(mi)
+				pix[i + (j - 1) * nn] = escape_color(escaped, t)
 			end
-	        z = f(z, c)
-	    end
-	    1
+		end
+		return pix
 	end
 
-	# This goes over all the points in the image, considers the point an initial, check the sequence, colors accordingly depending on whether they diverge or not
-	# (flat column-major vector — index y + x*(img_size+1) — so the same code
-	# also runs inside the WebAssembly islands, where Matrix construction is
-	# not yet available)
-	function julia_fractal(depth, X, Y, c, f)
-		img = fill(0.0f0, (img_size + 1) * (img_size + 1))
-	    for x in X
-	        for y in Y
-	            z = f(x, y)
-				x_scaled, y_scaled = scale_tuple((x, y), 0, img_size)
-				img[y_scaled + 1 + x_scaled * (img_size + 1)] = is_stable(depth, z, c)
-	        end
-	    end
-		img
+	# Mandelbrot escape-time field: same loop, but here c VARIES per pixel
+	# (c = the pixel's own coordinate) and z starts at 0. Flat column-major RGBA.
+	function mandel_field(n::Int64, max_iter::Int64,
+	                      ctr_x::Float64, ctr_y::Float64, half::Float64)
+		nn = n < 2 ? Int64(2) : (n > 200 ? Int64(200) : n)
+		mi = max_iter < 1 ? Int64(1) : max_iter
+		h  = half <= 0.0 ? 1.0e-6 : half
+		pix = Vector{NTuple{4,Float64}}(undef, nn * nn)
+		lo_x = ctr_x - h
+		lo_y = ctr_y - h
+		step = (2.0 * h) / Float64(nn - 1)
+		for j in 1:nn
+			cy = lo_y + step * Float64(j - 1)
+			for i in 1:nn
+				cx = lo_x + step * Float64(i - 1)
+				zx = 0.0
+				zy = 0.0
+				it = Int64(0)
+				escaped = false
+				while it < mi
+					zx2 = zx * zx
+					zy2 = zy * zy
+					if zx2 + zy2 > 4.0
+						escaped = true
+						break
+					end
+					new_zx = zx2 - zy2 + cx
+					zy = 2.0 * zx * zy + cy
+					zx = new_zx
+					it += 1
+				end
+				t = Float64(it) / Float64(mi)
+				pix[i + (j - 1) * nn] = escape_color(escaped, t)
+			end
+		end
+		return pix
 	end
-	
+
+	# WasmMakie display helper: render a flat column-major RGBA vector through
+	# `image!` (the wasm-stable image path — heatmap! is not yet wasm-safe).
+	# Copies the exact image! signature from images.jl `rgb_figure`.
+	function fractal_figure(pix::Vector{NTuple{4,Float64}}, nn::Int64; px::Int = 340)
+		fig = Figure(size = (px, px))
+		ax = Axis(fig[1, 1])
+		hidedecorations!(ax)
+		hidespines!(ax)
+		image!(ax, (0.0, Float64(nn)), (0.0, Float64(nn)), pix,
+		       nn, nn; interpolate = false)
+		fig
+	end
+end
+
+# ╔═╡ 8899561d-42e7-4397-a649-8800461c6649
+let
+	# Concrete-typed Julia-set island. The grid is fixed at 140×140; the
+	# half-width shrinks as zoom grows (zoom-in around the origin). Everything
+	# crosses into the wasm island as plain Float64 / Int64.
+	n = 140
+	half = 1.6 / Float64(julia_zoom)
+	pix = julia_field(Int64(n), Int64(julia_iter),
+	                  Float64(julia_cx), Float64(julia_cy),
+	                  0.0, 0.0, half)
+	fractal_figure(pix, Int64(n))
+end
+
+# ╔═╡ d3b2c4e5-9066-4c2f-b14a-3e2c7f8a5d93
+let
+	# Concrete-typed Mandelbrot island — identical wasm-safe kernel, with c
+	# varying per pixel. 140×140 grid; half-width shrinks with zoom.
+	n = 140
+	half = 1.6 / Float64(mb_zoom)
+	pix = mandel_field(Int64(n), Int64(mb_iter),
+	                   Float64(mb_cx), Float64(mb_cy), half)
+	fractal_figure(pix, Int64(n))
 end
 
 # ╔═╡ 0cfe1f7a-bdae-443d-a1d2-4a503c05ea62
@@ -501,40 +625,6 @@ new_sequence = create_sequence_with_c(Fc, c, new_initial_value, 15)
 
 # ╔═╡ 4693d328-0907-4d62-b8e4-dcccff803b59
 last(new_sequence)
-
-# ╔═╡ 454f51c5-c11d-405b-b3e2-7ef289aec7db
-c_fractal_picker = @bind c_for_fractal ComplexNumberPicker(default=-.04+.72im);
-
-# ╔═╡ 7789450c-31d6-4286-9fd9-3e88b075b538
-c_fractal_picker
-
-# ╔═╡ 8899561d-42e7-4397-a649-8800461c6649
-let
-	# coordinate vector built with an integer loop — LinRange/StepRangeLen
-	# iteration is not wasm-compilable yet (WASM_FINDINGS #7)
-	coords = Float64[]
-	for k in 0:img_size
-		push!(coords, -1.5 + 3.0 * k / img_size)
-	end
-
-	fractal = julia_fractal(80, coords, coords, c_for_fractal, Complex)
-
-	c1 = (Float64(red(color1)), Float64(green(color1)), Float64(blue(color1)), 1.0)
-	c2 = (Float64(red(color2)), Float64(green(color2)), Float64(blue(color2)), 1.0)
-
-	# flat column-major RGBA pixels for WasmMakie's image! (x = i, y = j)
-	pixels = Vector{NTuple{4,Float64}}(undef, img_size * img_size)
-	for j in 1:img_size, i in 1:img_size
-		v = fractal[j + (i - 1) * (img_size + 1)]
-		pixels[i + (j - 1) * img_size] = v == 1.0f0 ? c1 : c2
-	end
-
-	fig = Figure(size = (340, 340))
-	ax = Axis(fig[1, 1])
-	hidedecorations!(ax)
-	image!(ax, (-1.5, 1.5), (-1.5, 1.5), pixels, img_size, img_size; interpolate = false)
-	fig
-end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1352,11 +1442,13 @@ version = "17.7.0+0"
 # ╟─98fbff5f-df70-4ee6-a2b3-7d56b6299140
 # ╟─3dc2f13d-0238-444d-b440-5e7e2df0618f
 # ╟─9c83bdc9-8796-47cf-9a83-65dda43099bf
-# ╟─7789450c-31d6-4286-9fd9-3e88b075b538
+# ╟─454f51c5-c11d-405b-b3e2-7ef289aec7db
 # ╟─8899561d-42e7-4397-a649-8800461c6649
+# ╟─b1f0c1a2-7e44-4a0d-9f2e-1c0a5d6e3b71
+# ╟─c2a1b3d4-8f55-4b1e-a03f-2d1b6e7f4c82
+# ╟─d3b2c4e5-9066-4c2f-b14a-3e2c7f8a5d93
 # ╟─e7f0f154-ddf6-432e-bc6f-5654fa4c5a14
 # ╟─81afcd2c-28e9-4b2a-8dc0-828d5feec4f7
-# ╟─454f51c5-c11d-405b-b3e2-7ef289aec7db
 # ╟─712ce6d2-c5d4-4699-8b2c-f6db11ac17af
 # ╟─98d7894e-3a9f-4df4-b282-fe4566d3c0f7
 # ╟─6233f626-19e9-4012-ba72-e9ca2386ab27
