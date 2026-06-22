@@ -83,21 +83,28 @@ function make_gradient(nr::Int64, nc::Int64)
 end
 
 # ╔═╡ b72d08fd-58b2-4e75-a5a6-e5be5d4438dd
-"Render a flat column-major `Vector{Float64}` image (`nr` rows, `nc` cols) as a grayscale WasmMakie heatmap."
+"""
+Render a flat column-major `Vector{Float64}` image (`nr` rows, `nc` cols, pixel
+`idx = i + (j-1)*nr`) as a grayscale WasmMakie figure. Each brightness `v` is
+shown as the neutral colour `(v, v, v)`, drawn through the wasm-stable `image!`
+path (the `heatmap!` codegen path traps in compiled islands).
+"""
 function gray_figure(img::Vector{Float64}, nr::Int64, nc::Int64; px::Int64=320)
-	# repack into the heatmap's expected layout, flipping rows so image row 1
-	# renders at the top
-	vals = Vector{Float64}(undef, nr * nc)
+	# repack column-major (row stride nr) into image! layout (row stride nc),
+	# flipping rows so image row 1 renders at the TOP, and map gray → RGBA
+	pix = Vector{NTuple{4,Float64}}(undef, nr * nc)
 	for i in 1:nr
 		for j in 1:nc
-			vals[j + (nr - i) * nc] = img[i + (j - 1) * nr]
+			v = img[i + (j - 1) * nr]
+			pix[j + (nr - i) * nc] = (v, v, v, 1.0)
 		end
 	end
 	fig = Figure(size = (px, px))
 	ax = Axis(fig[1, 1])
 	hidedecorations!(ax)
 	hidespines!(ax)
-	heatmap!(ax, 1:nc, 1:nr, vals, nc, nr; colorrange = (0.0, 1.0))
+	image!(ax, (0.0, Float64(nc)), (0.0, Float64(nr)), pix,
+	       Int64(nc), Int64(nr); interpolate = false)
 	return fig
 end
 
@@ -107,14 +114,14 @@ Pick the image size — smaller images make the individual dithered pixels easie
 see: $(@bind imgsize Slider(16:8:64, default=48, show_value=true))
 """
 
-# ╔═╡ 9258ccd2-c6ef-4fff-b7bf-13f09dfd5b43
+# ╔═╡ b509f437-be95-4272-a675-2d1e6af498ca
 md"""
 ### The original (continuous) image
 
 This is the smooth, full-precision image before any quantization.
 """
 
-# ╔═╡ b72d08fd-58b2-4e75-a5a6-e5be5d4438de
+# ╔═╡ 09cbe381-c39e-4431-a9d3-624091ea42d0
 let
 	n = imgsize
 	img = make_gradient(n, n)
@@ -284,7 +291,7 @@ end
 # ╔═╡ a52bdeb6-35c4-4a70-bfa4-469912b30b27
 md"""**Mean abs. error — plain rounding:** $(err_quantize)"""
 
-# ╔═╡ a52bdeb6-35c4-4a70-bfa4-469912b30b28
+# ╔═╡ ce25faed-be1c-4b74-9c3c-968638eb7813
 md"""**Mean abs. error — Floyd–Steinberg:** $(err_dither)
 
 Per-pixel, dithering does *not* reduce the absolute error (it still snaps to the
@@ -565,8 +572,8 @@ version = "1.64.0+1"
 # ╠═1e9359f2-59c1-4910-b00f-81dc74f889ae
 # ╠═b72d08fd-58b2-4e75-a5a6-e5be5d4438dd
 # ╟─a4a610a0-2034-4548-b9b1-283eaba05b59
-# ╟─9258ccd2-c6ef-4fff-b7bf-13f09dfd5b43
-# ╠═b72d08fd-58b2-4e75-a5a6-e5be5d4438de
+# ╟─b509f437-be95-4272-a675-2d1e6af498ca
+# ╠═09cbe381-c39e-4431-a9d3-624091ea42d0
 # ╟─53d3af8c-88b5-4409-bf6a-9e1b22ac34a0
 # ╠═0c6aff98-350e-4935-834c-6b9aa9fa3a38
 # ╠═dc829cc3-213b-4f8f-b1e0-ad705be35edb
@@ -581,7 +588,7 @@ version = "1.64.0+1"
 # ╠═7d1ced8c-8a33-4429-b8fb-f06eb4bc7b1b
 # ╠═c4799684-46b7-4783-99de-c8946e7067de
 # ╟─a52bdeb6-35c4-4a70-bfa4-469912b30b27
-# ╟─a52bdeb6-35c4-4a70-bfa4-469912b30b28
+# ╟─ce25faed-be1c-4b74-9c3c-968638eb7813
 # ╟─83252609-ff10-4395-82b5-06b592998647
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
