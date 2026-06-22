@@ -134,13 +134,14 @@ The sequence of values that you go through when iterating a number is often call
 """
 
 # ╔═╡ 75b9294e-43a4-48c4-b493-5d40027f3cd6
-md"## The Collatz Graph"
+md"## All Paths Lead to One"
 
 # ╔═╡ 12d218ee-9a43-4647-a96b-c9252c665fa0
 md"""
 
-We can visualize the path that each number takes with a graph. 
-
+We can visualize the path that *every* number takes by overlaying many hailstone
+sequences at once. Each line is one starting value; watch how, no matter where they
+begin, they all tumble down into the same ``4 \rightarrow 2 \rightarrow 1`` cycle.
 
 """
 
@@ -201,40 +202,27 @@ This formulation makes sure that we always deal with integers.
 """
 
 # ╔═╡ 0e85d872-ef01-463e-b395-b0797c96317e
-@htl("""
-<div style="padding: .5rem">
-	<div>
-	<h4>
-	Want to generalize the parameters? $(@bind do_generalize_collatz PlutoUI.CheckBox())
-	</h4>
-	
-	</div>
-	<div>
-	<b>Note</b>: This will update all the plots and visualizations in the notebook. 
-</div>
-</div>
-
-""")
+md"""
+The sliders below let you change the three numbers ``P``, ``a`` and ``b`` directly.
+Every plot above — the hailstone sequence, the convergence view and the stopping-time
+plot — reacts live to these values, so you can explore the generalized family without
+leaving the page.
+"""
 
 # ╔═╡ 1c3f1bea-f1ba-4d64-90ad-584391c01da5
-begin
-	generalize_checkbox = @bind generalize_collatz MultiCheckBox(["Hailstone Sequence", "Graph", "Stopping Time", "Interactive"], default=["Interactive"])
-	if(do_generalize_collatz)
-		generalize_checkbox
-	end
-end
-
-# ╔═╡ 5f074850-b967-4de5-8ca3-b85a74052499
-begin
-	generalize_collatz
-	stopping_times = Dict();
-end;
+md"""
+!!! info "Try it"
+	The classic Collatz problem is ``P = 2``, ``a = 3``, ``b = 1``. Move the sliders to
+	pick a different ``(P, a, b)`` and watch how the trajectories change.
+"""
 
 # ╔═╡ af0c36ee-0534-4143-b59b-4ee041ef0f04
-do_generalize_collatz ? md"""
+md"""
 !!! warning "Divergence"
-	Some parameters will not behave as the traditional problem and will lead to some numbers diverging up to infinity. In that case, the calculations will stop at a stopping time of 1000. However, this still can still result in high latency so beware! .
-""" : md""
+	Some parameter choices do not behave like the traditional problem and can send the
+	numbers climbing without ever reaching 1. To keep everything fast and finite, the
+	computations stop after at most 1000 steps.
+"""
 
 # ╔═╡ 16d57341-6c55-4440-bdeb-492b4d0c4427
 md"# Gallery"
@@ -395,6 +383,52 @@ end
 
 # ╔═╡ f02affaa-534b-4c72-81ae-c42ca3b455fd
 md"### Collatz"
+
+# ╔═╡ a3b1c2d4-0001-4001-8001-000000000001
+"""
+	collatz_hailstone(n0, P, a, b, maxlen)
+
+The generalized hailstone sequence as a flat `Vector{Int64}`, computed with a plain
+integer loop so it compiles to WebAssembly. `g(n) = n ÷ P` when `n % P == 0`, otherwise
+`g(n) = a*n + b`. Iteration stops at 1 or after `maxlen` steps.
+"""
+function collatz_hailstone(n0::Int64, P::Int64, a::Int64, b::Int64, maxlen::Int64)
+	out = Int64[]
+	n = n0 < 1 ? Int64(1) : n0
+	pp = P < 2 ? Int64(2) : P
+	push!(out, n)
+	steps = 0
+	while n != 1 && steps < maxlen
+		n = (n % pp == 0) ? (n ÷ pp) : (a * n + b)
+		push!(out, n)
+		steps += 1
+		if n < 1
+			break
+		end
+	end
+	return out
+end
+
+# ╔═╡ a3b1c2d4-0002-4001-8001-000000000002
+"""
+	collatz_stopping_time(n0, P, a, b, maxlen)
+
+Number of steps the generalized Collatz map takes to first reach 1 (the *total stopping
+time*), as a plain `Int64`. Capped at `maxlen` steps so divergent parameters stay finite.
+"""
+function collatz_stopping_time(n0::Int64, P::Int64, a::Int64, b::Int64, maxlen::Int64)
+	n = n0 < 1 ? Int64(1) : n0
+	pp = P < 2 ? Int64(2) : P
+	steps = 0
+	while n != 1 && steps < maxlen
+		n = (n % pp == 0) ? (n ÷ pp) : (a * n + b)
+		steps += 1
+		if n < 1
+			break
+		end
+	end
+	return steps
+end
 
 # ╔═╡ 4c991173-d9ff-4ba9-b217-8f9aafbbd631
 shortcut_collatz_cache = Dict{Int, Vector{Int}}()
@@ -1019,27 +1053,13 @@ end
 	)
 
 # ╔═╡ 43c4fd8d-bb44-43cd-91dd-d221629d1fd9
-begin
-graph_sliders = @bind graph_parameters format_sliderParameter(title="Collatz Graph Parameters:",[
-	SliderParameter(lb=1,ub=1000,default=1,step=1,alias=:start_value,label="Starting Value"),
-	SliderParameter(lb=1,ub=25,default=9,step=1,alias=:orbit,label="Maximum Orbit")
-	
+@bind graph_parameters format_sliderParameter(title="Convergence View:",[
+	SliderParameter(lb=1,ub=60,default=12,step=1,alias=:start_value,label="Overlay paths for 1 … N")
 ])
-	
-
-	@htl("""
-	<div class="slider_group">
-	<div>
-		$graph_sliders
-	</div>
-	
-	</div>
-	""")
-end
 
 # ╔═╡ 0fd7242c-46a1-4929-9c53-3c45768893b4
 @bind stopping_parameters format_sliderParameter(title="Stopping Time Plot Parameters",
-	[SliderParameter(lb=100, ub=30000, step=100, default=1000,alias=:ub, label="Upper Bound")]
+	[SliderParameter(lb=100, ub=3000, step=100, default=1000,alias=:ub, label="Upper Bound")]
 
 )
 
@@ -1048,11 +1068,11 @@ viz_sliders = @bind viz_parameters format_sliderParameter(
 			title = "Visualization Options:", 
 			[
 				SliderParameter(
-					lb = 100.0,
-					ub = 10000.0, 
-					default = 1000.0, 
-			 		step = 100.0, 
-					alias = :num_traject, 
+					lb = 10.0,
+					ub = 300.0,
+					default = 80.0,
+			 		step = 10.0,
+					alias = :num_traject,
 					label = "Numbers of trajectories"
 				),
 				SliderParameter(
@@ -1074,96 +1094,99 @@ viz_sliders = @bind viz_parameters format_sliderParameter(
 		);
 
 # ╔═╡ f21f1e3e-a3ab-458e-a101-ce824731f0b6
-begin
-collatz_sliders = @bind collatz_parameters format_sliderParameter(title="Collatz Parameters:",[
-	SliderParameter(lb=1,ub=10,step=1,default=2,label="P"),
+@bind collatz_parameters format_sliderParameter(title="Collatz Parameters (P, a, b):",[
+	SliderParameter(lb=2,ub=10,step=1,default=2,label="P"),
 	SliderParameter(lb=1,ub=10,step=1,default=3,label="a"),
-	SliderParameter(lb=1,ub=10,step=1,label="b"),
+	SliderParameter(lb=1,ub=10,step=1,default=1,label="b"),
 ])
-	if(do_generalize_collatz)
-		collatz_sliders
-	else
-	end
-end
 
 # ╔═╡ 66fe673a-7679-4c55-bf59-146a8dd1241c
 begin
-	hailstone_seq = "Hailstone Sequence" ∈ generalize_collatz ? hailstone_sequence(hailstone_params.start_value; collatz_parameters... ,verbose=false) : hailstone_sequence(hailstone_params.start_value; verbose=false)
+	hail_x = Float64[]
+	hail_y = Float64[]
+	let
+		seq = collatz_hailstone(
+			Int64(hailstone_params.start_value),
+			Int64(collatz_parameters.P),
+			Int64(collatz_parameters.a),
+			Int64(collatz_parameters.b),
+			Int64(1000))
+		i = 1
+		for v in seq
+			push!(hail_x, Float64(i))
+			push!(hail_y, Float64(v))
+			i += 1
+		end
+	end
 
 	fig_hail = Figure(size = (640, 420))
 	ax_hail = Axis(fig_hail[1, 1];
 		title = "Hailstone sequence of: " * string(hailstone_params.start_value),
 		xlabel = "Iterations",
 		ylabel = "Value")
-
-	hail_x = Float64[]
-	hail_y = Float64[]
-	for (i, v) in enumerate(hailstone_seq)
-		push!(hail_x, Float64(i))
-		push!(hail_y, Float64(v))
-	end
 	lines!(ax_hail, hail_x, hail_y; color = (0.678, 0.847, 0.902, 1.0))
 	scatter!(ax_hail, hail_x, hail_y; markersize = 12.0, color = (0.678, 0.847, 0.902, 1.0))
 
 	fig_hail
 end
 
-# ╔═╡ 6693800b-e2bc-46e4-b5f8-004184ef472b
-begin
-	g, record = "Graph" ∈ generalize_collatz ?  make_collatz_graph(
-		graph_parameters.start_value,
-		graph_parameters.orbit;
-		collatz_parameters...
-	) :  make_collatz_graph(
-		graph_parameters.start_value,
-		graph_parameters.orbit;
-	)
-	
-	graph_colors = [RGB(rescale(record[i][1],1,graph_parameters.orbit, 1,0.3),.1,.3) 
-		               for i in 1:nv(g)]
-end;
-
 # ╔═╡ 3550fe19-261e-4069-9bf6-6417dcaac102
 begin
-	collatz_graph = @drawsvg begin
-	    background("white")
-	    sethue("grey40")
-	    fontsize(25)
-	    drawgraph(g, 
-			layout=Stress(initialpos=[(0.0,0.0)]),
-			margin = 60,                         
-	        vertexlabels = map(x -> x[2], record),
-			vertexshapesizes = 40,
-	        vertexfillcolors = graph_colors
-	    )	
-	end 1600 1200
-			
-	collatz_graph
+	# Every starting number from 1 up to `start_value` traces its own hailstone
+	# path. Overlaying them shows the central pedagogy of the Collatz graph: no
+	# matter where you begin, every path funnels down into the 4 → 2 → 1 cycle.
+	# Each trajectory is computed with the pure-integer kernel and drawn with
+	# WasmMakie `lines!`, so the whole figure ships as a live wasm island.
+	fig_conv = Figure(size = (700, 460))
+	ax_conv = Axis(fig_conv[1, 1];
+		title = "Hailstone paths for 1 … " * string(graph_parameters.start_value),
+		xlabel = "Iterations",
+		ylabel = "Value")
+
+	top = Int64(graph_parameters.start_value)
+	n0 = Int64(1)
+	while n0 <= top
+		seq = collatz_hailstone(
+			n0,
+			Int64(collatz_parameters.P),
+			Int64(collatz_parameters.a),
+			Int64(collatz_parameters.b),
+			Int64(1000))
+		cx = Float64[]
+		cy = Float64[]
+		i = 1
+		for v in seq
+			push!(cx, Float64(i))
+			push!(cy, Float64(v))
+			i += 1
+		end
+		shade = Float64(n0 % 7) / 7.0
+		lines!(ax_conv, cx, cy;
+			color = (0.25 + 0.5 * shade, 0.45, 0.85 - 0.4 * shade, 0.55),
+			linewidth = 1.5)
+		n0 += 1
+	end
+	fig_conv
 end
 
 # ╔═╡ 45ca6e2a-6a58-475e-9c02-4925e71625bd
 begin
-	# find values that that have not been previously been calculated
-	newValues = filter(x -> !(x ∈ keys(stopping_times)),collect(range(1,stopping_parameters.ub,step=1)) )
-	
-	# calculate the values and add them to the dictionary 
-	for newValue in newValues
-		push!(stopping_times, 
-			( newValue => "Stopping Time" ∈ generalize_collatz ? stopping_time(newValue, ;collatz_parameters..., total_stopping_time=true) : stopping_time(newValue, total_stopping_time=true))
-		)
-	end
-
-	st_vals = collect(values(sort(
-			filter(
-				key -> (key[1] ∈ range(1,stopping_parameters.ub,step=1))
-				, stopping_times)
-		)
-	))
+	# Total stopping time for every starting point from 1 to the chosen upper
+	# bound, computed with the pure-integer kernel and collected into flat
+	# Float64 vectors — no Dict, no caching, fully wasm-compilable.
 	st_x = Float64[]
 	st_y = Float64[]
-	for (i, v) in enumerate(st_vals)
-		push!(st_x, Float64(i))
-		push!(st_y, Float64(v))
+	let
+		ub = Int64(stopping_parameters.ub)
+		Pv = Int64(collatz_parameters.P)
+		av = Int64(collatz_parameters.a)
+		bv = Int64(collatz_parameters.b)
+		n0 = Int64(1)
+		while n0 <= ub
+			push!(st_x, Float64(n0))
+			push!(st_y, Float64(collatz_stopping_time(n0, Pv, av, bv, Int64(1000))))
+			n0 += 1
+		end
 	end
 
 	fig_st = Figure(size = (640, 420))
@@ -1428,14 +1451,19 @@ begin
 	@unpack ( stroke_color, background_color ) = viz_colors_options
 	@unpack ( random_shade, vary_shade, edmund_style, chris_style ) = viz_extra_options
 
-	# Trajectories exactly as CollatzVisualization computes them
-	viz_trajectories = if chris_style
-		[reverse(ultra_shortcut_collatz(n)) for n in 1:num_traject]
-	elseif edmund_style
-		[reverse(shortcut_collatz(n)) for n in 1:num_traject]
-	else
-		reverse_hailstone_sequences(1:num_traject;
-			P = collatz_parameters.P, a = collatz_parameters.a, b = collatz_parameters.b)
+	# Trajectories from the pure-integer kernel (reversed so they grow outward
+	# from 1), one per starting number — fully wasm-compilable.
+	viz_trajectories = Vector{Vector{Int64}}()
+	let
+		Pv = Int64(collatz_parameters.P)
+		av = Int64(collatz_parameters.a)
+		bv = Int64(collatz_parameters.b)
+		n0 = Int64(1)
+		ntop = Int64(round(Int, num_traject))
+		while n0 <= ntop
+			push!(viz_trajectories, reverse(collatz_hailstone(n0, Pv, av, bv, Int64(1000))))
+			n0 += 1
+		end
 	end
 
 	# Turtle-walk each sequence in pure Julia (WasmMakie draws the paths):
@@ -2835,12 +2863,10 @@ version = "4.1.0+0"
 # ╟─12d218ee-9a43-4647-a96b-c9252c665fa0
 # ╟─3550fe19-261e-4069-9bf6-6417dcaac102
 # ╟─43c4fd8d-bb44-43cd-91dd-d221629d1fd9
-# ╟─6693800b-e2bc-46e4-b5f8-004184ef472b
 # ╟─6f68b20d-67e5-4872-a23b-1840bbbb06ec
 # ╟─6a45247d-25db-445f-a687-191c0952c6c4
 # ╟─0fd7242c-46a1-4929-9c53-3c45768893b4
 # ╟─45ca6e2a-6a58-475e-9c02-4925e71625bd
-# ╟─5f074850-b967-4de5-8ca3-b85a74052499
 # ╟─d0672735-8007-4a69-9fa5-0f40ac0685ea
 # ╟─50a423ad-ca90-4015-9ef6-577f60e4efe7
 # ╟─6d225dce-3362-4f5d-bba9-0b5312f6be5a
@@ -2883,6 +2909,8 @@ version = "4.1.0+0"
 # ╟─7335059c-d9b8-40a5-b2c0-6bcca4bdfe28
 # ╟─b4a31304-34a3-4ecc-8c6e-e67714bc5d52
 # ╟─f02affaa-534b-4c72-81ae-c42ca3b455fd
+# ╟─a3b1c2d4-0001-4001-8001-000000000001
+# ╟─a3b1c2d4-0002-4001-8001-000000000002
 # ╟─4c991173-d9ff-4ba9-b217-8f9aafbbd631
 # ╟─240b4cc1-1bae-429b-863b-792897cd555b
 # ╟─23be8efa-b907-453f-9245-8bc46a37ad26
