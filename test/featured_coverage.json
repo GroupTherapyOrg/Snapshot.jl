@@ -1,0 +1,178 @@
+{
+  "notebooks": {
+    "Basic mathematics.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 1,
+        "total": 1
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 1,
+        "partial": 0,
+        "total": 1
+      }
+    },
+    "CollatzConjecture.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 4,
+        "total": 4
+      },
+      "groups": {
+        "fallback": 1,
+        "island": 1,
+        "partial": 0,
+        "total": 2
+      }
+    },
+    "Interactivity with HTML.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 8,
+        "total": 8
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 6,
+        "partial": 0,
+        "total": 6
+      }
+    },
+    "PlutoUI.jl.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 27,
+        "total": 27
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 25,
+        "partial": 0,
+        "total": 25
+      }
+    },
+    "Titration.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 3,
+        "total": 3
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 1,
+        "partial": 0,
+        "total": 1
+      }
+    },
+    "convolution_1d.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 9,
+        "total": 9
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 1,
+        "partial": 0,
+        "total": 1
+      }
+    },
+    "convolution_2d.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 5,
+        "total": 5
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 4,
+        "partial": 0,
+        "total": 4
+      }
+    },
+    "dither.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 7,
+        "total": 7
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 1,
+        "partial": 0,
+        "total": 1
+      }
+    },
+    "eeg_features.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 2,
+        "total": 2
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 1,
+        "partial": 0,
+        "total": 1
+      }
+    },
+    "fractals.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 15,
+        "total": 15
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 7,
+        "partial": 0,
+        "total": 7
+      }
+    },
+    "images.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 8,
+        "total": 8
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 7,
+        "partial": 0,
+        "total": 7
+      }
+    },
+    "newton.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 6,
+        "total": 6
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 1,
+        "partial": 0,
+        "total": 1
+      }
+    },
+    "turtles-art.jl": {
+      "cells": {
+        "fallback": 0,
+        "interactive": 4,
+        "total": 4
+      },
+      "groups": {
+        "fallback": 0,
+        "island": 4,
+        "partial": 0,
+        "total": 4
+      }
+    }
+  },
+  "summary": {
+    "fallback": 0,
+    "interactive": 99,
+    "total": 99
+  }
+}
