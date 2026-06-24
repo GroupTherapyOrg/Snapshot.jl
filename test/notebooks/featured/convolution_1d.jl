@@ -138,6 +138,12 @@ patients_flipped = append!(["" for i in 1:8-length(patients)], reverse(patients)
 # ╔═╡ 9243a029-8f8d-4a28-b098-d2a2810a8786
 md"""**Try it:** How many days should the disease go on:  $(len_slider) day(s)"""
 
+# ╔═╡ 188f4129-9e9d-46e2-a511-65dba97f52aa
+# Numeric per-day patient counts (= the lengths of the emoji groups above). The
+# figure and the day-by-day text below run on these flat Int counts so they
+# compile to live WebAssembly islands — no emoji string-length work in the kernel.
+patient_counts = (exponential ? [1, 2, 5, 8, 16, 32, 65, 0] : [1, 2, 5, 8, 4, 2, 1, 0])[1:len]
+
 # ╔═╡ bccfdd98-b425-4f8d-a58d-489134851ebd
 begin
 	# Set slider for the day (index)
@@ -165,27 +171,24 @@ treatment_in = [a1_s, a2_s, a3_s, a4_s, a5_s, a6_s, a7_s, a8_s];
 treatment = vec([repeat('💊', i) for i in treatment_in])
 
 # ╔═╡ f0d08486-0086-48da-baeb-169f3812d0ea
-let
-	t = treatment
-	p = patients
-md"""Now as a doctor, you want to be ready for this scenario, at each day you want to know, how many pills you will need for your patients:
+md"""Now as a doctor, you want to be ready: each day you total how many pills your patients need.
 
-- On day 1: you would give $((t[1]))  to $((p[1])) 
-- On day 2: you would give $((t[2]))  to $((p[1]))  , and $((t[1]))  to $((p[2]))  each
-- On day 3: you would give  $((t[3]))  to $(length(p[1])) , and $((t[2])) pills to $((p[2])) , and $((t[1]))  to $((p[3]))  each ... etc 
+- On **day 1** you treat **$(patient_counts[1])** patient group(s) with **$(treatment_in[1])** new pills.
+- On **day 2** those patients are still there, **plus $(patient_counts[2])** new ones.
+- Each new day you **multiply** pills-per-patient and **add** across every day so far.
 
-Notice how we are multiplying and adding each day? We are close to performing a convolution already!
+Notice how we keep multiplying and adding each day? That running total is exactly a **convolution**!
 """
-end
 
 # ╔═╡ 472b52d8-e787-4a93-83d8-c53e977a143c
 begin
-	# Set the number of patients array (First function)
-	numbers_patients = [length(s) for s in patients_flipped]
-	y2_patients = append!([0 for i in 1:9], numbers_patients, [0 for i in 1:16-length(patients_flipped)])
+	# Number of patients per day (First function) — flipped + left-padded to 8,
+	# exactly as `patients_flipped` is, but built from flat Int counts.
+	numbers_patients = append!([0 for i in 1:8-length(patient_counts)], reverse(patient_counts))
+	y2_patients = append!([0 for i in 1:9], numbers_patients, [0 for i in 1:16-length(numbers_patients)])
 
-	# Set the number of pills array (Second function)
-	numbers_pills = [length(s) for s in treatment]
+	# Number of pills per day (Second function) — the scrubbable counts directly.
+	numbers_pills = treatment_in
 	y1_pills = append!([0 for i in 1:9], numbers_pills, [0 for i in 1:16-length(numbers_pills)])
 
 end;
@@ -246,11 +249,6 @@ begin
 	# Float64 vectors with explicit loops so it compiles to a live island, and
 	# the convolution is the very `simple_conv` the notebook teaches.
 
-	# inline literal colours (NTuple{4,Float64}) so the island needs no
-	# ColorSchemes lookup inside the kernel
-	col_conv  = (0.85, 0.65, 0.13, 1.0)   # gold — convolution result
-	col_today = (0.85, 0.20, 0.20, 1.0)   # red — current day marker
-
 	# the convolution result: the stockpile required each day — the same
 	# explicit kernel the whole notebook is about
 	y3 = simple_conv(y1_pills, reverse(y2_patients))
@@ -272,13 +270,13 @@ begin
 	day_x = Float64(day)
 	day_y = Float64(y3[day])
 
-	# build the figure (single axis, two draw calls — keeps the combined wasm
-	# module small enough to compile and run reliably as an island)
+	# build the figure with the proven-minimal WasmMakie API (bare Axis + bare
+	# lines!, exactly like the known-good figure island): the convolution curve,
+	# plus a vertical stem at the current day so it stays visible as you scrub.
 	f = Figure(size = (640, 380))
-	ax = Axis(f[1, 1]; ylabel = "stockpile", xlabel = "day")
-	lines!(ax, xs3, ys3; color = col_conv, linewidth = 3.0)
-	scatter!(ax, [day_x], [day_y]; color = col_today, markersize = 12.0)
-
+	ax = Axis(f[1, 1])
+	lines!(ax, xs3, ys3)
+	lines!(ax, [day_x, day_x], [0.0, day_y])
 	f
 end
 
@@ -746,6 +744,7 @@ version = "1.64.0+1"
 # ╟─572bd8d5-65b0-462e-a143-811f4bfa875e
 # ╟─1fd4973b-8a25-4ddb-ac6d-3fb444a5ed2c
 # ╟─a60029d5-ae8d-4704-bef1-076949712c37
+# ╠═188f4129-9e9d-46e2-a511-65dba97f52aa
 # ╟─bccfdd98-b425-4f8d-a58d-489134851ebd
 # ╠═6b243243-8f26-4f2d-8727-564f0701b302
 # ╟─0ccf60db-75b2-466d-935e-f39855bc36f7

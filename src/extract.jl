@@ -704,6 +704,25 @@ function _plan_cell(
     ex = _parse_cell(cell)
     ex === nothing && return fail("cell failed to parse")
 
+    # Output-suppressed cells (`…;`) render to an EMPTY body natively — Pluto
+    # hides them. A bond-DEPENDENT suppressed cell (`x = f(bond);` scaffolding)
+    # would otherwise ship a value-DISPLAY island that mismatches native "" — a
+    # systemic gap across notebooks. Emit a minimal empty-string island that
+    # ignores its inputs (the cell's VALUE is still recomputed by the downstream
+    # cells that actually use it, via their own preambles). No preamble here, so
+    # it can't trap on upstream code it never needed to display.
+    native_body = _sget(_sget(cr, "output", Dict()), "body", nothing)
+    if native_body isa String && isempty(strip(native_body)) &&
+       mime != "application/vnd.pluto.stacktrace+object"
+        sup_args = Expr[]
+        for (n, t, bake) in zip(bond_names, arg_types, bakes)
+            push!(sup_args, Expr(:(::), bake === nothing ? n : Symbol("__", n, "_key"), t))
+        end
+        sup_fn = Expr(:function, Expr(:tuple, sup_args...), Expr(:block, :(return "")))
+        return (CellPlan(; cell_id=id, mime, export_name, fn_expr=sup_fn,
+                         ok=true, body_kind=:string), Expr[])
+    end
+
     # Gather upstream code (topo order), splitting out preamble exprs.
     # `bonds` are recompute-fn parameters: a definition that closes over one
     # stays in the body (where the bond is in scope), everything else hoists.
