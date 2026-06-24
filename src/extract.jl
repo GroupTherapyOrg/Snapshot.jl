@@ -608,23 +608,47 @@ is just `string(scalar)`."
 _slot_str_expr(session::ServerSession, notebook::Notebook, slot, reactive::Set{Symbol}) =
     :(string($(_slot_inner(slot))))
 
+"Render a STATIC leaf (no reactive slots) to its baked HTML string. Returns the
+literal HTML `String` (a valid string-valued skeleton leaf) or `nothing`. Used for
+conditional-reveal feedback cells whose CONDITION is reactive but whose branch
+CONTENT is constant markdown — those branches carry no slot, so `_leaf_html_expr`
+declines them; we bake them whole here so only the condition compiles to wasm."
+function _static_leaf_html(session::ServerSession, notebook::Notebook, leaf)
+    render_expr = :(repr(MIME"text/html"(), $leaf))
+    html = try
+        Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook), render_expr)
+    catch
+        return nothing
+    end
+    html isa String ? html : nothing
+end
+
 "Turn a text/html cell body expr into a body-string expr: `if/elseif/else` becomes a
 conditional over per-branch skeletons (conditions stay, compiled to wasm); leaves go
 through `_leaf_html_expr`. `nothing` if any branch can't be skeletonized."
-function _html_skeleton_expr(session::ServerSession, notebook::Notebook, ex, reactive::Set{Symbol})
+function _html_skeleton_expr(session::ServerSession, notebook::Notebook, ex,
+                             reactive::Set{Symbol}; allow_static::Bool=false)
     if ex isa Expr && ex.head in (:if, :elseif)
-        thenx = _html_skeleton_expr(session, notebook, ex.args[2], reactive)
+        # Branch CONTENT may be static (the reactive part is the condition, which
+        # stays and compiles to wasm) — allow each branch to bake itself whole.
+        thenx = _html_skeleton_expr(session, notebook, ex.args[2], reactive; allow_static=true)
         thenx === nothing && return nothing
         elsex = length(ex.args) >= 3 ?
-                _html_skeleton_expr(session, notebook, ex.args[3], reactive) : ""
+                _html_skeleton_expr(session, notebook, ex.args[3], reactive; allow_static=true) : ""
         elsex === nothing && return nothing
         return Expr(:if, ex.args[1], thenx, elsex)
     elseif ex isa Expr && ex.head === :block
         reals = filter(a -> !(a isa LineNumberNode), ex.args)
-        length(reals) == 1 && return _html_skeleton_expr(session, notebook, reals[1], reactive)
+        length(reals) == 1 &&
+            return _html_skeleton_expr(session, notebook, reals[1], reactive; allow_static=allow_static)
         return nothing   # multi-statement branch: not a pure render leaf
     else
-        return _leaf_html_expr(session, notebook, ex, reactive)
+        leaf = _leaf_html_expr(session, notebook, ex, reactive)
+        leaf !== nothing && return leaf
+        # Static leaf (no reactive slot): bake it whole, but only inside a reactive
+        # conditional — a top-level static cell is baked by the caller, not here.
+        allow_static || return nothing
+        return _static_leaf_html(session, notebook, ex)
     end
 end
 

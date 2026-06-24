@@ -80,7 +80,7 @@ Step 1: choose an initial value $z_0$ :
 """
 
 # ╔═╡ 1dfe4357-af4d-4db4-9a10-05219737041a
-@bindname z0 PlutoUI.Slider(BigInt(-10):BigInt(10), default = 1, show_value = true) 
+@bindname z0 PlutoUI.Slider(-10:10, default = 1, show_value = true)
 
 # ╔═╡ 9469dd0d-efb2-49a5-83f4-a6da7290af20
 md"Now, we can calculate ``z_1``, and ``z_2``, and so on:"
@@ -117,7 +117,13 @@ md"""
 F(z) = z^2 + 1;
 
 # ╔═╡ c3e25292-54aa-4b89-a2f2-0eb0d3880fae
-Fⁿ(x, n) = ∘(fill(F, n)...)(x);
+function Fⁿ(x, n)
+	z = x
+	for i in 1:n
+		z = F(z)   # apply F, n times in a row
+	end
+	return z
+end;
 
 # ╔═╡ 4135244d-fb5a-4e8d-ad4b-c4046781b70c
 zₙ = Fⁿ(z0, n)
@@ -127,17 +133,17 @@ checkbox = @bind show_answer CheckBox(default=false);
 
 # ╔═╡ 57819281-a466-4f6c-af96-ffe512594270
 begin 
-	if show_answer 
+	if show_answer
 	md"""
-	!!! correct "Answer!"
-	
-		If you guessed that the code calculates the $n^{th}$ number in the sequence then you guessed correctly! 🎉"""
-		
+	> **✅ Answer!**
+	>
+	> If you guessed that the code calculates the ``n``-th number in the sequence then you guessed correctly! 🎉"""
+
 	else
 		md"""
-		!!! hint "Did you guess what the code does?" 
-		
-			**Tip:** Move both the $n$ **and** the $z_0$ sliders around if you need help!"""
+		> **💡 Did you guess what the code does?**
+		>
+		> **Tip:** Move both the ``n`` **and** the ``z_0`` sliders around if you need help!"""
 	end
 	end
 
@@ -154,17 +160,15 @@ This code generate the whole sequence up to our chosen n and saves it in a list.
 But no worries if you don't understand it, it's not necessary for the rest."
 
 # ╔═╡ bccffd3d-46b5-43e8-b515-626640b0bb32
-function create_sequence(F, initial_value, max_n)
-	# Define a function that computes the next element in the sequence 
-	function z_i(last_z, i)
-		F(last_z)
+function create_sequence(initial_value, max_n)
+	# Build the sequence one step at a time, starting from the initial value
+	series = [initial_value]
+	z = initial_value
+	for i in 2:max_n
+		z = F(z)          # next element: apply our function F
+		push!(series, z)  # save it in the list
 	end
-	
-	# We use Base.accumulate to get the series values
-	series = accumulate(z_i, 2:max_n, init=initial_value)
-	
-	# Add initial element to the final series
-	return [initial_value, series...]
+	return series
 end;
 
 # ╔═╡ a3bce920-0be0-49cd-b639-4042a71b0001
@@ -172,14 +176,14 @@ md"Change the initial value and n and observe how the series changes!"
 
 # ╔═╡ 066c0e7b-f127-40e9-af96-a0d03b559043
 md"""
-``z_0 = `` $(@bind initial_value Slider(BigInt(-10):BigInt(10); show_value=true))
+``z_0 = `` $(@bind initial_value Slider(-10:10; show_value=true))
 
 ``n = `` $(@bind max_n Slider(1:20; show_value=true))
 
 """
 
 # ╔═╡ ee4df211-020e-43d4-a41d-513fbd6f31b7
-sequence = create_sequence(F, initial_value, max_n)
+sequence = create_sequence(initial_value, max_n)
 
 # ╔═╡ d242a89b-8a02-42fd-bb14-92a31b50413e
 md"""
@@ -223,27 +227,25 @@ Fc(z, c) = z^2 + c;
 md"""Now let's use our code from above again with our new function this time. """
 
 # ╔═╡ 8a4de5d7-1e7f-4d7c-a3a9-02fa954aa38d
-function create_sequence_with_c(F, C, initial_value, max_n)
-	# Define a function that computes the next element in the sequence 
-	function z_i(last_z, i)
-		F(last_z, C)
+function create_sequence_with_c(C, initial_value, max_n)
+	# Same idea as before, but now our function also uses the constant C
+	series = [initial_value]
+	z = initial_value
+	for i in 2:max_n
+		z = Fc(z, C)      # next element: apply F with our constant C
+		push!(series, z)
 	end
-	
-	# We use Base.accumulate to get the series values
-	series = accumulate(z_i, 2:max_n, init=initial_value)
-	
-	# Add initial element to the final series
-	return [initial_value, series...]
+	return series
 end;
 
 # ╔═╡ bc4a4421-f543-4bfc-8214-3d97468f89e7
-@bindname initial_value_with_c PlutoUI.Slider(BigInt(-10):BigInt(10), default = 1, show_value = true) 
+@bindname initial_value_with_c PlutoUI.Slider(-10:10, default = 1, show_value = true)
 
 # ╔═╡ c12abce1-6109-4274-b260-835b5e1659df
 md"""Try setting **C = -1**. What happens to our `C_sequence` (if you chance nothing else)?"""
 
 # ╔═╡ ae6b02ce-180e-487b-9a25-2be9c6092293
-C_sequence = create_sequence_with_c(Fc, C, initial_value_with_c, max_n)
+C_sequence = create_sequence_with_c(C, initial_value_with_c, max_n)
 
 # ╔═╡ b99f5d32-d017-4722-9226-13345cad6a2b
 md"If you noticed that we get a completely new sequence, that's correct!
@@ -254,13 +256,13 @@ But, how about if we set **initial\_value\_with\_c = 1**. What happens? Do you n
 begin
 if initial_value_with_c == 1
 md"""
-	!!! correct "Answer"
-
-		In this case, the series **doesn't** go to infinity but moves back and forth between 0 and -1, and so it doesn't *diverge*. It oscillates. 
-
-		PS: The same thing happens if initial\_value\_with\_c = 0"""
+	> **✅ Answer**
+	>
+	> In this case, the series **doesn't** go to infinity but moves back and forth between 0 and -1, and so it doesn't *diverge*. It oscillates.
+	>
+	> PS: The same thing happens if initial\_value\_with\_c = 0"""
 else
-	md""
+	md"*(Set the initial value to 1 above to reveal a note about this special case.)*"
 end
 end
 
@@ -280,10 +282,10 @@ aside(md"""
 md"**👇 Click anywhere to chose a point!**"
 
 # ╔═╡ db2a3f19-a755-4863-9b38-2f1d4e235dd2
-md"Again, we get our code from above and set a fixed initial value. See how the sequence changes completely for even very similar c value? Pretty cool right!"
+md"Again, starting from a fixed initial value, let's watch the **size** of each term in the sequence. See how it changes completely for even very similar `c` values? Pretty cool right!"
 
 # ╔═╡ 87eb68ff-5af9-4748-bbc9-95d192b53e70
-new_initial_value = 1.0
+new_initial_value = 1.0 + 0.0im
 
 # ╔═╡ 1936a375-5b07-4c93-8e72-01c5370a021e
 md"""
@@ -293,7 +295,7 @@ md"""
 
 #### Convergence?
 
-Let's look at the last value of the sequence (``z_{20}``). Is it a small number (convergence), or something very large or `NaN` (divergence)?
+Let's look at the size of the **last term**. Is it a small number (convergence), or something very large or `NaN` (divergence)?
 """
 
 # ╔═╡ a979f1ad-8a2e-4687-ac64-3b7ac4eb1995
@@ -301,7 +303,7 @@ aside(md"""
 !!! info "Explosion 🔥"
 	For  some values of c, the values get so big that even Julia is overwhelmed and just returns `Inf` or `NaN` instead! Whoopsie.
 
-	If you want to work with really big numbers, Julia offers the [`BigFloat` and `BigInt`](https://docs.julialang.org/en/v1/manual/integers-and-floating-point-numbers/) types, which can be as big as you want! We secretly used `BigInt` in the previous examples.""", v_offset=-300)
+	If you want to work with really big numbers, Julia offers the [`BigFloat` and `BigInt`](https://docs.julialang.org/en/v1/manual/integers-and-floating-point-numbers/) types, which can be as big as you want — no overflow!""", v_offset=-300)
 
 # ╔═╡ 6827d3fd-91e2-49b2-b215-082fe0573723
 md"### One last thing "
@@ -313,14 +315,14 @@ Choose 2 of your favorite colors (ideally they should match each other 😉):
 
 # ╔═╡ bad211bc-220c-43dd-ade6-7b63f980f524
 TwoColumn(
-md""" First color: 
+md""" First color:
 
-$(@bind color1 ColorPicker(default=colorant"#f5c894"))
-""",  
+$(@bind color1 Select(["gold", "teal", "crimson", "navy", "magenta"]))
+""",
 md"""
 Second color:
 
-$(@bind color2 ColorPicker(default=colorant"#445233"))
+$(@bind color2 Select(["green", "purple", "orange", "black", "blue"]))
 """)
 
 # ╔═╡ 98fbff5f-df70-4ee6-a2b3-7d56b6299140
@@ -331,18 +333,15 @@ Now we have everything we need to construct a fractal from the Julia set.
 "
 
 # ╔═╡ 3dc2f13d-0238-444d-b440-5e7e2df0618f
-# some markdown hackery because the $ interpolation did not work inside a blockquote.
-Markdown.BlockQuote(
-	md"""
-	#### Recipe: Julia Set picture
-	1. Choose a complex number ``c`` **(on the left)**.
-	2. We define our favorite sequence $z_{n+1} = z_n^2 + c$
-	3. Now, we're going over **all** the imaginary numbers in a square around ``0``, and for each:
-	- Use the number as the initial value to compute a sequence.
-	- If the sequence **converges**, we color the point in $(color1). 
-	- If the sequence **diverges**, we color the point in $(color2).
-	"""
-) |> Markdown.MD
+md"""
+**Recipe: Julia Set picture**
+1. Choose a complex number ``c`` **(on the left)**.
+2. We define our favorite sequence ``z_{n+1} = z_n^2 + c``
+3. Now, we're going over **all** the imaginary numbers in a square around ``0``, and for each:
+   - Use the number as the initial value to compute a sequence.
+   - If the sequence **converges**, we color the point **$(color1)**.
+   - If the sequence **diverges**, we color the point **$(color2)**.
+"""
 
 # ╔═╡ 9c83bdc9-8796-47cf-9a83-65dda43099bf
 md"**👇 Drag the sliders to choose the constant ``c = c_x + i\,c_y``, zoom, and detail!**"
@@ -621,7 +620,21 @@ end
 c
 
 # ╔═╡ 78da1442-19df-464f-8099-407b50d99303
-new_sequence = create_sequence_with_c(Fc, c, new_initial_value, 15)
+new_sequence = let
+	# Track the SIZE (magnitude) of each term — that's exactly what tells us
+	# whether the sequence stays small (converges) or blows up (diverges).
+	# We cap huge values so the list stays readable: a value of 1000000 means
+	# "this term blew up".
+	zc = new_initial_value
+	sizes = Int[]
+	for i in 1:15
+		m = abs(zc)
+		push!(sizes, round(Int, min(m, 1.0e6)))
+		m > 1.0e6 && break         # stop once it has clearly diverged
+		zc = Fc(zc, c)             # our function from above, now with a complex c
+	end
+	sizes
+end
 
 # ╔═╡ 4693d328-0907-4d62-b8e4-dcccff803b59
 last(new_sequence)
