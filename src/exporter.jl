@@ -181,9 +181,27 @@ function generate_wasm_islands(
     # precompute files / a live slider server) and decorates fallback cells
     bond_graph = Dict(string(k) => string.(v) for (k, v) in connections)
     write_island_assets(assets_dir, islands; bond_graph, fallback_warnings)
-    n_degraded = count(r -> r["judgement"] == "fallback", report)
-    @info "🏝️ wasm islands written" url_path islands = length(islands) degraded = n_degraded dir =
-        assets_dir
+    # Accurate, CELL-LEVEL coverage. A "partial" group ships an island but STILL has
+    # fallback cells — those are non-interactive on the deployed page, so the group-level
+    # island count overstates interactivity (the count then disagrees with what you see
+    # on GitHub Pages). Count what actually ships, per cell. `coverage.json` is the
+    # source of truth for audits / the CI island-count gate / the site.
+    cell_recs = collect(Iterators.flatten(r["cells"] for r in report))
+    coverage = Dict(
+        "groups" => Dict(
+            "island"   => count(r -> r["judgement"] == "island", report),
+            "partial"  => count(r -> r["judgement"] == "partial", report),
+            "fallback" => count(r -> r["judgement"] == "fallback", report),
+            "total"    => length(report)),
+        "cells" => Dict(
+            "interactive" => count(c -> c["ok"], cell_recs),
+            "fallback"    => count(c -> !c["ok"], cell_recs),
+            "total"       => length(cell_recs)))
+    write(joinpath(assets_dir, "coverage.json"), JSON.json(coverage))
+    @info "🏝️ wasm islands written" url_path islands_shipped = length(islands) groups_island =
+        coverage["groups"]["island"] groups_partial = coverage["groups"]["partial"] groups_fallback =
+        coverage["groups"]["fallback"] cells_interactive = coverage["cells"]["interactive"] cells_fallback =
+        coverage["cells"]["fallback"] dir = assets_dir
     islands_dirname
 end
 
