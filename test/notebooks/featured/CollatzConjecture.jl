@@ -205,8 +205,8 @@ viz_specs_sliders = @htl("""
 <div class="slider_group_inner">
 	<div><p>Image Options:</p></div>
 	<div>Image Rotation (in degrees): $(@bind init_angle Slider(0:360, default=20, show_value=true))</div>
-	<div>Starting point (X): $(@bind x_start Slider(0:window_width, default=window_width ÷ 2, show_value=true))</div>
-	<div>Starting point (Y): $(@bind y_start Slider(0:window_height, default=window_height, show_value=true))</div>
+	<div>Starting point (X): $(@bind x_start Slider(0:1000, default=250, show_value=true))</div>
+	<div>Starting point (Y): $(@bind y_start Slider(0:1000, default=700, show_value=true))</div>
 	<div>Stroke Width: $(@bind stroke_width Slider(1:50, default=5, show_value=true))</div>
 </div>
 """);
@@ -447,12 +447,8 @@ begin
 	end
 
 	fig_hail = Figure(size = (640, 420))
-	ax_hail = Axis(fig_hail[1, 1];
-		title = "Hailstone sequence of: " * string(hailstone_start_value),
-		xlabel = "Iterations",
-		ylabel = "Value")
+	ax_hail = Axis(fig_hail[1, 1])
 	lines!(ax_hail, hail_x, hail_y; color = (0.678, 0.847, 0.902, 1.0))
-	scatter!(ax_hail, hail_x, hail_y; markersize = 12.0, color = (0.678, 0.847, 0.902, 1.0))
 
 	fig_hail
 end
@@ -465,10 +461,7 @@ begin
 	# Each trajectory is computed with the pure-integer kernel and drawn with
 	# WasmMakie `lines!`, so the whole figure ships as a live wasm island.
 	fig_conv = Figure(size = (700, 460))
-	ax_conv = Axis(fig_conv[1, 1];
-		title = "Hailstone paths for 1 … " * string(graph_start_value),
-		xlabel = "Iterations",
-		ylabel = "Value")
+	ax_conv = Axis(fig_conv[1, 1])
 
 	top = Int64(graph_start_value)
 	n0 = Int64(1)
@@ -617,10 +610,7 @@ begin
 	end
 
 	fig_st = Figure(size = (640, 420))
-	ax_st = Axis(fig_st[1, 1];
-		title = "Total stopping time of numbers up to " * string(stopping_ub),
-		xlabel = "Starting point",
-		ylabel = "Stopping time")
+	ax_st = Axis(fig_st[1, 1])
 	scatter!(ax_st, st_x, st_y; markersize = 4.0)
 	fig_st
 end
