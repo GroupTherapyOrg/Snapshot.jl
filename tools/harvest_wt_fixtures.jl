@@ -59,7 +59,32 @@ session = Pluto.ServerSession()
 # groups. (Matches tools/island_survey.jl.)
 
 records = Any[]
-flush!() = open(OUT, "w") do io; JSON.print(io, records, 2) end
+# Completeness audit, written alongside the fixtures. Extraction is driven by
+# RUNTIME-registered bonds, so a @bind cell that ERRORS never registers and would
+# otherwise vanish silently. We reconcile every @bind cell against the registered +
+# extracted bonds and record drops in BOTH directions — loud, never silent.
+audits = Any[]
+const AUDIT_OUT = joinpath(@__DIR__, "..", "..", "WasmTarget.jl", "test", "integration", "pi_bind_audit.json")
+flush!() = (open(OUT, "w") do io; JSON.print(io, records, 2) end;
+            open(AUDIT_OUT, "w") do io; JSON.print(io, audits, 2) end)
+
+function _bind_audit(session, nb, state, groups, nbname)
+    reg = Set(string.(Pluto.get_bond_names(session, nb)))
+    extr = Set(reduce(vcat, [string.(g.bond_names) for g in groups]; init = String[]))
+    cellres = get(state, "cell_results", Dict())
+    errored = String[]
+    for cell in nb.cells
+        PlutoIslands.is_bind_cell(cell) || continue   # occursin("@bind"): code OR md-interp OR prose
+        cr = get(cellres, string(cell.cell_id), nothing)
+        (cr !== nothing && get(cr, "errored", false)) || continue
+        push!(errored, replace(strip(first(cell.code, 90)), r"\s+" => " "))
+    end
+    reg_not_extracted = sort(collect(setdiff(reg, extr)))
+    Dict{String,Any}("notebook" => nbname, "registered" => length(reg),
+        "extracted" => length(extr), "errored_bind_cells" => errored,
+        "registered_not_extracted" => reg_not_extracted,
+        "complete" => isempty(errored) && isempty(reg_not_extracted))
+end
 
 for nbname in files
     println("=== ", nbname, " ===")
@@ -69,6 +94,15 @@ for nbname in files
         state = Pluto.notebook_to_js(nb)
         conn = bound_variable_connections_graph(session, nb)
         groups = extract_groups(session, nb; connections = conn, original_state = state)
+        au = _bind_audit(session, nb, state, groups, nbname)
+        push!(audits, au)
+        if au["complete"]
+            println("  bind audit OK: registered=", au["registered"], " → all extracted")
+        else
+            println("  ⚠ BIND AUDIT INCOMPLETE: errored_bind_cells=", length(au["errored_bind_cells"]),
+                    " registered_not_extracted=", au["registered_not_extracted"])
+            for e in au["errored_bind_cells"]; println("      ✗ errored @bind cell: ", e); end
+        end
         for (gi, g) in enumerate(groups)
             grec = Dict{String,Any}(
                 "notebook" => nbname, "group" => gi,
