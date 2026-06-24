@@ -979,6 +979,35 @@ end
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
+"Connected components of the bond co-occurrence graph. `connections` maps each bond
+to the bonds it DIRECTLY co-occurs with (Pluto's bound_variable_connections_graph);
+those per-bond sets OVERLAP when a bond (e.g. a shared parameter used by every figure)
+co-occurs with everything. Taking the distinct sets as groups then yields overlapping
+groups, and a cell downstream of the shared bond lands in several of them — in the
+ones missing its OTHER bonds it can't compile and poisons the whole island module.
+Union the co-occurrence edges instead: one component = one island, each cell in
+exactly one group. Disjoint-bond notebooks are unaffected (each cluster is its own
+component); notebooks with a shared bond collapse to a single correct island."
+function _bond_components(connections::Dict{Symbol,Vector{Symbol}})::Vector{Vector{Symbol}}
+    parent = Dict{Symbol,Symbol}()
+    root(x) = (parent[x] == x ? x : (parent[x] = root(parent[x])))
+    for (k, vs) in connections
+        get!(parent, k, k)
+        for v in vs
+            get!(parent, v, v)
+        end
+    end
+    for (k, vs) in connections, v in vs
+        rk, rv = root(k), root(v)
+        rk == rv || (parent[rk] = rv)
+    end
+    comps = Dict{Symbol,Vector{Symbol}}()
+    for k in keys(parent)
+        push!(get!(comps, root(k), Symbol[]), k)
+    end
+    collect(values(comps))
+end
+
 """
     extract_groups(session, notebook; connections, original_state) -> Vector{ExtractedGroup}
 
@@ -992,7 +1021,7 @@ function extract_groups(
     original_state::Dict=Pluto.notebook_to_js(notebook),
 )::Vector{ExtractedGroup}
     topology = notebook.topology
-    groups = sort(collect(Set(values(connections))); by=g -> string(sort(g)))
+    groups = sort(_bond_components(connections); by=g -> string(sort(g)))
 
     map(filter(!isempty, groups)) do group
         bond_names = sort(group)
