@@ -686,7 +686,10 @@ function _plan_cell(
     bakes::Vector=Any[nothing for _ in bond_names],
 )::Tuple{CellPlan,Vector{Expr}}
     id = cell.cell_id
-    export_name = "cellbody_" * replace(string(id), "-" => "")[1:12]
+    # Full UUID (dashes stripped) — a 12-char prefix can COLLIDE between cells
+    # (e.g. hand-edited near-duplicate UUIDs), making two compiled cells share one
+    # wasm export so one silently overwrites the other. The full id is unique.
+    export_name = "cellbody_" * replace(string(id), "-" => "")
     # cell_results is keyed by UUID in-process (notebook_to_js) but by String
     # after a msgpack round-trip (statefile) — accept either. Values may be
     # Pluto ImmutableMarker wrappers (AbstractDict with getindex but no get).

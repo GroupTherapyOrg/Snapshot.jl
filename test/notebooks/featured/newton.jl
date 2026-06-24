@@ -151,7 +151,9 @@ function newton_sequence(which::Int64, x0::Float64, n::Int64)
 end
 
 # ╔═╡ 2fb40dc6-7c2f-11eb-2469-8deb4db59b5c
-iterates = newton_sequence(which, x0, n)
+# shown as strings so the Float64 list renders identically in-browser
+# (whole-number iterates like 2.0 print as "2.0", matching Julia)
+iterates = string.(newton_sequence(which, x0, n))
 
 # ╔═╡ 35791bca-7c2f-11eb-1cfb-8d5ebd0208cb
 "The final Newton estimate of the root after `n` iterations."
@@ -194,9 +196,9 @@ md"""**Residual |f(x)| at that estimate:** $(res)
 md"""
 ## Visualising the steps
 
-The blue curve is $f$. The magenta dashed line is the $x$-axis (where the root lives).
-The green dots mark each iterate $x_0, x_1, \dots$ landing on the axis as Newton's
-method homes in on the root.
+The curve is $f$. The horizontal line is the $x$-axis (where the root lives).
+The vertical ticks mark each iterate $x_0, x_1, \dots$ as Newton's method homes in
+on the root.
 """
 
 # ╔═╡ f25af026-7b9c-11eb-1f11-77a8b06b2d71
@@ -214,20 +216,19 @@ let
         push!(ys, f(t, which))
     end
 
-    # the Newton iterates, projected onto the x-axis
+    # the Newton iterates (x positions converging on the root)
     seq = newton_sequence(which, x0, n)
-    zx = Float64[]
-    zy = Float64[]
-    for v in seq
-        push!(zx, v)
-        push!(zy, 0.0)
-    end
 
+    # proven-minimal WasmMakie API (bare Axis + bare lines!, like the known-good
+    # figure island): the curve f(x), the x-axis line, and a vertical tick at
+    # each Newton iterate so you can watch them home in on the root.
     fig = Figure(size = (480, 320))
-    ax = Axis(fig[1, 1]; title = "Newton's method", xlabel = "x", ylabel = "f(x)")
-    lines!(ax, xs, ys; linewidth = 3.0)
-    hlines!(ax, [0.0]; color = :magenta, linewidth = 2.0, linestyle = :dash)
-    scatter!(ax, zx, zy; color = :green, markersize = 10.0)
+    ax = Axis(fig[1, 1])
+    lines!(ax, xs, ys)                  # the curve f(x)
+    lines!(ax, [lo, hi], [0.0, 0.0])    # the x-axis (where the root lives)
+    for v in seq
+        lines!(ax, [v, v], [-0.5, 0.5]) # a tick marking this iterate
+    end
     fig
 end
 
