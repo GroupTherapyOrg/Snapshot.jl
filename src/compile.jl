@@ -218,7 +218,11 @@ function compile_group(
                 push!(import_stubs, (sp.func, sp.name, Tuple(sp.arg_types), idx, sp.return_type))
             end
             wmod = WasmTarget.compile_module(entries; existing_module=cmod, import_stubs=import_stubs)
-            WasmTarget.to_bytes(wmod)
+            cbytes = WasmTarget.to_bytes(wmod)
+            # E-004 canvas islands aren't routed through compile_multi, so apply
+            # the same wasm-opt pass here when requested (the oracle re-verifies).
+            optimize === false ? cbytes :
+                WasmTarget.optimize(cbytes; level = optimize === true ? :size : optimize)
         end
     catch e
         return fail("module assembly (compile_multi) failed: $(sprint(showerror, e)[1:min(end, 300)])")
