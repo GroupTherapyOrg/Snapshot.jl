@@ -166,6 +166,44 @@ Luka van der Plas (2020)"""
 # ╔═╡ 5f6beed8-33ae-463c-9d28-09e3a4235936
 @bind fractal_base Slider(0:0.01:2; default=1)
 
+# ╔═╡ 83cd894b-2be0-48c7-b5e7-8db7ed96c13f
+# Built inline (a plain `let`, NOT a `do` closure): the L-system is written
+# ITERATIVELY with an explicit work-stack of (x, y, heading, depth), so we never
+# mutate-and-restore turtle fields across recursive calls — and we don't pass a
+# bond-capturing closure that allocates a stack to `turtle_drawing_fast`, both of
+# which WasmTarget can't yet compile. Same strokes + same render as the others.
+fractal = let
+	t = Turtle()
+	penup!(t)
+	backward!(t, 15)
+	pendown!(t)
+	stack = NTuple{4,Float64}[(t.pos[1], t.pos[2], t.heading, 0.0)]
+	while !isempty(stack)
+		st = pop!(stack)
+		x = st[1]; y = st[2]; h = st[3]; depth = st[4]
+		depth >= 10.0 && continue
+		size = fractal_base * 0.5 ^ (depth * 0.5)
+		t.pos = (x, y)
+		t.heading = h
+		color_hsl!(t, depth * 30.0, 0.8, 0.5)
+		forward!(t, size * 8.0)
+		nx = t.pos[1]; ny = t.pos[2]
+		push!(stack, (nx, ny, h + fractal_tilt / 2.0, depth + 1.0))
+		push!(stack, (nx, ny, h + fractal_tilt / 2.0 - fractal_angle, depth + 1.0))
+	end
+	# same figure render as `turtle_drawing` (white background → no backdrop span)
+	fig = Figure(size = (320, 320))
+	ax = Axis(fig[1, 1])
+	hidedecorations!(ax)
+	hidespines!(ax)
+	ax.xmin = -15.0; ax.xmax = 15.0
+	ax.ymin = -15.0; ax.ymax = 15.0
+	for k in 1:length(t.xs)
+		lines!(ax, t.xs[k], t.ys[k]; color = t.cols[k], linewidth = 1.5)
+	end
+	fig
+end
+
 # ╔═╡ 18a97ce6-ae85-46a2-b294-830473fe80cd
 function lindenmayer(turtle, depth, angle, tilt, base)
 	if depth < 10
@@ -186,14 +224,6 @@ function lindenmayer(turtle, depth, angle, tilt, base)
 		turtle.pos = old_pos
 		turtle.heading = old_heading
 	end
-end
-
-# ╔═╡ 83cd894b-2be0-48c7-b5e7-8db7ed96c13f
-fractal = turtle_drawing_fast() do t
-	penup!(t)
-	backward!(t, 15)
-	pendown!(t)
-	lindenmayer(t, 0, fractal_angle, fractal_tilt, fractal_base)
 end
 
 # ╔═╡ e51d4b19-fa30-4643-8d12-407941a4757d
