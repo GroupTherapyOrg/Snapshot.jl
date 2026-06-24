@@ -40,6 +40,10 @@ function generate_wasm_islands(
     oracle_samples::Integer=5,
     max_wasm_size_per_group::Integer=5_000_000,
     fallback_warnings::Bool=true,
+    # WasmTarget.optimize level applied to every island: false (off) |
+    # true/:size (-Os) | :speed (-O3) | :debug (-O1). Verify + oracle run on the
+    # OPTIMIZED bytes below, so we always verify exactly what we ship.
+    optimize=false,
     # notebooks using the Pkg.activate escape hatch (nbpkg disabled, e.g. for
     # unregistered packages like WasmMakie) have no nbpkg env to detect —
     # callers pass the activated env here. With in-process workspaces the env
@@ -75,7 +79,8 @@ function generate_wasm_islands(
             # missing-initial groups: original bodies are missing-tainted and
             # not reproducible — skip initial-body check, the oracle covers them
             initial_bodies=g.synthetic_initials ? nothing : initial_bodies,
-            verify_node=verify)
+            verify_node=verify,
+            optimize)
         if island.ok && length(island.bytes) > max_wasm_size_per_group
             island = CompiledIsland(;
                 bond_names=island.bond_names, arg_types=island.arg_types,
@@ -241,6 +246,8 @@ function export_notebook(
     verify::Bool=true,
     oracle_samples::Integer=5,
     max_wasm_size_per_group::Integer=5_000_000,
+    # WasmTarget.optimize level for every island: false | true/:size | :speed | :debug
+    optimize=false,
     baked_state::Bool=true,
     baked_notebookfile::Bool=true,
     disable_ui::Bool=true,
@@ -264,7 +271,7 @@ function export_notebook(
             generate_wasm_islands(
                 session, notebook, original_state;
                 output_dir, url_path=basename(notebook_path),
-                verify, oracle_samples, max_wasm_size_per_group, env_dir)
+                verify, oracle_samples, max_wasm_size_per_group, env_dir, optimize)
         catch e
             @error "🏝️ island generation failed — exporting static" exception =
                 (e, catch_backtrace())
