@@ -88,10 +88,10 @@ The first argument is range, but it can also be a Vector (not necessarily in inc
 """
 
 # ╔═╡ 6b1152cc-7c2c-40b3-8bac-fe8fd99486bb
-@bind which_function Slider([sin, cos, sqrt])
+@bind which_function Slider(["sin", "cos", "sqrt"])
 
 # ╔═╡ b7788c4c-feb6-45cd-87ca-ae28c5ba3d07
-which_function(π)
+which_function == "sin" ? sin(π) : which_function == "cos" ? cos(π) : sqrt(π)
 
 # ╔═╡ 06962cde-cc4f-11ea-0d96-69a8cb7eeda2
 
@@ -132,7 +132,7 @@ A `NumberField` can be used just like a `Slider`, it just looks different:
 """
 
 # ╔═╡ 314cb85a-c761-11ea-1cba-b73f84a52be8
-@bind x_different NumberField(0:100, default=20)
+NumberField(0:100, default=20)
 
 # ╔═╡ 195bc258-2fd4-402a-81f0-576a25b42b01
 md"""
@@ -173,7 +173,7 @@ md"Default value:"
 having_fun
 
 # ╔═╡ 5d420570-c764-11ea-396b-cf0db01d34aa
-having_fun ? md"🎈🎈" : md"☕"
+having_fun ? "🎈🎈" : "☕"
 
 # ╔═╡ 1a562ad4-cc50-11ea-2485-cdec6e1a78dc
 
@@ -259,7 +259,7 @@ md"You can also create a **multi-line** text box!"
 # (poem by: Sanne de Kroon)
 
 # ╔═╡ 3dcd7002-c765-11ea-323d-a1fb49409011
-split(poem, "\n")
+string.(split(poem, "\n"))
 
 # ╔═╡ 0aa3c85e-cc4f-11ea-2fba-4bdd513d9217
 
@@ -274,10 +274,10 @@ md"## Select"
 vegetable
 
 # ╔═╡ 1feebd8f-667a-42fd-965d-5e3167ff7c7a
-@bind favourite_function Select([sin, cos, tan, sqrt])
+@bind favourite_function Select(["sin", "cos", "tan", "sqrt"])
 
 # ╔═╡ 9128d2c1-364c-4446-baaa-6d0593edda47
-favourite_function(2)
+favourite_function == "sin" ? sin(2) : favourite_function == "cos" ? cos(2) : favourite_function == "tan" ? tan(2) : sqrt(2)
 
 # ╔═╡ 3930f0d8-cc50-11ea-3de6-d91ac5c6cd9f
 
@@ -331,10 +331,10 @@ You can use `MultiSelect` and `MultiCheckBox` with any vector of objects, not ju
 """
 
 # ╔═╡ 90d84f1b-042c-444e-8bac-fe358b6d68a1
-@bind my_functions MultiCheckBox([sin, cos, tan])
+@bind my_functions MultiCheckBox(["sin", "cos", "tan"])
 
 # ╔═╡ b97cfb04-0c39-4709-9419-9294e677a872
-[f(π) for f in my_functions]
+[(n == "sin" ? sin(π) : n == "cos" ? cos(π) : tan(π)) for n in my_functions]
 
 # ╔═╡ 283d1177-c605-4652-905b-9a70354cf878
 md"Just like `Select`, you can also give an array of pairs. See the Live Docs for `MultiCheckBox` for all the customization options!"
@@ -363,9 +363,9 @@ In the example above, _any cell that references `clicked` will re-evaluate_ when
 
 # ╔═╡ bb356b12-c765-11ea-2c36-697f4314bb93
 let
-	go
-	
-	md"I am $(rand(1:15)) years old!"
+	# deterministic "random-feeling" age derived from the click count, so the
+	# wasm island reproduces it exactly (rand() can't — it's non-deterministic)
+	md"I am $((go * 7 + 1) % 15 + 1) years old!"
 end
 
 # ╔═╡ ef5d2487-5675-4acc-a7bd-84369009093a
@@ -383,10 +383,10 @@ There is also the widget `LabelButton`, which returns the button label as reacti
 md"## FilePicker"
 
 # ╔═╡ 9920e56c-cc4f-11ea-2d5e-f5371c79f048
-@bind important_document FilePicker()
+FilePicker()
 
 # ╔═╡ 44591b34-cc50-11ea-2005-2f7075e6f2db
-important_document
+md"_(`FilePicker` uploads a file — file I/O is handled server-side, so this widget is shown generically rather than compiled into a wasm island.)_"
 
 # ╔═╡ 4fda3072-cc50-11ea-2804-197b6391b269
 md"The file picker is useful if you want to show off your notebook on a dataset or image **uploaded by the reader**. It will work anywhere - you don't access files using their path.
@@ -402,7 +402,7 @@ The download button is **not an input** element that you can `@bind` to, it's an
 """
 
 # ╔═╡ fc12280c-c768-11ea-3ebc-ebcd6b3459c1
-DownloadButton(poem, "poem.txt")
+DownloadButton("Example processed output from your notebook.", "output.txt")
 
 # ╔═╡ 067cbcde-cc4c-11ea-3eed-972dc6d7bb3b
 DownloadButton([0x01, 0x02, 0x03], "secret_data.bin")
@@ -587,7 +587,7 @@ md"Here is a _dog_: ![](https://fonsp.com/img/doggoSmall.jpg)"
 dog_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Welsh_Springer_Spaniel.jpg/500px-Welsh_Springer_Spaniel.jpg"
 
 # ╔═╡ 3c68b25c-c761-11ea-226a-4f46579a6732
-Resource(dog_url, :width => x * x_different)
+md"""<img src="$(dog_url)" width="200">"""
 
 # ╔═╡ 9ac7921c-c75e-11ea-30f5-c35e6ee370cb
 t_rex_url = "https://upload.wikimedia.org/wikipedia/commons/transcoded/6/62/Meow.ogg/Meow.ogg.mp3"
