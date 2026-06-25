@@ -36,6 +36,41 @@ function frontmatter_field(src::String, key::String)
     m === nothing ? nothing : String(m.captures[1])
 end
 
+"Read a notebook's island (group-level) AND cell-level counts from its exported
+`.islands/` dir. coverage.json (PI's accurate cell tally) is the real metric —
+a 'partial' group ships an island but still has non-interactive fallback CELLS,
+so the group count alone overstates interactivity."
+function read_counts(slug::AbstractString)
+    dir = joinpath(OUT, slug * ".islands")
+    islands = degraded = 0
+    rp = joinpath(dir, "report.json")
+    if isfile(rp)
+        r = JSON.parsefile(rp)
+        islands = count(g -> g["judgement"] != "fallback", r)
+        degraded = count(g -> g["judgement"] == "fallback", r)
+    end
+    ci = cf = ct = 0
+    cp = joinpath(dir, "coverage.json")
+    if isfile(cp)
+        cells = get(JSON.parsefile(cp), "cells", Dict())
+        ci = get(cells, "interactive", 0)
+        cf = get(cells, "fallback", 0)
+        ct = get(cells, "total", 0)
+    end
+    (; islands, degraded, cells_interactive=ci, cells_fallback=cf, cells_total=ct)
+end
+
+"merge island/cell counts into an index entry (single source of the schema)"
+function apply_counts!(entry::AbstractDict, c)
+    entry["islands"] = c.islands
+    entry["degraded"] = c.degraded
+    entry["cells_interactive"] = c.cells_interactive
+    entry["cells_fallback"] = c.cells_fallback
+    entry["cells_total"] = c.cells_total
+    entry["status"] = c.islands > 0 ? "interactive" : "static"
+    entry
+end
+
 # featured corpus + our own demo notebooks (guaranteed-interactive showcases)
 jobs = [(joinpath(CORPUS, f), splitext(f)[1])
         for f in sort(filter(f -> endswith(f, ".jl") && !occursin("backup", f), readdir(CORPUS)))]
@@ -69,6 +104,9 @@ for (i, (path, slug)) in enumerate(jobs)
         old["title"] = something(frontmatter_field(src, "title"), replace(slug, "_" => " "))
         old["description"] = something(frontmatter_field(src, "description"), "")
         old["image"] = something(frontmatter_field(src, "image"), "island-demo.svg")
+        # refresh counts from the on-disk export (schema may have grown cell-level
+        # fields since this entry was first written — no re-export needed)
+        get(old, "status", "") == "failed" || apply_counts!(old, read_counts(slug))
         @info "[$i/$(length(jobs))] cached ✓" slug
         push!(entries, old)
         continue
@@ -88,18 +126,8 @@ for (i, (path, slug)) in enumerate(jobs)
     try
         PlutoIslands.export_notebook(path; output_dir=OUT)
         isfile(joinpath(OUT, html_name)) || error("export produced no HTML (notebook failed to run?)")
-        # judgement counts from the islands report (absent = no islands shipped)
-        report_path = joinpath(OUT, slug * ".islands", "report.json")
-        islands, degraded = if isfile(report_path)
-            r = JSON.parsefile(report_path)
-            # "partial" groups ship a wasm island too (some cells excluded)
-            (count(g -> g["judgement"] != "fallback", r), count(g -> g["judgement"] == "fallback", r))
-        else
-            (0, 0)
-        end
-        entry["islands"] = islands
-        entry["degraded"] = degraded
-        entry["status"] = islands > 0 ? "interactive" : "static"
+        # island (group) + accurate cell-level counts from the export's report/coverage
+        apply_counts!(entry, read_counts(slug))
     catch e
         entry["status"] = "failed"
         entry["error"] = first(sprint(showerror, e), 500)
@@ -116,4 +144,8 @@ write(INDEX, JSON.json(entries, 2))
 n_int = count(e -> e["status"] == "interactive", entries)
 n_static = count(e -> e["status"] == "static", entries)
 n_fail = count(e -> e["status"] == "failed", entries)
-println("EXPORT DONE: $(n_int) interactive · $(n_static) static · $(n_fail) failed → $OUT")
+cells_int = sum(e -> get(e, "cells_interactive", 0), entries; init=0)
+cells_tot = sum(e -> get(e, "cells_total", 0), entries; init=0)
+cells_fb = sum(e -> get(e, "cells_fallback", 0), entries; init=0)
+println("EXPORT DONE: $(n_int) interactive · $(n_static) static · $(n_fail) failed notebooks")
+println("             $(cells_int)/$(cells_tot) bond-cells interactive · $(cells_fb) fallback → $OUT")

@@ -61,8 +61,9 @@ let index_path = joinpath(@__DIR__, "notebooks-static", "index.json"),
             route = "/notebooks/$(e["slug"])/"
             push!(app.routes, route => let np = NotebookPage,
                     slug = e["slug"], title = e["title"], html = e["html"],
-                    status = e["status"], islands = Int(get(e, "islands", 0))
-                () -> Base.invokelatest(np, slug, title, html, status, islands)
+                    status = e["status"], islands = Int(get(e, "islands", 0)),
+                    ci = Int(get(e, "cells_interactive", 0)), ct = Int(get(e, "cells_total", 0))
+                () -> Base.invokelatest(np, slug, title, html, status, islands, ci, ct)
             end)
             println("  Registered notebook route: $(route)")
         end

@@ -14,10 +14,18 @@ import JSON
     index_path = joinpath(@__DIR__, "..", "..", "notebooks-static", "index.json")
     entries = isfile(index_path) ? JSON.parsefile(index_path) : []
 
-    badge(status, islands, degraded) =
+    # accurate CELL-level counts (coverage.json): interactive cells / total bond
+    # cells, with any non-interactive fallback cells called out honestly.
+    badge(e) = begin
+        status = get(e, "status", "failed")
+        ci = get(e, "cells_interactive", 0)
+        ct = get(e, "cells_total", 0)
+        cf = get(e, "cells_fallback", 0)
+        degraded = get(e, "degraded", 0)
         if status == "interactive"
             Span(:class => "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-100 dark:bg-accent-900/50 text-accent-700 dark:text-accent-300",
-                "🏝️ interactive — $(islands) island$(islands == 1 ? "" : "s")$(degraded > 0 ? " · $(degraded) fallback" : "")")
+                ct > 0 ? "🏝️ $(ci)/$(ct) cells interactive$(cf > 0 ? " · $(cf) fallback" : "")" :
+                         "🏝️ interactive")
         elseif status == "static" && degraded > 0
             # has @bind groups, but none compiled yet — say so honestly
             Span(:class => "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
@@ -29,6 +37,12 @@ import JSON
             Span(:class => "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
                 "⚠️ export failed")
         end
+    end
+
+    # corpus totals (accurate cell-level) for the intro line
+    tot_int = sum(e -> get(e, "cells_interactive", 0), entries; init=0)
+    tot_cells = sum(e -> get(e, "cells_total", 0), entries; init=0)
+    n_interactive_nb = count(e -> get(e, "status", "") == "interactive", entries)
 
     Div(:class => "space-y-10",
         Div(:class => "space-y-4",
@@ -37,11 +51,25 @@ import JSON
                 "The ",
                 A(:href => "https://github.com/JuliaPluto/featured", :target => "_blank", :class => "text-accent-500 hover:text-accent-600 underline", "Pluto featured notebooks"),
                 ", exported by this fork. ",
-                Strong("🏝️ interactive"), " notebooks have at least one bond group running as a WasmTarget island — ",
-                "move those sliders with no Julia server behind the page. ",
+                Strong("🏝️ interactive"), " notebooks run their reactive cells as WasmTarget islands — ",
+                "move the sliders with no Julia server behind the page. Each badge shows how many of a notebook's ",
+                "bond-dependent cells run live (interactive / total). ",
                 Strong("📄 static"), " notebooks have no compilable bonds (yet — every fallback reason is a ",
                 A(:href => "https://github.com/GroupTherapyOrg/PlutoIslands.jl/blob/main/WASM_FINDINGS.md", :target => "_blank", :class => "text-accent-500 hover:text-accent-600 underline", "work item"),
                 "). Cells that error show their errors inline, exactly like Pluto."
+            ),
+            tot_cells > 0 ?
+                P(:class => "text-sm text-accent-700 dark:text-accent-300 font-medium",
+                    "$(tot_int)/$(tot_cells) interactive cells live across $(n_interactive_nb) notebooks.") :
+                nothing,
+            # honest note: some notebooks are lightly adapted to today's WT subset
+            Div(:class => "rounded-lg border border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-950/30 px-4 py-3 text-sm text-warm-700 dark:text-warm-300 max-w-3xl",
+                Strong("Note: "),
+                "Some of these notebooks have been lightly adapted from the original Pluto featured versions to fit the current capabilities of ",
+                A(:href => "https://github.com/GroupTherapyOrg/WasmTarget.jl", :target => "_blank", :class => "text-accent-500 hover:text-accent-600 underline", "WasmTarget.jl"),
+                " (the Julia→WebAssembly compiler). The concepts, demos, and teaching are preserved — only the implementation is adjusted to WT-supported patterns (e.g. ",
+                A(:href => "https://github.com/GroupTherapyOrg/WasmMakie.jl", :target => "_blank", :class => "text-accent-500 hover:text-accent-600 underline", "WasmMakie"),
+                " figures and blessed bond/return types) so every cell can compile to a live in-browser island."
             )
         ),
         isempty(entries) ?
@@ -50,8 +78,6 @@ import JSON
             Div(:class => "grid grid-cols-1 md:grid-cols-2 gap-6",
                 For(entries) do e
                     status = get(e, "status", "failed")
-                    islands = get(e, "islands", 0)
-                    degraded = get(e, "degraded", 0)
                     image = get(e, "image", "")
                     # internal route: the notebook opens INSIDE the docs layout
                     href = "$(base)/notebooks/$(replace(e["slug"], " " => "%20"))/"
@@ -64,7 +90,7 @@ import JSON
                         Div(:class => "p-5 space-y-3 flex-1 flex flex-col",
                             Div(:class => "flex items-start justify-between gap-3",
                                 H3(:class => "font-semibold text-warm-900 dark:text-warm-100 leading-snug", e["title"]),
-                                badge(status, islands, degraded)
+                                badge(e)
                             ),
                             P(:class => "text-sm text-warm-600 dark:text-warm-400 leading-relaxed flex-1",
                                 get(e, "description", "")),
