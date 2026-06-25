@@ -155,6 +155,18 @@
         return manifest_promise
     }
 
+    // Shared font atlas (font dedup): when the manifest carries `fonts_url`, the
+    // ~1.9 MB Makie font atlas lives in ONE shared file (referenced by URL) instead
+    // of being inlined into every notebook. Fetch + parse it once, cached, the same
+    // way we fetch the wasm (relative to assets_base).
+    let shared_fonts_promise = null
+    const load_shared_fonts = (m) => {
+        if (!m || !m.fonts_url) return Promise.resolve([])
+        shared_fonts_promise ??= orig_fetch(new URL(m.fonts_url, assets_base))
+            .then((r) => r.text()).then((t) => JSON.parse(t)).catch(() => [])
+        return shared_fonts_promise
+    }
+
     const load_group = (group) => {
         group._instance ??= (async () => {
             const wasm_resp = await orig_fetch(new URL(group.wasm, assets_base))
@@ -179,7 +191,12 @@
                 const factory = new Function(group.canvas_glue + "\nreturn { canvas2d_imports, canvas2d_load_fonts };")()
                 canvas2d = factory.canvas2d_imports(ctx_proxy)
                 try {
-                    await factory.canvas2d_load_fonts(JSON.parse(group.canvas_fonts ?? "[]"))
+                    // fonts are inline (group.canvas_fonts) OR externalized to a
+                    // shared file (manifest.fonts_url) — the dedup path.
+                    const _fonts = group.canvas_fonts != null
+                        ? JSON.parse(group.canvas_fonts)
+                        : await load_shared_fonts(await load_manifest())
+                    await factory.canvas2d_load_fonts(_fonts)
                 } catch (e) { console.warn("🏝️ canvas font load failed:", e) }
             }
             const imports = {}
@@ -296,6 +313,45 @@
         return msgpack_response(mp.encode(graph))
     }
 
+    // ─── shared render core ───
+    // Run a group's cells with bond values from `get_raw(name)` and return
+    // [{id, kind, body}]. Used by BOTH the Pluto staterequest path and the lean
+    // Therapy __pi_renderAll path → one marshalling implementation, no drift.
+    const render_group_cells = async (group, get_raw) => {
+        const { ex, read_str } = await load_group(group)
+        // args in manifest order; untouched bonds default to initial values.
+        // transform tables map raw widget values (what the client sends) to what
+        // the notebook actually sees (transform_value); rebuilt INSIDE wasm.
+        const deep_eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+        const args = group.bonds.map((b) => {
+            let v = get_raw(b.name)
+            if (v !== undefined && b.transform) {
+                const hit = b.transform.find((pair) => deep_eq(pair[0], v))
+                if (hit) v = hit[1]
+            }
+            return build(ex, b.desc, value_tree(b.desc, v ?? b.initial))
+        })
+        // canvas cells render into an offscreen canvas → data-URL <img>
+        const render_canvas = (cell) => {
+            const w = Number(cell.desc?.w ?? 640), h = Number(cell.desc?.h ?? 480)
+            const cv = document.createElement("canvas")
+            cv.width = w
+            cv.height = h
+            group._ctx = cv.getContext("2d")
+            try { ex[cell.fn](...args) } finally { group._ctx = null }
+            return `<img class="wasmmakie-island" width="${w}" height="${h}" src="${cv.toDataURL()}">`
+        }
+        return group.cells.map((cell) => ({
+            id: cell.id,
+            kind: cell.kind,
+            body: cell.kind === "tree"
+                ? pluto_tree_body(cell.desc, walk_ex(ex, cell.desc, ex[cell.fn](...args)))
+                : cell.kind === "canvas"
+                ? render_canvas(cell)
+                : read_str(ex[cell.fn](...args)),
+        }))
+    }
+
     const handle_staterequest = async (bonds_u8, passthrough) => {
         const m = await load_manifest()
         const bonds = mp.decode(bonds_u8)
@@ -307,49 +363,37 @@
             console.log("🏝️ staterequest passthrough (fallback group):", sent)
             return passthrough()
         }
-        const { ex, read_str } = await load_group(group)
-        // args in manifest order; untouched bonds default to initial values.
-        // transform tables map raw widget values (what the client sends) to
-        // what the notebook actually sees (transform_value); then each value
-        // is rebuilt INSIDE wasm via the bridge constructor closure.
-        const deep_eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
-        const args = group.bonds.map((b) => {
-            let v = bonds[b.name]?.value
-            if (v !== undefined && b.transform) {
-                const hit = b.transform.find((pair) => deep_eq(pair[0], v))
-                if (hit) v = hit[1]
-            }
-            return build(ex, b.desc, value_tree(b.desc, v ?? b.initial))
-        })
         console.log("🏝️ staterequest served by wasm island:", bonds)
-        // canvas cells: render into an offscreen canvas and patch the body
-        // with a data-URL <img> — stateless like every other cell body
-        const render_canvas = (cell) => {
-            const w = Number(cell.desc?.w ?? 640), h = Number(cell.desc?.h ?? 480)
-            const cv = document.createElement("canvas")
-            cv.width = w
-            cv.height = h
-            group._ctx = cv.getContext("2d")
-            try { ex[cell.fn](...args) } finally { group._ctx = null }
-            return `<img class="wasmmakie-island" width="${w}" height="${h}" src="${cv.toDataURL()}">`
-        }
+        const cells = await render_group_cells(group, (name) => bonds[name]?.value)
         // Patch shape mirrors a real PSS staterequest response exactly
         // (run_bonds_get_patches → Firebasey.diff): body + output.last_run_timestamp
         // (which CellOutput uses to invalidate) + persist_js_state + logs + runtime.
         const patches = []
-        for (const cell of group.cells) {
-            const body = cell.kind === "tree"
-                ? pluto_tree_body(cell.desc, walk_ex(ex, cell.desc, ex[cell.fn](...args)))
-                : cell.kind === "canvas"
-                ? render_canvas(cell)
-                : read_str(ex[cell.fn](...args))
+        for (const cell of cells) {
             patches.push({ op: "replace", path: ["cell_results", cell.id, "logs"], value: [] })
-            patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "body"], value: body })
+            patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "body"], value: cell.body })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "persist_js_state"], value: true })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "last_run_timestamp"], value: Date.now() / 1000 })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "runtime"], value: 1000 })
         }
         return msgpack_response(mp.encode({ patches }))
+    }
+
+    // ─── lean Therapy runtime: drive islands directly from HTML inputs ───
+    // The lean exported page (no Pluto frontend, no fetch interception) calls
+    // window.__pi_renderAll({bondName: rawValue}) on every input change; we run
+    // EVERY island group and patch each cell's mount div (#out-<cellId>).
+    window.__pi_renderAll = async (bondValues) => {
+        const m = await load_manifest()
+        for (const group of m.groups) {
+            let cells
+            try { cells = await render_group_cells(group, (name) => bondValues[name]) }
+            catch (e) { console.warn("🏝️ island render failed:", e); continue }
+            for (const c of cells) {
+                const mount = document.getElementById("out-" + c.id)
+                if (mount) mount.innerHTML = c.body
+            }
+        }
     }
 
     window.fetch = (resource, options) => {
