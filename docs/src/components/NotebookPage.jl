@@ -8,11 +8,12 @@
 const _NOTEBOOK_GITHUB_BASE =
     "https://github.com/GroupTherapyOrg/PlutoIslands.jl/blob/main/test/notebooks/featured"
 
-function NotebookPage(slug::AbstractString, title::AbstractString, html_name::AbstractString, status::AbstractString, islands::Int)
+function NotebookPage(slug::AbstractString, title::AbstractString, html_name::AbstractString, status::AbstractString, islands::Int, cells_interactive::Int=0, cells_total::Int=0)
     base = get(ENV, "PIDOCS_BASE", "")
     badge = status == "interactive" ?
         Span(:class => "px-2 py-0.5 rounded-full bg-accent-100 dark:bg-accent-900/50 text-accent-700 dark:text-accent-300 normal-case tracking-normal",
-            "🏝️ $(islands) wasm island$(islands == 1 ? "" : "s") — sliders need no server") :
+            cells_total > 0 ? "🏝️ $(cells_interactive)/$(cells_total) cells interactive — sliders need no server" :
+                              "🏝️ $(islands) wasm island$(islands == 1 ? "" : "s") — sliders need no server") :
         Span(:class => "px-2 py-0.5 rounded-full bg-warm-200 dark:bg-warm-800 text-warm-600 dark:text-warm-400 normal-case tracking-normal",
             "📄 static export")
 
