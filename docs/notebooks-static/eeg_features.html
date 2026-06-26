@@ -1,72 +1,1825 @@
-<!DOCTYPE html><html><head><script src="./eeg_features.islands/shim.js"></script><script type="importmap">{"imports":{"aVc6E":"./firebase-firestore.7f842f36.js","bEDS4":"./firebase-app.b603aaa4.js"}}</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/editor.6d99411f.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/editor.1a8c75c9.css"><script type="module" src="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/frontend.72627891.js"></script>
-    <meta name="viewport" content="width=device-width">
-    <meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
+<title>eeg_features</title>
+<style>
+:root{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
+body{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
+/* Pluto's tree/table/code use white-space:pre (no wrap); the output box must
+   scroll horizontally so wide content (long arrays, wide tables, long inline
+   math) stays inside the cell column instead of bleeding off-page — exactly
+   how Pluto's own cell output behaves. */
+pluto-output{display:block;overflow-x:auto;overflow-y:visible}
+.cell{margin:1.1rem 0}
+img.wasmmakie-island,.pi-reactive canvas{max-width:100%;height:auto}
+input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
+select,input[type=number]{accent-color:var(--color-primary)}
+bond{display:inline-block}
+a{color:var(--color-primary)}
+/* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
+   ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
+.pi-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
+.pi-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
+/* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
+   (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
+.pl-cell{margin:1.25rem 0}
+.pl-code{background:var(--color-base-200);border-radius:.4rem;padding:.5rem .75rem;overflow-x:auto;max-width:100%;font-size:.8em;line-height:1.5;margin:.4rem 0 0}
+.pl-code code{background:none;padding:0;font-size:1em;white-space:pre;font-family:var(--julia-mono-font-stack,ui-monospace,Menlo,monospace)}
+/* keep wide cell content inside the notebook column (don't blow out the page):
+   long code lines scroll within their block; PlutoUI multi-slider rows wrap;
+   widgets/markdown never exceed the column; anything still wide scrolls in-cell.
+   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .pi-notebook
+   wrapper (it uses <main>), and in the docs fragment the whole sheet is wrapped in
+   `@scope (.pi-notebook)` — so a `.pi-notebook X` selector matched NOTHING in either
+   context (the earlier 272px residual). Bare class/element selectors auto-scope under
+   @scope for the fragment and stay notebook-specific (these are Pluto/PlutoUI classes)
+   for the standalone page. */
+pre,table,bond,.markdown,img{max-width:100%}
+.slider_group_inner,.slider_group,.on_small_show,.on_big_show{flex-wrap:wrap !important;max-width:100% !important}
+/* PlutoUI/combine `sidebar-left|right` parks slider columns in the PAGE MARGIN via
+   `position:absolute; left:100%` (Pluto's full-width editor has room); in our narrow
+   embedded column that flings them past the right edge by their own ~17rem width (the
+   272px page overflow + sliders in the gutter). Flow them inline instead — `position:
+   static` also neutralises the left/right/top:100% offsets (they only apply to
+   positioned boxes). `.aside` is PlutoUI.combine's own margin-aside variant. */
+.sidebar-left,.sidebar-right,.sidebar-bottom,.slider_group.aside{position:static !important;left:auto !important;right:auto !important;top:auto !important;width:auto !important}
+/* PlutoUI.aside() (margin notes / admonitions in the gutter) does the SAME trick via
+   an inline cell <style>: `aside.plutoui-aside-wrapper{position:absolute;right:-11px;
+   width:0}` + `> div{width:300px}` — a zero-width anchor whose 300px child spills past
+   the right edge (the fractals / PlutoUI.jl 312px overflow). Flow the note inline in
+   our narrow column instead: static anchor, and the child caps at the column width. */
+.plutoui-aside-wrapper{position:static !important;right:auto !important;left:auto !important;width:auto !important}
+.plutoui-aside-wrapper>div{width:auto !important;max-width:100% !important}
+/* safety net: anything STILL wider than the column scrolls within the notebook column
+   rather than pushing the page layout out (e.g. a stray fixed-width figure). */
+.pi-cells,main{overflow-x:auto}
+/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+.tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
+.tok-string,.tok-character,.tok-special{color:#16a34a}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
+.tok-typeName{color:#0891b2}
+.tok-macroName{color:#db2777}
+.tok-function,.tok-definition{color:#2563eb}
+.tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
+/* ── EMBEDDED ToC (docs): keep Pluto's floating aside, but make it respect the docs
+   chrome. It stays a fixed top-right panel (like Pluto) so it never disturbs the
+   notebook column's flow — but sits BELOW the docs sticky header (lower z-index +
+   a little lower) and, crucially, the collapsed `.hide` state slides flush to the
+   right viewport edge (translateX to right:0) instead of PAST it, so it can never
+   add a horizontal scrollbar. It starts collapsed (the JS adds .hide) so it reads
+   as a tidy tab the reader opens, never floating over docs text at rest. */
+.plutoui-toc.toc-embedded.aside{z-index:30;top:4.5rem;right:0;max-height:calc(100vh - 6rem);box-shadow:0 2px 14px rgba(0,0,0,.10)}
+.plutoui-toc.toc-embedded.aside.hide{transform:translateX(calc(100% - 28px))}
 
-    <title>EEG band-power features</title>
-<meta name="description" content='Interactive EEG spectral band-power feature extraction — pure Julia, runs in the browser via WebAssembly (no server).'>
-<meta property="og:article:tag" content='signal'>
-<meta property="og:article:tag" content='eeg'>
-<meta property="og:article:tag" content='beacon'>
-<meta property='og:title' content='EEG band-power features'>
-<meta property='og:type' content='article'>
-<meta property='og:description' content='Interactive EEG spectral band-power feature extraction — pure Julia, runs in the browser via WebAssembly (no server).'>
+/* AUTO-GENERATED by src/pluto_css.jl — Pluto's output CSS re-themed to DaisyUI.
+   Every Pluto colour var below → a DaisyUI --color-* token. Do not hand-edit;
+   edit PLUTO_VAR_MAP / pluto-base.css and regenerate (write_pluto_css()). */
+:root {
+  --a-underline: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  --admonition-title-color: var(--color-primary-content);
+  --ansi-black: var(--color-base-content);
+  --ansi-blue: var(--color-info, #3b82f6);
+  --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --ansi-bright-blue: var(--color-info, #60a5fa);
+  --ansi-bright-cyan: var(--color-accent, #22d3ee);
+  --ansi-bright-green: var(--color-success, #22c55e);
+  --ansi-bright-magenta: var(--color-secondary, #a855f7);
+  --ansi-bright-red: var(--color-error, #ef4444);
+  --ansi-bright-white: var(--color-base-content);
+  --ansi-bright-yellow: var(--color-warning, #eab308);
+  --ansi-cyan: var(--color-accent, #0891b2);
+  --ansi-green: var(--color-success, #16a34a);
+  --ansi-magenta: var(--color-secondary, #7c3aed);
+  --ansi-red: var(--color-error, #dc2626);
+  --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+  --ansi-yellow: var(--color-warning, #d97706);
+  --before-content: "";
+  --bg: var(--color-base-100);
+  --black: var(--color-base-content);
+  --blockquote-bg: var(--color-base-200);
+  --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --br: 0.4rem;
+  --cm-color-builtin: var(--color-info, #0891b2);
+  --cm-color-clickable-underline: var(--color-primary);
+  --cm-color-comment: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  --cm-color-editor-text: var(--color-base-content);
+  --cm-color-keyword: #8b5cf6;
+  --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  --cm-color-literal: #d97706;
+  --cm-color-macro: #db2777;
+  --cm-color-string: #16a34a;
+  --cm-color-symbol: #d97706;
+  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-variable: var(--color-base-content);
+  --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
+  --cm-var-color: var(--color-base-content);
+  --code-background: var(--color-base-200);
+  --code-section-bg-color: var(--color-base-200);
+  --crop: 0;
+  --cursor-color: var(--color-base-content);
+  --docs-binding-bg: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+  --footnote-border-color: var(--color-base-300);
+  --gray: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  --icon-filter: none;
+  --image-filters: none;
+  --inter-ui-font-stack: var(--system-ui-font-stack);
+  --jl-danger-accent-color: var(--color-error, #dc2626);
+  --jl-danger-color: color-mix(in oklab, var(--color-error, #dc2626) 14%, var(--color-base-100));
+  --jl-debug-accent-color: var(--color-secondary, #7c3aed);
+  --jl-debug-color: color-mix(in oklab, var(--color-secondary, #7c3aed) 14%, var(--color-base-100));
+  --jl-info-acccolor: color-mix(in oklab, var(--color-info, #3b82f6) 14%, var(--color-base-100));
+  --jl-info-accent-color: var(--color-info, #3b82f6);
+  --jl-info-color: color-mix(in oklab, var(--color-info, #3b82f6) 14%, var(--color-base-100));
+  --jl-message-accent-color: var(--color-success, #16a34a);
+  --jl-message-color: color-mix(in oklab, var(--color-success, #16a34a) 16%, var(--color-base-100));
+  --jl-warn-accent-color: var(--color-warning, #d97706);
+  --jl-warn-color: color-mix(in oklab, var(--color-warning, #d97706) 16%, var(--color-base-100));
+  --jlerror-a-bg-color: color-mix(in oklab, var(--color-warning, #d97706) 14%, var(--color-base-100));
+  --jlerror-a-border-left-color: var(--color-error, #dc2626);
+  --jlerror-header-color: var(--color-error, #dc2626);
+  --jlerror-mark-bg-color: var(--color-base-200);
+  --jlerror-mark-color: var(--color-base-content);
+  --julia-mono-font-stack: "JuliaMono", ui-monospace, "SF Mono", Menlo, monospace;
+  --kbd-border-color: var(--color-base-300);
+  --main-bg-color: var(--color-base-100);
+  --pkg-terminal-border-color: var(--color-base-300);
+  --pluto-cell-spacing: 12px;
+  --pluto-logs-debug-color: color-mix(in oklab, var(--color-secondary, #7c3aed) 14%, var(--color-base-100));
+  --pluto-logs-key-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --pluto-output-bg-color: var(--color-base-100);
+  --pluto-output-color: var(--color-base-content);
+  --pluto-output-h-color: var(--color-base-content);
+  --pluto-schema-types-border-color: var(--color-base-300);
+  --pluto-schema-types-color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  --pluto-tree-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
+  --rule-color: var(--color-base-300);
+  --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --system-fonts-mono: var(--julia-mono-font-stack);
+  --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --table-bg-hover-color: var(--color-base-200);
+  --table-border-color: var(--color-base-300);
+  --white: var(--color-base-100);
+}
 
-<meta name="pluto-insertion-spot-meta">
+/* Pluto output rules (editor.css pluto-output sections + treeview.css +
+   PlutoUI TableOfContents), copied from Pluto frontend. The DaisyUI var-map
+   + ansi/highlightjs/error are added by src/pluto_css.jl at load. Regenerate on
+   a Pluto/PlutoUI bump via PlutoIslands.write_pluto_css(). */
+/* ─── VERBATIM: Pluto editor.css 122-528 (pluto-output output rules) ─── */
+pluto-output {
+    font-family: "Alegreya Sans", "Trebuchet MS", sans-serif;
+    font-size: 14.5px;
+    font-weight: 400;
+    color: var(--pluto-output-color);
+}
+
+pluto-output h1,
+pluto-output h2,
+pluto-output h3,
+pluto-output h4,
+pluto-output h5,
+pluto-output h6 {
+    font-family: "Vollkorn", Palatino, Georgia, serif;
+    font-feature-settings: "lnum", "pnum";
+    font-weight: 600;
+    color: var(--pluto-output-h-color);
+    margin-block-start: 1rem;
+    margin-block-end: 0rem;
+    line-height: 1.25em;
+}
+
+pluto-output h1,
+pluto-output h2 {
+    font-weight: 700;
+    margin-block-start: 2rem;
+}
+
+pluto-output h1:first-child,
+pluto-output h2:first-child {
+    margin-block-start: calc(2rem - var(--pluto-cell-spacing));
+}
+
+pluto-output h1 {
+    font-size: 2.2rem;
+    border-bottom: 3px solid var(--rule-color);
+    margin-bottom: 0.5rem;
+}
+
+pluto-output h2 {
+    font-size: 1.8rem;
+    border-bottom: 2px dotted var(--rule-color);
+    margin-bottom: 0.5rem;
+}
+
+pluto-output h1:empty,
+pluto-output h2:empty {
+    border-bottom: none;
+}
+
+pluto-output h3 {
+    font-size: 1.6rem;
+    /* border-bottom: 2px dotted rgba(0,0,0,.15); */
+}
+
+pluto-output h4 {
+    font-size: 1.4rem;
+}
+
+pluto-output h5 {
+    font-size: 1.2rem;
+}
+
+pluto-output h6 {
+    font-size: 1rem;
+}
+
+pluto-output h3:first-child,
+pluto-output h4:first-child,
+pluto-output h5:first-child,
+pluto-output h6:first-child {
+    margin-block-start: 0px;
+}
+
+pluto-output br,
+pluto-output p {
+    margin-block-start: 0px;
+    margin-block-end: var(--pluto-cell-spacing);
+    word-spacing: 0.053em;
+    line-height: 1.6em;
+}
+
+/* This allows a linebreak in Markdown using backslash with smaller spacing compared to paragraph in firefox */
+pluto-output br {
+    margin-block-end: 0;
+}
+
+pluto-output p:first-child {
+    margin-block-start: 0px;
+}
+
+/* https://github.com/necolas/normalize.css/blob/fc091cce1534909334c1911709a39c22d406977b/normalize.css#L96 */
+b,
+strong {
+    font-weight: bolder;
+}
+
+/* I actually just want to get rid of the margin-block-start on the p tag,
+    but css doesn't allow that. So I have to move the list up, instead of not moving it up */
+pluto-output li p + ul,
+pluto-output li p + ol {
+    margin-block-start: calc(var(--pluto-cell-spacing) * -1);
+}
+pluto-output p:last-child {
+    margin-block-end: 0px;
+}
+
+pluto-output img,
+pluto-output video {
+    max-width: 100%;
+}
+
+a {
+    color: var(--black);
+    /* font-weight: bold; */
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--a-underline);
+    /* text-shadow: 1px -1px 0px #ffffff33; */
+}
+a:hover {
+    text-decoration-color: var(--black);
+}
+
+.cm-cursor {
+    border-left: 1.2px solid var(--cursor-color) !important;
+}
+
+pluto-output code {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9em; /* not rem */
+    font-variant-ligatures: none;
+}
+
+pluto-output code .cm-editor .cm-line {
+    font-family: var(--julia-mono-font-stack);
+}
+
+pluto-output pre > code {
+    font-size: inherit;
+}
+
+pluto-output.rich_output code {
+    padding: 0.18em;
+    border-radius: 8px;
+    background-color: var(--pluto-output-bg-color);
+}
+pluto-output.rich_output pre > code {
+    padding: 0px;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+pluto-log-dot pre,
+pluto-output pre {
+    display: inline-block;
+    margin: 0px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    tab-size: 4;
+    -moz-tab-size: 4; /* https://bugzilla.mozilla.org/show_bug.cgi?id=737785 */
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.8rem;
+    font-variant-ligatures: none;
+}
+
+pluto-display pre {
+    white-space: pre;
+    word-break: normal;
+}
+
+pluto-output hr {
+    border: none;
+    border-top: 3px solid var(--rule-color);
+    margin-left: 0;
+    margin-right: 0;
+}
+
+pluto-output blockquote {
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+pluto-output.rich_output pre:not(.no-block),
+pluto-output blockquote {
+    margin-block-start: 0px;
+    margin-block-end: var(--pluto-cell-spacing);
+    display: block;
+    padding: 15px;
+    border-radius: 15px;
+    background-color: var(--blockquote-bg);
+    color: var(--blockquote-color);
+}
+pluto-output.rich_output pre:not(.no-block):last-child,
+pluto-output blockquote:last-child {
+    margin-block-end: 0px;
+}
+
+pluto-output div.admonition {
+    border-radius: 8px;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+pluto-output div.admonition .admonition-title {
+    font-family: "Vollkorn", Palatino, sans-serif;
+    font-feature-settings: "lnum", "pnum";
+    color: var(--admonition-title-color);
+    font-weight: 600;
+    margin-block-end: 0px;
+    padding-left: 0.3em;
+    font-size: 1.3em;
+}
+pluto-output div.admonition .admonition-title ~ * {
+    margin-block-end: 0.5em;
+    margin-block-start: 0.5em;
+    transition: filter linear 0.1s;
+}
+
+pluto-output div.admonition {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    background: var(--jl-message-color);
+    border: 5px solid var(--jl-message-accent-color);
+}
+pluto-output div.admonition .admonition-title {
+    background: var(--jl-message-accent-color);
+    margin: -1px; /* Fixes a rendering glitch in Chrome */
+    margin-left: -0.55rem;
+    margin-right: -0.55rem;
+}
+pluto-output div.admonition.note,
+pluto-output div.admonition.info,
+pluto-output div.admonition.hint {
+    background: var(--jl-info-color);
+    border: 5px solid var(--jl-info-accent-color);
+}
+pluto-output div.admonition.note > .admonition-title,
+pluto-output div.admonition.info > .admonition-title,
+pluto-output div.admonition.hint > .admonition-title {
+    background: var(--jl-info-accent-color);
+}
+pluto-output div.admonition.warning,
+pluto-output div.admonition.alert-danger {
+    background: var(--jl-warn-color);
+    border: 5px solid var(--jl-warn-accent-color);
+}
+pluto-output div.admonition.warning > .admonition-title,
+pluto-output div.admonition.alert-danger > .admonition-title {
+    background: var(--jl-warn-accent-color);
+}
+pluto-output div.admonition.danger {
+    background: var(--jl-danger-color);
+    border: 5px solid var(--jl-danger-accent-color);
+}
+pluto-output div.admonition.danger > .admonition-title {
+    background: var(--jl-danger-accent-color);
+}
+
+pluto-output div.admonition.hint > .admonition-title ~ * {
+    filter: blur(0.25em);
+}
+pluto-output div.admonition.hint:hover > .admonition-title ~ *,
+pluto-output div.admonition.hint:focus-within > .admonition-title ~ * {
+    filter: blur(0em);
+}
+
+pluto-output div.footnote {
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+
+pluto-output div.footnote p.footnote-title::before {
+    content: "[";
+}
+pluto-output div.footnote p.footnote-title::after {
+    content: "]: ";
+}
+pluto-output a.footnote,
+pluto-output div.footnote p.footnote-title {
+    font-family: var(--roboto-mono-font-stack);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-block-end: 0px;
+    letter-spacing: -0.05em;
+    /* font-variant: small-caps; */
+}
+
+pluto-output div.footnote p.footnote-title ~ * {
+    margin-left: 0.1em;
+    padding-left: 0.4em;
+    border-left: 5px solid var(--footnote-border-color);
+    padding-bottom: var(--pluto-cell-spacing);
+    margin-block-end: 0px;
+}
+pluto-output div.footnote p:last-child {
+    padding-bottom: 0px;
+}
+
+pluto-output.scroll_y {
+    max-height: 80vh;
+    max-height: 502px;
+    overflow: auto;
+}
+
+pluto-output table {
+    border-collapse: collapse;
+    border: 2px solid var(--table-border-color);
+    border-left: none;
+    border-right: none;
+    margin: 0 auto;
+    margin-block-start: var(--pluto-cell-spacing);
+    margin-block-end: var(--pluto-cell-spacing);
+}
+
+pluto-output table > thead {
+    border-bottom: 1px solid var(--table-border-color);
+}
+
+pluto-output table > tbody td {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+    font-variant-ligatures: none;
+}
+pluto-output table > tbody td code {
+    font-size: 0.75rem;
+}
+
+pluto-output table td,
+pluto-output table th {
+    padding: 0.2rem 0.5rem;
+}
+
+pluto-output table > tbody tr:hover {
+    background-color: var(--table-bg-hover-color);
+}
+pluto-output table pre {
+    white-space: pre;
+}
+
+pluto-output kbd,
+kbd {
+    letter-spacing: -0.7px;
+    border: 1px solid var(--kbd-border-color);
+    border-radius: 3px;
+    padding: 0.1em 0.4em;
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Avoid scrollbar in in-line latex with markdown, see https://github.com/JuliaPluto/Pluto.jl/issues/1309 */
+pluto-output mjx-assistive-mml {
+    height: 1px;
+}
+
+/* Allow horizontal scrolling of wide markdown content (e.g. long MathJax
+   expressions) while keeping vertical overflow hidden. This still prevents
+   scrollbars for simple headers but avoids clipping.  */
+.raw-html-wrapper > div.markdown {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+pluto-output details {
+    border: 1px solid var(--rule-color);
+    border-radius: 4px;
+    padding: 0.5em 0.5em 0;
+    margin-block-start: 0;
+    margin-block-end: var(--pluto-cell-spacing);
+}
+
+pluto-output details:first-child {
+    margin-block-start: 0;
+}
+
+pluto-output details:last-child {
+    margin-block-end: 0;
+}
+
+pluto-output details summary {
+    cursor: pointer;
+    font-family: var(--system-ui-font-stack);
+    font-weight: bold;
+    border-radius: 3px;
+    padding: 0.5em;
+    margin: -0.5em -0.5em 0;
+    transition:
+        color 0.25s ease-in-out,
+        background-color 0.25s ease-in-out;
+    /* Border may have transparency, let's not change the border with a background-color */
+    background-clip: padding-box;
+}
+
+pluto-output details summary:hover {
+    color: var(--blockquote-color);
+    background-color: var(--blockquote-bg);
+}
+
+pluto-output details[open] {
+    padding: 0.5em;
+}
+
+pluto-output details[open] summary {
+    border-bottom: 1px solid var(--rule-color);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-bottom: 0.5em;
+}
+
+/* ─── VERBATIM: Pluto editor.css 3044-3077 (.pluto-docs-binding output) ─── */
+.pluto-docs-binding {
+    margin: 0.5em;
+    padding: 1em;
+    border-radius: 1em;
+    background: var(--docs-binding-bg);
+    color: var(--pluto-output-color);
+}
+
+.pluto-docs-binding > span {
+    display: inline-block;
+    transform: translate(-1.2em, -73%);
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-top: -1em;
+    padding: 0.235rem;
+    border-radius: 0.4rem;
+    background: var(--pluto-output-bg-color);
+    color: var(--black);
+}
+
+.pluto-docs-binding h1 {
+    font-size: 1.4em;
+}
+
+.pluto-docs-binding h2 {
+    font-size: 1.3em;
+}
+.pluto-docs-binding h3,
+.pluto-docs-binding h4,
+.pluto-docs-binding h5,
+.pluto-docs-binding h6 {
+    font-size: 1.1em;
+}
+
+/* ─── VERBATIM: Pluto treeview.css (@charset/@import stripped) ─── */
 
 
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2a2928">
-    <meta name="color-scheme" content="light dark">
 
-    <link rel="icon" type="image/png" sizes="16x16" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/favicon-16x16.fe7feca6.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/favicon-32x32.4cb27571.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/favicon-96x96.d3e6b4f5.png">
-    <link rel="pluto-external-source" id="pluto-logo-big" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/logo.103597bc.svg">
-    <link rel="pluto-external-source" id="pluto-logo-small" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/favicon_unsaturated.9ed3a6f6.svg">
+/*  */
 
-    <script defer="">console.log("Pluto.jl, by Fons van der Plas (https://github.com/fonsp), Mikołaj Bochenski (https://github.com/malyvsen), Michiel Dral (https://github.com/dralletje), Παναγιώτης (Panagiotis) Γεωργακόπουλος (https://github.com/pankgeorg), Paul Berg (https://github.com/Pangoraw) and friends 🌈");</script>
+pluto-tree,
+pluto-tree-pair {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+}
+pluto-tree {
+    color: var(--pluto-tree-color);
+    white-space: pre;
+    cursor: pointer;
+}
 
-    <script src="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/editor.2f9fc277.js" defer=""></script>
+pluto-tree,
+pluto-tree-items {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    direction: ltr;
+}
+pluto-tree.collapsed,
+pluto-tree.collapsed pluto-tree,
+pluto-tree.collapsed pluto-tree-items {
+    flex-direction: row;
+    align-items: baseline;
+}
 
-    <!-- This doesn't do anything unless activated, and it makes sure parcel bundles this -->
-    <script id="iframe-resizer-content-window-script" src="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/editor.7a04a462.js" crossorigin="anonymous" defer=""></script>
+pluto-tree-items {
+    cursor: auto;
+}
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/editor.34f4e0d4.css" type="text/css">
+pluto-tree-prefix {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: baseline;
+}
 
-    <meta rel="pluto-cdn-root" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/">
-    <script data-pluto-file="launch-parameters">
-window.pluto_notebook_id = undefined;
-window.pluto_isolated_cell_ids = undefined;
-window.pluto_notebookfile = "data:text/julia;charset=utf-8;base64,IyMjIEEgUGx1dG8uamwgbm90ZWJvb2sgIyMjCiMgdjAuMjAuMjgKCiM+IFtmcm9udG1hdHRlcl0KIz4gb3JkZXIgPSAiMTMiCiM+IHRpdGxlID0gIkVFRyBiYW5kLXBvd2VyIGZlYXR1cmVzIgojPiB0YWdzID0gWyJzaWduYWwiLCAiZWVnIiwgImJlYWNvbiJdCiM+IGRlc2NyaXB0aW9uID0gIkludGVyYWN0aXZlIEVFRyBzcGVjdHJhbCBiYW5kLXBvd2VyIGZlYXR1cmUgZXh0cmFjdGlvbiDigJQgcHVyZSBKdWxpYSwgcnVucyBpbiB0aGUgYnJvd3NlciB2aWEgV2ViQXNzZW1ibHkgKG5vIHNlcnZlcikuIgoKdXNpbmcgTWFya2Rvd24KdXNpbmcgSW50ZXJhY3RpdmVVdGlscwoKIyBUaGlzIFBsdXRvIG5vdGVib29rIHVzZXMgQGJpbmQgZm9yIGludGVyYWN0aXZpdHkuIFdoZW4gcnVubmluZyB0aGlzIG5vdGVib29rIG91dHNpZGUgb2YgUGx1dG8sIHRoZSBmb2xsb3dpbmcgJ21vY2sgdmVyc2lvbicgb2YgQGJpbmQgZ2l2ZXMgYm91bmQgdmFyaWFibGVzIGEgZGVmYXVsdCB2YWx1ZSAoaW5zdGVhZCBvZiBhbiBlcnJvcikuCm1hY3JvIGJpbmQoZGVmLCBlbGVtZW50KQogICAgIyEgZm9ybWF0OiBvZmYKICAgIHJldHVybiBxdW90ZQogICAgICAgIGxvY2FsIGl2ID0gdHJ5IEJhc2UubG9hZGVkX21vZHVsZXNbQmFzZS5Qa2dJZChCYXNlLlVVSUQoIjZlNjk2YzcyLTY1NDItMjA2Ny03MjY1LTQyMjA2Yzc1NjE1MCIpLCAiQWJzdHJhY3RQbHV0b0RpbmdldGplcyIpXS5Cb25kcy5pbml0aWFsX3ZhbHVlIGNhdGNoOyBiIC0+IG1pc3Npbmc7IGVuZAogICAgICAgIGxvY2FsIGVsID0gJChlc2MoZWxlbWVudCkpCiAgICAgICAgZ2xvYmFsICQoZXNjKGRlZikpID0gQ29yZS5hcHBsaWNhYmxlKEJhc2UuZ2V0LCBlbCkgPyBCYXNlLmdldChlbCkgOiBpdihlbCkKICAgICAgICBlbAogICAgZW5kCiAgICAjISBmb3JtYXQ6IG9uCmVuZAoKIyDilZTilZDilaEgYWFhYTAwMDEtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxCnVzaW5nIFBsdXRvVUkKCiMg4pWU4pWQ4pWhIGFhYWEwMDAyLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMgptZCIiIiMgRUVHIHNwZWN0cmFsIGJhbmQtcG93ZXIgZmVhdHVyZXMKCkEgc2VsZi1jb250YWluZWQgRUVHIGZlYXR1cmUgZXh0cmFjdG9yOiBhIHN5bnRoZXRpYyBzaWduYWwgKHN1bSBvZiBwaHlzaW9sb2dpY2FsCnJoeXRobXMpIGlzIGFuYWx5c2VkIHdpdGggYSAqKnB1cmUtSnVsaWEgREZUKiogYW5kIHJlZHVjZWQgdG8gdGhlIGNhbm9uaWNhbCBjbGluaWNhbApiYW5kIHBvd2Vycy4gRXZlcnl0aGluZyBiZWxvdyB0aGUgc2xpZGVyIHJ1bnMgKippbiB5b3VyIGJyb3dzZXIgYXMgV2ViQXNzZW1ibHkqKiDigJQgbm8KSnVsaWEgc2VydmVyLCBubyBpbnN0YWxsLiBEcmFnIHRoZSBzbGlkZXIgdG8gY2hhbmdlIHRoZSAqKmFscGhhIHJoeXRobSBhbXBsaXR1ZGUqKiBhbmQKd2F0Y2ggdGhlIGJhbmQgcG93ZXJzIHVwZGF0ZSBsaXZlLgoiIiIKCiMg4pWU4pWQ4pWhIGFhYWEwMDAzLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMwptZCIqKkFscGhhICg44oCTMTMgSHopIGFtcGxpdHVkZToqKiIKCiMg4pWU4pWQ4pWhIGFhYWEwMDA0LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNApAYmluZCBhbHBoYV9hbXAgU2xpZGVyKDAuMDowLjE6Mi4wLCBkZWZhdWx0PTEuMCwgc2hvd192YWx1ZT10cnVlKQoKIyDilZTilZDilaEgYWFhYTAwMDUtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA1CiIiIlB1cmUtSnVsaWEgRUVHIGJhbmQgcG93ZXJzOiBzeW50aGVzaXplIGEgMTI4LXNhbXBsZSAvIDEyOCBIeiBzaWduYWwgKGRlbHRhK3RoZXRhKwphbHBoYStiZXRhK2dhbW1hKSwgdGFrZSB0aGUgREZULCBhbmQgaW50ZWdyYXRlIHBvd2VyIG92ZXIgdGhlIGNsaW5pY2FsIGJhbmRzLiIiIgpmdW5jdGlvbiBlZWdfYmFuZF9wb3dlcnMoYWxwaGFfYW1wOjpGbG9hdDY0KQogICAgTiA9IDEyODsgZnMgPSAxMjguMAogICAgeCA9IFZlY3RvcntGbG9hdDY0fSh1bmRlZiwgTikKICAgIGZvciBuIGluIDE6TgogICAgICAgIHQgPSAobiAtIDEpIC8gZnMKICAgICAgICB4W25dID0gMC41KnNpbigyz4AqMip0KSArIDAuNCpzaW4oMs+AKjYqdCkgKyBhbHBoYV9hbXAqc2luKDLPgCoxMCp0KSArCiAgICAgICAgICAgICAgIDAuMypzaW4oMs+AKjIwKnQpICsgMC4yKnNpbigyz4AqNDAqdCkKICAgIGVuZAogICAgaGFsZiA9IE4gw7cgMgogICAgYmFuZHMgPSB6ZXJvcyhGbG9hdDY0LCA1KQogICAgZm9yIGsgaW4gMDpoYWxmCiAgICAgICAgcmUgPSAwLjA7IGltID0gMC4wCiAgICAgICAgZm9yIG4gaW4gMTpOCiAgICAgICAgICAgIM64ID0gMs+AICogayAqIChuIC0gMSkgLyBOCiAgICAgICAgICAgIHJlICs9IHhbbl0qY29zKM64KTsgaW0gLT0geFtuXSpzaW4ozrgpCiAgICAgICAgZW5kCiAgICAgICAgcCA9IHJlKnJlICsgaW0qaW0KICAgICAgICBmID0gayAqIGZzIC8gTgogICAgICAgIGlmICAgICBmID49IDAuNSAmJiBmIDwgNDsgIGJhbmRzWzFdICs9IHAKICAgICAgICBlbHNlaWYgZiA8IDg7ICAgICAgICAgICAgICBiYW5kc1syXSArPSBwCiAgICAgICAgZWxzZWlmIGYgPCAxMzsgICAgICAgICAgICAgYmFuZHNbM10gKz0gcAogICAgICAgIGVsc2VpZiBmIDwgMzA7ICAgICAgICAgICAgIGJhbmRzWzRdICs9IHAKICAgICAgICBlbHNlaWYgZiA8IDQ1OyAgICAgICAgICAgICBiYW5kc1s1XSArPSBwCiAgICAgICAgZW5kCiAgICBlbmQKICAgIHJldHVybiBiYW5kcwplbmQKCiMg4pWU4pWQ4pWhIGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNgoiUmVsYXRpdmUgYWxwaGEgcG93ZXIgPSBhbHBoYS1iYW5kIHBvd2VyIC8gdG90YWwgYmFuZCBwb3dlci4iCmZ1bmN0aW9uIHJlbGF0aXZlX2FscGhhKGE6OkZsb2F0NjQpCiAgICBiID0gZWVnX2JhbmRfcG93ZXJzKGEpCiAgICByZXR1cm4gYlszXSAvIChiWzFdICsgYlsyXSArIGJbM10gKyBiWzRdICsgYls1XSkKZW5kCgojIOKVlOKVkOKVoSBhYWFhMDAwNy0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDcKcmVsID0gcmVsYXRpdmVfYWxwaGEoYWxwaGFfYW1wKQoKIyDilZTilZDilaEgYWFhYTAwMDgtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA4Cm1kIiIiKipSZWxhdGl2ZSBhbHBoYSBwb3dlcjoqKiAkKHJlbCkKCihhbHBoYS1iYW5kIGZyYWN0aW9uIG9mIHRvdGFsIHNwZWN0cmFsIHBvd2VyIOKAlCByaXNlcyBhcyB5b3UgaW5jcmVhc2UgdGhlIGFscGhhIGFtcGxpdHVkZSkKIiIiCgojIOKVlOKVkOKVoSAwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEKUExVVE9fUFJPSkVDVF9UT01MX0NPTlRFTlRTID0gIiIiCltkZXBzXQpQbHV0b1VJID0gIjdmOTA0ZGZlLWI4NWUtNGZmNi1iNDYzLWRhZTIyOTIzOTZhOCIKCltjb21wYXRdClBsdXRvVUkgPSAifjAuNy44MyIKIiIiCgojIOKVlOKVkOKVoSAwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDIKUExVVE9fTUFOSUZFU1RfVE9NTF9DT05URU5UUyA9ICIiIgojIFRoaXMgZmlsZSBpcyBtYWNoaW5lLWdlbmVyYXRlZCAtIGVkaXRpbmcgaXQgZGlyZWN0bHkgaXMgbm90IGFkdmlzZWQKCmp1bGlhX3ZlcnNpb24gPSAiMS4xMi42IgptYW5pZmVzdF9mb3JtYXQgPSAiMi4wIgpwcm9qZWN0X2hhc2ggPSAiNDBjOWYxY2FjOTczZDY0ZjhjYTNlZjNhMDlmNzY5ZmY5NDdlODBmMyIKCltbZGVwcy5BYnN0cmFjdFBsdXRvRGluZ2V0amVzXV0KZ2l0LXRyZWUtc2hhMSA9ICI2YzM5MTNmNGU5YmRmNmJhM2MwODA0MWE0NDZmYjEzMzI3MTZjYmMyIgp1dWlkID0gIjZlNjk2YzcyLTY1NDItMjA2Ny03MjY1LTQyMjA2Yzc1NjE1MCIKdmVyc2lvbiA9ICIxLjQuMCIKCltbZGVwcy5BcmdUb29sc11dCnV1aWQgPSAiMGRhZDg0YzUtZDExMi00MmU2LThkMjgtZWYxMmRhYmI3ODlmIgp2ZXJzaW9uID0gIjEuMS4yIgoKW1tkZXBzLkFydGlmYWN0c11dCnV1aWQgPSAiNTZmMjJkNzItZmQ2ZC05OGYxLTAyZjAtMDhkZGMwOTA3YzMzIgp2ZXJzaW9uID0gIjEuMTEuMCIKCltbZGVwcy5CYXNlNjRdXQp1dWlkID0gIjJhMGY0NGUzLTZjODMtNTViZC04N2U0LWIxOTc4ZDk4YmQ1ZiIKdmVyc2lvbiA9ICIxLjExLjAiCgpbW2RlcHMuQ29sb3JUeXBlc11dCmRlcHMgPSBbIkZpeGVkUG9pbnROdW1iZXJzIiwgIlJhbmRvbSJdCmdpdC10cmVlLXNoYTEgPSAiNjdlMTFlZTgzYTQzZWI3MWRkYzk1MDMwMmM1M2JmMzNmMDY5MGRmZSIKdXVpZCA9ICIzZGEwMDJmNy01OTg0LTVhNjAtYjhhNi1jYmI2NmMwYjMzM2YiCnZlcnNpb24gPSAiMC4xMi4xIgp3ZWFrZGVwcyA9IFsiU3R5bGVkU3RyaW5ncyJdCgogICAgW2RlcHMuQ29sb3JUeXBlcy5leHRlbnNpb25zXQogICAgU3R5bGVkU3RyaW5nc0V4dCA9ICJTdHlsZWRTdHJpbmdzIgoKW1tkZXBzLkNvbXBpbGVyU3VwcG9ydExpYnJhcmllc19qbGxdXQpkZXBzID0gWyJBcnRpZmFjdHMiLCAiTGliZGwiXQp1dWlkID0gImU2NmUwMDc4LTcwMTUtNTQ1MC05MmY3LTE1ZmJkOTU3ZjJhZSIKdmVyc2lvbiA9ICIxLjMuMCsxIgoKW1tkZXBzLkRhdGVzXV0KZGVwcyA9IFsiUHJpbnRmIl0KdXVpZCA9ICJhZGUyY2E3MC0zODkxLTU5NDUtOThmYi1kYzA5OTQzMmUwNmEiCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLkRvd25sb2Fkc11dCmRlcHMgPSBbIkFyZ1Rvb2xzIiwgIkZpbGVXYXRjaGluZyIsICJMaWJDVVJMIiwgIk5ldHdvcmtPcHRpb25zIl0KdXVpZCA9ICJmNDNhMjQxZi1jMjBhLTRhZDQtODUyYy1mNmIxMjQ3ODYxYzYiCnZlcnNpb24gPSAiMS43LjAiCgpbW2RlcHMuRmlsZVdhdGNoaW5nXV0KdXVpZCA9ICI3YjFmNjA3OS03MzdhLTU4ZGMtYjhiYy03YTJjYTVjMWI1ZWUiCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLkZpeGVkUG9pbnROdW1iZXJzXV0KZGVwcyA9IFsiUmFuZG9tIiwgIlN0YXRpc3RpY3MiXQpnaXQtdHJlZS1zaGExID0gIjU5YWY5NmI5ODIxN2M2ZWY0YWUwZGZlMDY1YWM3YzIwODMxZDFhODQiCnV1aWQgPSAiNTNjNDhjMTctNGE3ZC01Y2EyLTkwYzUtNzliNzg5NmVlYTkzIgp2ZXJzaW9uID0gIjAuOC42IgoKW1tkZXBzLkh5cGVyc2NyaXB0XV0KZGVwcyA9IFsiVGVzdCJdCmdpdC10cmVlLXNoYTEgPSAiMTc5MjY3Y2ZhNWU3MTI3NjBjZDQzZGNhZTM4NWQ3ZWE5MGNjMjVhNCIKdXVpZCA9ICI0N2QyZWQyYi0zNmRlLTUwY2YtYmY4Ny00OWMyY2Y0YjhiOTEiCnZlcnNpb24gPSAiMC4wLjUiCgpbW2RlcHMuSHlwZXJ0ZXh0TGl0ZXJhbF1dCmRlcHMgPSBbIlRyaWNrcyJdCmdpdC10cmVlLXNoYTEgPSAiZDFhODY3MjRmODFiY2QxODRhMzhmZDI4NGNlMTgzZWMwNjdkNzFhMCIKdXVpZCA9ICJhYzExOTJhOC1mNGIzLTRiZmUtYmEyMi1hZjViOTJjZDNhYjIiCnZlcnNpb24gPSAiMS4wLjAiCgpbW2RlcHMuSU9DYXB0dXJlXV0KZGVwcyA9IFsiTG9nZ2luZyIsICJSYW5kb20iXQpnaXQtdHJlZS1zaGExID0gIjBlZTE4MWVjMDhkZjdkN2M5MTE5MDFlYTM4YmFmMTZmNzU1MTE0ZGMiCnV1aWQgPSAiYjVmODFlNTktNjU1Mi00ZDMyLWIxZjAtYzA3MWIwMjFiZjg5Igp2ZXJzaW9uID0gIjEuMC4wIgoKW1tkZXBzLkludGVyYWN0aXZlVXRpbHNdXQpkZXBzID0gWyJNYXJrZG93biJdCnV1aWQgPSAiYjc3ZTBhNGMtZDI5MS01N2EwLTkwZTgtOGRiMjVhMjdhMjQwIgp2ZXJzaW9uID0gIjEuMTEuMCIKCltbZGVwcy5KdWxpYVN5bnRheEhpZ2hsaWdodGluZ11dCmRlcHMgPSBbIlN0eWxlZFN0cmluZ3MiXQp1dWlkID0gImFjNmU1ZmY3LWZiNjUtNGU3OS1hNDI1LWVjM2JjOWMwMzAxMSIKdmVyc2lvbiA9ICIxLjEyLjAiCgpbW2RlcHMuTGliQ1VSTF1dCmRlcHMgPSBbIkxpYkNVUkxfamxsIiwgIk1vemlsbGFDQUNlcnRzX2psbCJdCnV1aWQgPSAiYjI3MDMyYzItYTNlNy01MGM4LTgwY2QtMmQzNmRiY2JmZDIxIgp2ZXJzaW9uID0gIjAuNi40IgoKW1tkZXBzLkxpYkNVUkxfamxsXV0KZGVwcyA9IFsiQXJ0aWZhY3RzIiwgIkxpYlNTSDJfamxsIiwgIkxpYmRsIiwgIk9wZW5TU0xfamxsIiwgIlpsaWJfamxsIiwgIm5naHR0cDJfamxsIl0KdXVpZCA9ICJkZWFjOWI0Ny04YmM3LTU5MDYtYTBmZS0zNWFjNTZkYzg0YzAiCnZlcnNpb24gPSAiOC4xNS4wKzAiCgpbW2RlcHMuTGliU1NIMl9qbGxdXQpkZXBzID0gWyJBcnRpZmFjdHMiLCAiTGliZGwiLCAiT3BlblNTTF9qbGwiXQp1dWlkID0gIjI5ODE2YjVhLWI5YWItNTQ2Zi05MzNjLWVkYWQxODg2ZGZhOCIKdmVyc2lvbiA9ICIxLjExLjMrMSIKCltbZGVwcy5MaWJkbF1dCnV1aWQgPSAiOGYzOTlkYTMtMzU1Ny01Njc1LWI1ZmYtZmI4MzJjOTdjYmRiIgp2ZXJzaW9uID0gIjEuMTEuMCIKCltbZGVwcy5MaW5lYXJBbGdlYnJhXV0KZGVwcyA9IFsiTGliZGwiLCAiT3BlbkJMQVNfamxsIiwgImxpYmJsYXN0cmFtcG9saW5lX2psbCJdCnV1aWQgPSAiMzdlMmU0NmQtZjg5ZC01MzlkLWI0ZWUtODM4ZmNjY2M5YzhlIgp2ZXJzaW9uID0gIjEuMTIuMCIKCltbZGVwcy5Mb2dnaW5nXV0KdXVpZCA9ICI1NmRkYjAxNi04NTdiLTU0ZTEtYjgzZC1kYjRkNThkYjU1NjgiCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLk1JTUVzXV0KZ2l0LXRyZWUtc2hhMSA9ICJjNjRkOTQzNTg3ZjcxODdlNzUxMTYyYjNiODQ0NDViYmJkNzlmNjkxIgp1dWlkID0gIjZjNmUyZTZjLTMwMzAtNjMyZC03MzY5LTJkNmM2OTYxNmQ2NSIKdmVyc2lvbiA9ICIxLjEuMCIKCltbZGVwcy5NYXJrZG93bl1dCmRlcHMgPSBbIkJhc2U2NCIsICJKdWxpYVN5bnRheEhpZ2hsaWdodGluZyIsICJTdHlsZWRTdHJpbmdzIl0KdXVpZCA9ICJkNmY0Mzc2ZS1hZWY1LTUwNWEtOTZjMS05YzAyNzM5NDYwN2EiCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLk1vemlsbGFDQUNlcnRzX2psbF1dCnV1aWQgPSAiMTRhMzYwNmQtZjYwZC01NjJlLTkxMjEtMTJkOTcyY2Q4MTU5Igp2ZXJzaW9uID0gIjIwMjUuMTEuNCIKCltbZGVwcy5OZXR3b3JrT3B0aW9uc11dCnV1aWQgPSAiY2E1NzU5MzAtYzJlMy00M2E5LWFjZTQtMWU5ODhiMmMxOTA4Igp2ZXJzaW9uID0gIjEuMy4wIgoKW1tkZXBzLk9wZW5CTEFTX2psbF1dCmRlcHMgPSBbIkFydGlmYWN0cyIsICJDb21waWxlclN1cHBvcnRMaWJyYXJpZXNfamxsIiwgIkxpYmRsIl0KdXVpZCA9ICI0NTM2NjI5YS1jNTI4LTViODAtYmQ0Ni1mODBkNTFjNWIzNjMiCnZlcnNpb24gPSAiMC4zLjI5KzAiCgpbW2RlcHMuT3BlblNTTF9qbGxdXQpkZXBzID0gWyJBcnRpZmFjdHMiLCAiTGliZGwiXQp1dWlkID0gIjQ1OGMzYzk1LTJlODQtNTBhYS04ZWZjLTE5MzgwYjJhM2E5NSIKdmVyc2lvbiA9ICIzLjUuNCswIgoKW1tkZXBzLlBsdXRvVUldXQpkZXBzID0gWyJBYnN0cmFjdFBsdXRvRGluZ2V0amVzIiwgIkJhc2U2NCIsICJDb2xvclR5cGVzIiwgIkRhdGVzIiwgIkRvd25sb2FkcyIsICJGaXhlZFBvaW50TnVtYmVycyIsICJIeXBlcnNjcmlwdCIsICJIeXBlcnRleHRMaXRlcmFsIiwgIklPQ2FwdHVyZSIsICJJbnRlcmFjdGl2ZVV0aWxzIiwgIkxvZ2dpbmciLCAiTUlNRXMiLCAiTWFya2Rvd24iLCAiUmFuZG9tIiwgIlJlZXhwb3J0IiwgIlVSSXMiLCAiVVVJRHMiXQpnaXQtdHJlZS1zaGExID0gImUxODlkMDYyM2U3Y2U5YzM3Mzg5YmFjMTdlODBhYWMzYjAzMDJlNzUiCnV1aWQgPSAiN2Y5MDRkZmUtYjg1ZS00ZmY2LWI0NjMtZGFlMjI5MjM5NmE4Igp2ZXJzaW9uID0gIjAuNy44MyIKCltbZGVwcy5QcmludGZdXQpkZXBzID0gWyJVbmljb2RlIl0KdXVpZCA9ICJkZTA4NThkYS02MzAzLTVlNjctODc0NC01MWVkZGVlZWI4ZDciCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLlJhbmRvbV1dCmRlcHMgPSBbIlNIQSJdCnV1aWQgPSAiOWEzZjgyODQtYTJjOS01ZjAyLTlhMTEtODQ1OTgwYTFmZDVjIgp2ZXJzaW9uID0gIjEuMTEuMCIKCltbZGVwcy5SZWV4cG9ydF1dCmdpdC10cmVlLXNoYTEgPSAiNDVlNDI4NDIxNjY2MDczZWFiNmYyZGE1YzlkMzEwZDk5YmIxMmY5YiIKdXVpZCA9ICIxODlhMzg2Ny0zMDUwLTUyZGEtYTgzNi1lNjMwYmE5MGFiNjkiCnZlcnNpb24gPSAiMS4yLjIiCgpbW2RlcHMuU0hBXV0KdXVpZCA9ICJlYThlOTE5Yy0yNDNjLTUxYWYtODgyNS1hYWE2M2NkNzIxY2UiCnZlcnNpb24gPSAiMC43LjAiCgpbW2RlcHMuU2VyaWFsaXphdGlvbl1dCnV1aWQgPSAiOWU4OGI0MmEtZjgyOS01YjBjLWJiZTktOWU5MjMxOTgxNjZiIgp2ZXJzaW9uID0gIjEuMTEuMCIKCltbZGVwcy5TdGF0aXN0aWNzXV0KZGVwcyA9IFsiTGluZWFyQWxnZWJyYSJdCmdpdC10cmVlLXNoYTEgPSAiYWUzYmIxZWIzYmJhMDc3Y2QyNzZiYzVjZmMzMzdjYzY1YzMwNzVjMCIKdXVpZCA9ICIxMDc0NWIxNi03OWNlLTExZTgtMTFmOS03ZDEzYWQzMmEzYjIiCnZlcnNpb24gPSAiMS4xMS4xIgoKICAgIFtkZXBzLlN0YXRpc3RpY3MuZXh0ZW5zaW9uc10KICAgIFNwYXJzZUFycmF5c0V4dCA9IFsiU3BhcnNlQXJyYXlzIl0KCiAgICBbZGVwcy5TdGF0aXN0aWNzLndlYWtkZXBzXQogICAgU3BhcnNlQXJyYXlzID0gIjJmMDExODRlLWUyMmItNWRmNS1hZTYzLWQ5M2ViYWI2OWVhZiIKCltbZGVwcy5TdHlsZWRTdHJpbmdzXV0KdXVpZCA9ICJmNDg5MzM0Yi1kYTNkLTRjMmUtYjhmMC1lNDc2ZTEyYzE2MmIiCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLlRlc3RdXQpkZXBzID0gWyJJbnRlcmFjdGl2ZVV0aWxzIiwgIkxvZ2dpbmciLCAiUmFuZG9tIiwgIlNlcmlhbGl6YXRpb24iXQp1dWlkID0gIjhkZmVkNjE0LWUyMmMtNWUwOC04NWUxLTY1YzUyMzRmMGI0MCIKdmVyc2lvbiA9ICIxLjExLjAiCgpbW2RlcHMuVHJpY2tzXV0KZ2l0LXRyZWUtc2hhMSA9ICIzMTEzNDlmZDFjOTNhMzFmNzgzZjk3N2E3MWU4YjA2MmE1N2Q0MTAxIgp1dWlkID0gIjQxMGE0YjRkLTQ5ZTQtNGZiYy1hYjZkLWNiNzFiMTdiMzc3NSIKdmVyc2lvbiA9ICIwLjEuMTMiCgpbW2RlcHMuVVJJc11dCmdpdC10cmVlLXNoYTEgPSAiYmVmMjZmYjA0NmQwMzEzNTNlZjk3YTgyZTNmZGI2YWZlN2YyMWIxYSIKdXVpZCA9ICI1YzI3NDdmOC1iN2VhLTRmZjItYmEyZS01NjNiZmQzNmIxZDQiCnZlcnNpb24gPSAiMS42LjEiCgpbW2RlcHMuVVVJRHNdXQpkZXBzID0gWyJSYW5kb20iLCAiU0hBIl0KdXVpZCA9ICJjZjcxMThhNy02OTc2LTViMWEtOWEzOS03YWRjNzJmNTkxYTQiCnZlcnNpb24gPSAiMS4xMS4wIgoKW1tkZXBzLlVuaWNvZGVdXQp1dWlkID0gIjRlYzBhODNlLTQ5M2UtNTBlMi1iOWFjLThmNzJhY2Y1YThmNSIKdmVyc2lvbiA9ICIxLjExLjAiCgpbW2RlcHMuWmxpYl9qbGxdXQpkZXBzID0gWyJMaWJkbCJdCnV1aWQgPSAiODM3NzVhNTgtMWYxZC01MTNmLWIxOTctZDcxMzU0YWIwMDdhIgp2ZXJzaW9uID0gIjEuMy4xKzIiCgpbW2RlcHMubGliYmxhc3RyYW1wb2xpbmVfamxsXV0KZGVwcyA9IFsiQXJ0aWZhY3RzIiwgIkxpYmRsIl0KdXVpZCA9ICI4ZTg1MGI5MC04NmRiLTUzNGMtYTBkMy0xNDc4MTc2YzdkOTMiCnZlcnNpb24gPSAiNS4xNS4wKzAiCgpbW2RlcHMubmdodHRwMl9qbGxdXQpkZXBzID0gWyJBcnRpZmFjdHMiLCAiTGliZGwiXQp1dWlkID0gIjhlODUwZWRlLTc2ODgtNTMzOS1hMDdjLTMwMmFjZDJhYWY4ZCIKdmVyc2lvbiA9ICIxLjY0LjArMSIKIiIiCgojIOKVlOKVkOKVoSBDZWxsIG9yZGVyOgojIOKVn+KUgGFhYWEwMDAyLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMgojIOKVoOKVkGFhYWEwMDAxLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMQojIOKVn+KUgGFhYWEwMDAzLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMwojIOKVoOKVkGFhYWEwMDA0LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNAojIOKVoOKVkGFhYWEwMDA1LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNQojIOKVoOKVkGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNgojIOKVoOKVkGFhYWEwMDA3LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNwojIOKVn+KUgGFhYWEwMDA4LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwOAojIOKVn+KUgDAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMQojIOKVn+KUgDAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMgo=";
-window.pluto_disable_ui = true;
-window.pluto_slider_server_url = ".";
-window.pluto_binder_url = undefined;
-window.pluto_statefile = "data:;base64,3gASpWJvbmRzgalhbHBoYV9hbXCBpXZhbHVlC6xjZWxsX3Jlc3VsdHOI2SRhYWFhMDAwNy0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDeKpnF1ZXVlZMKkbG9nc5CncnVubmluZ8Kmb3V0cHV0hqRib2R5sjAuNjQ5MzUwNjQ5MzUwNjQ5NqRtaW1lqnRleHQvcGxhaW6scm9vdGFzc2lnbmVlo3JlbLJsYXN0X3J1bl90aW1lc3RhbXDLQdqPG0m21w6wcGVyc2lzdF9qc19zdGF0ZcO3aGFzX3BsdXRvX2hvb2tfZmVhdHVyZXPCp2NlbGxfaWTZJGFhYWEwMDA3LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwN7lkZXBlbmRzX29uX2Rpc2FibGVkX2NlbGxzwqdydW50aW1lzgABH5m1cHVibGlzaGVkX29iamVjdF9rZXlzkLhkZXBlbmRzX29uX3NraXBwZWRfY2VsbHPCp2Vycm9yZWTC2SRhYWFhMDAwMy0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDOKpnF1ZXVlZMKkbG9nc5CncnVubmluZ8Kmb3V0cHV0hqRib2R52Vk8ZGl2IGNsYXNzPSJtYXJrZG93biI+PHA+PHN0cm9uZz5BbHBoYSAmIzQwOzjigJMxMyBIeiYjNDE7IGFtcGxpdHVkZTo8L3N0cm9uZz48L3A+CjwvZGl2PqRtaW1lqXRleHQvaHRtbKxyb290YXNzaWduZWXAsmxhc3RfcnVuX3RpbWVzdGFtcMtB2o8bRlQjZLBwZXJzaXN0X2pzX3N0YXRlwrdoYXNfcGx1dG9faG9va19mZWF0dXJlc8KnY2VsbF9pZNkkYWFhYTAwMDMtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAzuWRlcGVuZHNfb25fZGlzYWJsZWRfY2VsbHPCp3J1bnRpbWXOAAHwlrVwdWJsaXNoZWRfb2JqZWN0X2tleXOQuGRlcGVuZHNfb25fc2tpcHBlZF9jZWxsc8KnZXJyb3JlZMLZJGFhYWEwMDA4LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwOIqmcXVldWVkwqRsb2dzkKdydW5uaW5nwqZvdXRwdXSGpGJvZHnZyDxkaXYgY2xhc3M9Im1hcmtkb3duIj48cD48c3Ryb25nPlJlbGF0aXZlIGFscGhhIHBvd2VyOjwvc3Ryb25nPiAwLjY0OTM1MDY0OTM1MDY0OTY8L3A+CjxwPiYjNDA7YWxwaGEtYmFuZCBmcmFjdGlvbiBvZiB0b3RhbCBzcGVjdHJhbCBwb3dlciDigJQgcmlzZXMgYXMgeW91IGluY3JlYXNlIHRoZSBhbHBoYSBhbXBsaXR1ZGUmIzQxOzwvcD4KPC9kaXY+pG1pbWWpdGV4dC9odG1srHJvb3Rhc3NpZ25lZcCybGFzdF9ydW5fdGltZXN0YW1wy0HajxtJtuhssHBlcnNpc3RfanNfc3RhdGXDt2hhc19wbHV0b19ob29rX2ZlYXR1cmVzwqdjZWxsX2lk2SRhYWFhMDAwOC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDi5ZGVwZW5kc19vbl9kaXNhYmxlZF9jZWxsc8KncnVudGltZc4AAfDotXB1Ymxpc2hlZF9vYmplY3Rfa2V5c5C4ZGVwZW5kc19vbl9za2lwcGVkX2NlbGxzwqdlcnJvcmVkwtkkYWFhYTAwMDQtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA0iqZxdWV1ZWTCpGxvZ3OQp3J1bm5pbmfCpm91dHB1dIakYm9kedoEWTxib25kIGRlZj0iYWxwaGFfYW1wIiB1bmlxdWVfaWQ9ImZya2hpeHJsZmllZCI+PGlucHV0IHR5cGU9J3JhbmdlJyBtaW49JzEnIG1heD0nMjEnIHZhbHVlPScxMSc+PHNjcmlwdD4KCQkJCQljb25zdCBpbnB1dF9lbCA9IGN1cnJlbnRTY3JpcHQucHJldmlvdXNFbGVtZW50U2libGluZwoJCQkJCWNvbnN0IG91dHB1dF9lbCA9IGN1cnJlbnRTY3JpcHQubmV4dEVsZW1lbnRTaWJsaW5nCgkJCQkJY29uc3QgZGlzcGxheXMgPSBbIjAuMCIsICIwLjEiLCAiMC4yIiwgIjAuMyIsICIwLjQiLCAiMC41IiwgIjAuNiIsICIwLjciLCAiMC44IiwgIjAuOSIsICIxLjAiLCAiMS4xIiwgIjEuMiIsICIxLjMiLCAiMS40IiwgIjEuNSIsICIxLjYiLCAiMS43IiwgIjEuOCIsICIxLjkiLCAiMi4wIl0KCgkJCQkJbGV0IHVwZGF0ZV9vdXRwdXQgPSAoKSA9PiB7CgkJCQkJCW91dHB1dF9lbC52YWx1ZSA9IGRpc3BsYXlzW2lucHV0X2VsLnZhbHVlQXNOdW1iZXIgLSAxXQoJCQkJCX0KCQkJCQkKCQkJCQlpbnB1dF9lbC5hZGRFdmVudExpc3RlbmVyKCJpbnB1dCIsIHVwZGF0ZV9vdXRwdXQpCgkJCQkJLy8gV2UgYWxzbyBwb2xsIGZvciBjaGFuZ2VzIGJlY2F1c2UgdGhlIGBpbnB1dF9lbC52YWx1ZWAgY2FuIGNoYW5nZSBmcm9tIHRoZSBvdXRzaWRlLCBlLmcuIGh0dHBzOi8vZ2l0aHViLmNvbS9KdWxpYVBsdXRvL1BsdXRvVUkuamwvaXNzdWVzLzI3NwoJCQkJCWxldCBpZCA9IHNldEludGVydmFsKHVwZGF0ZV9vdXRwdXQsIDIwMCkKCQkJCQlpbnZhbGlkYXRpb24udGhlbigoKSA9PiB7CgkJCQkJCWNsZWFySW50ZXJ2YWwoaWQpCgkJCQkJCWlucHV0X2VsLnJlbW92ZUV2ZW50TGlzdGVuZXIoImlucHV0IiwgdXBkYXRlX291dHB1dCkKCQkJCQl9KQoJCQkJCTwvc2NyaXB0PjxvdXRwdXQgc3R5bGU9JwoJCQkJCQlmb250LWZhbWlseTogc3lzdGVtLXVpOwoJCQkJCQlmb250LXZhcmlhbnQtbnVtZXJpYzogdGFidWxhci1udW1zOwogICAgCQkJCQlmb250LXNpemU6IDE1cHg7CiAgICAJCQkJCW1hcmdpbi1sZWZ0OiAzcHg7CiAgICAJCQkJCXRyYW5zZm9ybTogdHJhbnNsYXRlWSgtNHB4KTsKICAgIAkJCQkJZGlzcGxheTogaW5saW5lLWJsb2NrOyc+MS4wPC9vdXRwdXQ+PC9ib25kPqRtaW1lqXRleHQvaHRtbKxyb290YXNzaWduZWXAsmxhc3RfcnVuX3RpbWVzdGFtcMtB2o8bR1osgLBwZXJzaXN0X2pzX3N0YXRlwrdoYXNfcGx1dG9faG9va19mZWF0dXJlc8KnY2VsbF9pZNkkYWFhYTAwMDQtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA0uWRlcGVuZHNfb25fZGlzYWJsZWRfY2VsbHPCp3J1bnRpbWXOBaKs37VwdWJsaXNoZWRfb2JqZWN0X2tleXOQuGRlcGVuZHNfb25fc2tpcHBlZF9jZWxsc8KnZXJyb3JlZMLZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNoqmcXVldWVkwqRsb2dzkKdydW5uaW5nwqZvdXRwdXSGpGJvZHnZvjxkaXYgY2xhc3M9InBsdXRvLWRvY3MtYmluZGluZyI+CjxzcGFuIGlkPSJyZWxhdGl2ZV9hbHBoYSI+cmVsYXRpdmVfYWxwaGE8L3NwYW4+CjxkaXYgY2xhc3M9Im1hcmtkb3duIj48cD5SZWxhdGl2ZSBhbHBoYSBwb3dlciAmIzYxOyBhbHBoYS1iYW5kIHBvd2VyIC8gdG90YWwgYmFuZCBwb3dlci48L3A+CgoKPC9kaXY+CjwvZGl2PgqkbWltZal0ZXh0L2h0bWyscm9vdGFzc2lnbmVlwLJsYXN0X3J1bl90aW1lc3RhbXDLQdqPG0dgotOwcGVyc2lzdF9qc19zdGF0ZcK3aGFzX3BsdXRvX2hvb2tfZmVhdHVyZXPCp2NlbGxfaWTZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNrlkZXBlbmRzX29uX2Rpc2FibGVkX2NlbGxzwqdydW50aW1lzgBJVZm1cHVibGlzaGVkX29iamVjdF9rZXlzkLhkZXBlbmRzX29uX3NraXBwZWRfY2VsbHPCp2Vycm9yZWTC2SRhYWFhMDAwNS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDWKpnF1ZXVlZMKkbG9nc5CncnVubmluZ8Kmb3V0cHV0hqRib2R52gE4PGRpdiBjbGFzcz0icGx1dG8tZG9jcy1iaW5kaW5nIj4KPHNwYW4gaWQ9ImVlZ19iYW5kX3Bvd2VycyI+ZWVnX2JhbmRfcG93ZXJzPC9zcGFuPgo8ZGl2IGNsYXNzPSJtYXJrZG93biI+PHA+UHVyZS1KdWxpYSBFRUcgYmFuZCBwb3dlcnM6IHN5bnRoZXNpemUgYSAxMjgtc2FtcGxlIC8gMTI4IEh6IHNpZ25hbCAmIzQwO2RlbHRhJiM0Mzt0aGV0YSYjNDM7IGFscGhhJiM0MztiZXRhJiM0MztnYW1tYSYjNDE7LCB0YWtlIHRoZSBERlQsIGFuZCBpbnRlZ3JhdGUgcG93ZXIgb3ZlciB0aGUgY2xpbmljYWwgYmFuZHMuPC9wPgoKCjwvZGl2Pgo8L2Rpdj4KpG1pbWWpdGV4dC9odG1srHJvb3Rhc3NpZ25lZcCybGFzdF9ydW5fdGltZXN0YW1wy0HajxtHYII4sHBlcnNpc3RfanNfc3RhdGXCt2hhc19wbHV0b19ob29rX2ZlYXR1cmVzwqdjZWxsX2lk2SRhYWFhMDAwNS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDW5ZGVwZW5kc19vbl9kaXNhYmxlZF9jZWxsc8KncnVudGltZc4A1ieStXB1Ymxpc2hlZF9vYmplY3Rfa2V5c5C4ZGVwZW5kc19vbl9za2lwcGVkX2NlbGxzwqdlcnJvcmVkwtkkYWFhYTAwMDItMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyiqZxdWV1ZWTCpGxvZ3OQp3J1bm5pbmfCpm91dHB1dIakYm9kedoCGjxkaXYgY2xhc3M9Im1hcmtkb3duIj48aDEgaWQ9IkVFRy1zcGVjdHJhbC1iYW5kLXBvd2VyLWZlYXR1cmVzIj5FRUcgc3BlY3RyYWwgYmFuZC1wb3dlciBmZWF0dXJlczwvaDE+CjxwPkEgc2VsZi1jb250YWluZWQgRUVHIGZlYXR1cmUgZXh0cmFjdG9yOiBhIHN5bnRoZXRpYyBzaWduYWwgJiM0MDtzdW0gb2YgcGh5c2lvbG9naWNhbCByaHl0aG1zJiM0MTsgaXMgYW5hbHlzZWQgd2l0aCBhIDxzdHJvbmc+cHVyZS1KdWxpYSBERlQ8L3N0cm9uZz4gYW5kIHJlZHVjZWQgdG8gdGhlIGNhbm9uaWNhbCBjbGluaWNhbCBiYW5kIHBvd2Vycy4gRXZlcnl0aGluZyBiZWxvdyB0aGUgc2xpZGVyIHJ1bnMgPHN0cm9uZz5pbiB5b3VyIGJyb3dzZXIgYXMgV2ViQXNzZW1ibHk8L3N0cm9uZz4g4oCUIG5vIEp1bGlhIHNlcnZlciwgbm8gaW5zdGFsbC4gRHJhZyB0aGUgc2xpZGVyIHRvIGNoYW5nZSB0aGUgPHN0cm9uZz5hbHBoYSByaHl0aG0gYW1wbGl0dWRlPC9zdHJvbmc+IGFuZCB3YXRjaCB0aGUgYmFuZCBwb3dlcnMgdXBkYXRlIGxpdmUuPC9wPgo8L2Rpdj6kbWltZal0ZXh0L2h0bWyscm9vdGFzc2lnbmVlwLJsYXN0X3J1bl90aW1lc3RhbXDLQdqPG0ZUE52wcGVyc2lzdF9qc19zdGF0ZcK3aGFzX3BsdXRvX2hvb2tfZmVhdHVyZXPCp2NlbGxfaWTZJGFhYWEwMDAyLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMrlkZXBlbmRzX29uX2Rpc2FibGVkX2NlbGxzwqdydW50aW1lzgADPW61cHVibGlzaGVkX29iamVjdF9rZXlzkLhkZXBlbmRzX29uX3NraXBwZWRfY2VsbHPCp2Vycm9yZWTC2SRhYWFhMDAwMS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDGKpnF1ZXVlZMKkbG9nc5CncnVubmluZ8Kmb3V0cHV0hqRib2R5oKRtaW1lqnRleHQvcGxhaW6scm9vdGFzc2lnbmVlwLJsYXN0X3J1bl90aW1lc3RhbXDLQdqPG0ciSIiwcGVyc2lzdF9qc19zdGF0ZcK3aGFzX3BsdXRvX2hvb2tfZmVhdHVyZXPCp2NlbGxfaWTZJGFhYWEwMDAxLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMblkZXBlbmRzX29uX2Rpc2FibGVkX2NlbGxzwqdydW50aW1lzgM55Qm1cHVibGlzaGVkX29iamVjdF9rZXlzkLhkZXBlbmRzX29uX3NraXBwZWRfY2VsbHPCp2Vycm9yZWTCsWNlbGxfZGVwZW5kZW5jaWVziNkkYWFhYTAwMDctMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA3hLRwcmVjZWRlbmNlX2hldXJpc3RpYwmnY2VsbF9pZNkkYWFhYTAwMDctMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA3tGRvd25zdHJlYW1fY2VsbHNfbWFwgaNyZWyR2SRhYWFhMDAwOC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDiydXBzdHJlYW1fY2VsbHNfbWFwgq5yZWxhdGl2ZV9hbHBoYZHZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNqlhbHBoYV9hbXCR2SRhYWFhMDAwNC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDTZJGFhYWEwMDAzLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwM4S0cHJlY2VkZW5jZV9oZXVyaXN0aWMJp2NlbGxfaWTZJGFhYWEwMDAzLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwM7Rkb3duc3RyZWFtX2NlbGxzX21hcICydXBzdHJlYW1fY2VsbHNfbWFwgqdAbWRfc3RykKhnZXRpbmRleJDZJGFhYWEwMDA4LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwOIS0cHJlY2VkZW5jZV9oZXVyaXN0aWMJp2NlbGxfaWTZJGFhYWEwMDA4LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwOLRkb3duc3RyZWFtX2NlbGxzX21hcICydXBzdHJlYW1fY2VsbHNfbWFwg6dAbWRfc3RykKNyZWyR2SRhYWFhMDAwNy0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDeoZ2V0aW5kZXiQ2SRhYWFhMDAwNC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDSEtHByZWNlZGVuY2VfaGV1cmlzdGljCadjZWxsX2lk2SRhYWFhMDAwNC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDS0ZG93bnN0cmVhbV9jZWxsc19tYXCBqWFscGhhX2FtcJHZJGFhYWEwMDA3LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwN7J1cHN0cmVhbV9jZWxsc19tYXCJpENvcmWQpEJhc2WQoTqQt1BsdXRvUnVubmVyLmNyZWF0ZV9ib25kkKtQbHV0b1J1bm5lcpCvQ29yZS5hcHBsaWNhYmxlkKVAYmluZJCoQmFzZS5nZXSQplNsaWRlcpDZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNoS0cHJlY2VkZW5jZV9oZXVyaXN0aWMJp2NlbGxfaWTZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNrRkb3duc3RyZWFtX2NlbGxzX21hcIGucmVsYXRpdmVfYWxwaGGR2SRhYWFhMDAwNy0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDeydXBzdHJlYW1fY2VsbHNfbWFwiKRAZG9jkKVUdXBsZZChL5ChK5CvZWVnX2JhbmRfcG93ZXJzkdkkYWFhYTAwMDUtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA1pVVuaW9ukLojX19fdGhpc19wbHV0b19tb2R1bGVfbmFtZZCnRmxvYXQ2NJDZJGFhYWEwMDA1LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNYS0cHJlY2VkZW5jZV9oZXVyaXN0aWMJp2NlbGxfaWTZJGFhYWEwMDA1LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNbRkb3duc3RyZWFtX2NlbGxzX21hcIGvZWVnX2JhbmRfcG93ZXJzkdkkYWFhYTAwMDYtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA2snVwc3RyZWFtX2NlbGxzX21hcN4AFaRAZG9jkKE6kKNkaXaQpVR1cGxlkKV6ZXJvc5CnRmxvYXQ2NJCmaXNsZXNzkLojX19fdGhpc19wbHV0b19tb2R1bGVfbmFtZZCmVmVjdG9ykKE8kKEtkKI+PZChL5Ciw7eQoSuQpVVuaW9ukKV1bmRlZpCiz4CQo2Nvc5ChKpCjc2lukNkkYWFhYTAwMDItMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyhLRwcmVjZWRlbmNlX2hldXJpc3RpYwmnY2VsbF9pZNkkYWFhYTAwMDItMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAytGRvd25zdHJlYW1fY2VsbHNfbWFwgLJ1cHN0cmVhbV9jZWxsc19tYXCCp0BtZF9zdHKQqGdldGluZGV4kNkkYWFhYTAwMDEtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxhLRwcmVjZWRlbmNlX2hldXJpc3RpYwenY2VsbF9pZNkkYWFhYTAwMDEtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxtGRvd25zdHJlYW1fY2VsbHNfbWFwgadQbHV0b1VJkLJ1cHN0cmVhbV9jZWxsc19tYXCAtGNlbGxfZXhlY3V0aW9uX29yZGVymNkkYWFhYTAwMDEtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAx2SRhYWFhMDAwMi0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDLZJGFhYWEwMDAzLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwM9kkYWFhYTAwMDQtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA02SRhYWFhMDAwNS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDXZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNtkkYWFhYTAwMDctMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA32SRhYWFhMDAwOC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDi0bGFzdF9ob3RfcmVsb2FkX3RpbWXLAAAAAAAAAACpc2hvcnRwYXRor2VlZ19mZWF0dXJlcy5qbK5wcm9jZXNzX3N0YXR1c6VyZWFkeaRwYXRo2WYvVXNlcnMvZGFsZWJsYWNrL0RvY3VtZW50cy9kZXYvR3JvdXBUaGVyYXB5T3JnL1BsdXRvSXNsYW5kcy5qbC90ZXN0L25vdGVib29rcy9mZWF0dXJlZC9lZWdfZmVhdHVyZXMuamytcGx1dG9fdmVyc2lvbqh2MC4yMC4yOK5sYXN0X3NhdmVfdGltZctB2o8bRyZTVKpjZWxsX29yZGVymNkkYWFhYTAwMDItMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAy2SRhYWFhMDAwMS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDHZJGFhYWEwMDAzLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwM9kkYWFhYTAwMDQtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA02SRhYWFhMDAwNS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDXZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNtkkYWFhYTAwMDctMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA32SRhYWFhMDAwOC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDitanVsaWFfdmVyc2lvbqd2MS4xMi42sXB1Ymxpc2hlZF9vYmplY3RzgKVuYnBrZ4qvaW5zdGFsbF90aW1lX25zznLOj7msaW5zdGFudGlhdGVkw7JpbnN0YWxsZWRfdmVyc2lvbnODp1BsdXRvVUmmMC43Ljgz2SFfX2ludGVybmFsX2p1bGlhX21hbmlmZXN0X3ZlcnNpb26mMS4xMi42uF9faW50ZXJuYWxfanVsaWFfdmVyc2lvbqYxLjEyLjawdGVybWluYWxfb3V0cHV0c4KqbmJwa2dfc3luY9oCHAobWzBtG1sxbVJlc29sdmluZy4uLhtbMjJtChtbOTBtPT09G1szOW0KG1szNm0bWzFtICAgICBQcm9qZWN0G1syMm0bWzM5bSBObyBwYWNrYWdlcyBhZGRlZCB0byBvciByZW1vdmVkIGZyb20gYH4vLmp1bGlhL3NjcmF0Y2hzcGFjZXMvYzNlNGIwZjgtNTVjYi0xMWVhLTI5MjYtMTUyNTZiYmE1NzgxL3BrZ19lbnZzL2Vudl9vdG1pd2RyYmZnL1Byb2plY3QudG9tbGAKG1szNm0bWzFtICAgIE1hbmlmZXN0G1syMm0bWzM5bSBObyBwYWNrYWdlcyBhZGRlZCB0byBvciByZW1vdmVkIGZyb20gYH4vLmp1bGlhL3NjcmF0Y2hzcGFjZXMvYzNlNGIwZjgtNTVjYi0xMWVhLTI5MjYtMTUyNTZiYmE1NzgxL3BrZ19lbnZzL2Vudl9vdG1pd2RyYmZnL01hbmlmZXN0LnRvbWxgCgobWzBtG1sxbUluc3RhbnRpYXRpbmcuLi4bWzIybQobWzkwbT09PRtbMzltCgobWzBtG1sxbVByZWNvbXBpbGluZy4uLhtbMjJtChtbOTBtPT09G1szOW0KV2FpdGluZyBmb3Igbm90ZWJvb2sgcHJvY2VzcyB0byBzdGFydC4uLiBEb25lLiBTdGFydGluZyBwcmVjb21waWxhdGlvbi4uLqdQbHV0b1VJ2gIcChtbMG0bWzFtUmVzb2x2aW5nLi4uG1syMm0KG1s5MG09PT0bWzM5bQobWzM2bRtbMW0gICAgIFByb2plY3QbWzIybRtbMzltIE5vIHBhY2thZ2VzIGFkZGVkIHRvIG9yIHJlbW92ZWQgZnJvbSBgfi8uanVsaWEvc2NyYXRjaHNwYWNlcy9jM2U0YjBmOC01NWNiLTExZWEtMjkyNi0xNTI1NmJiYTU3ODEvcGtnX2VudnMvZW52X290bWl3ZHJiZmcvUHJvamVjdC50b21sYAobWzM2bRtbMW0gICAgTWFuaWZlc3QbWzIybRtbMzltIE5vIHBhY2thZ2VzIGFkZGVkIHRvIG9yIHJlbW92ZWQgZnJvbSBgfi8uanVsaWEvc2NyYXRjaHNwYWNlcy9jM2U0YjBmOC01NWNiLTExZWEtMjkyNi0xNTI1NmJiYTU3ODEvcGtnX2VudnMvZW52X290bWl3ZHJiZmcvTWFuaWZlc3QudG9tbGAKChtbMG0bWzFtSW5zdGFudGlhdGluZy4uLhtbMjJtChtbOTBtPT09G1szOW0KChtbMG0bWzFtUHJlY29tcGlsaW5nLi4uG1syMm0KG1s5MG09PT0bWzM5bQpXYWl0aW5nIGZvciBub3RlYm9vayBwcm9jZXNzIHRvIHN0YXJ0Li4uIERvbmUuIFN0YXJ0aW5nIHByZWNvbXBpbGF0aW9uLi4up2VuYWJsZWTDt3Jlc3RhcnRfcmVjb21tZW5kZWRfbXNnwLRyZXN0YXJ0X3JlcXVpcmVkX21zZ8CtYnVzeV9wYWNrYWdlc5C2d2FpdGluZ19mb3JfcGVybWlzc2lvbsLZLHdhaXRpbmdfZm9yX3Blcm1pc3Npb25fYnV0X3Byb2JhYmx5X2Rpc2FibGVkwqtjZWxsX2lucHV0c4jZJGFhYWEwMDA3LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwN4SnY2VsbF9pZNkkYWFhYTAwMDctMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA3pGNvZGW/cmVsID0gcmVsYXRpdmVfYWxwaGEoYWxwaGFfYW1wKahtZXRhZGF0YYOpc2hvd19sb2dzw6hkaXNhYmxlZMKuc2tpcF9hc19zY3JpcHTCq2NvZGVfZm9sZGVkwtkkYWFhYTAwMDMtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAzhKdjZWxsX2lk2SRhYWFhMDAwMy0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDOkY29kZdkkbWQiKipBbHBoYSAoOOKAkzEzIEh6KSBhbXBsaXR1ZGU6KioiqG1ldGFkYXRhg6lzaG93X2xvZ3PDqGRpc2FibGVkwq5za2lwX2FzX3NjcmlwdMKrY29kZV9mb2xkZWTD2SRhYWFhMDAwOC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDiEp2NlbGxfaWTZJGFhYWEwMDA4LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwOKRjb2Rl2YZtZCIiIioqUmVsYXRpdmUgYWxwaGEgcG93ZXI6KiogJChyZWwpCgooYWxwaGEtYmFuZCBmcmFjdGlvbiBvZiB0b3RhbCBzcGVjdHJhbCBwb3dlciDigJQgcmlzZXMgYXMgeW91IGluY3JlYXNlIHRoZSBhbHBoYSBhbXBsaXR1ZGUpCiIiIqhtZXRhZGF0YYOpc2hvd19sb2dzw6hkaXNhYmxlZMKuc2tpcF9hc19zY3JpcHTCq2NvZGVfZm9sZGVkw9kkYWFhYTAwMDQtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA0hKdjZWxsX2lk2SRhYWFhMDAwNC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDSkY29kZdlBQGJpbmQgYWxwaGFfYW1wIFNsaWRlcigwLjA6MC4xOjIuMCwgZGVmYXVsdD0xLjAsIHNob3dfdmFsdWU9dHJ1ZSmobWV0YWRhdGGDqXNob3dfbG9nc8OoZGlzYWJsZWTCrnNraXBfYXNfc2NyaXB0wqtjb2RlX2ZvbGRlZMLZJGFhYWEwMDA2LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNoSnY2VsbF9pZNkkYWFhYTAwMDYtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA2pGNvZGXZtSJSZWxhdGl2ZSBhbHBoYSBwb3dlciA9IGFscGhhLWJhbmQgcG93ZXIgLyB0b3RhbCBiYW5kIHBvd2VyLiIKZnVuY3Rpb24gcmVsYXRpdmVfYWxwaGEoYTo6RmxvYXQ2NCkKICAgIGIgPSBlZWdfYmFuZF9wb3dlcnMoYSkKICAgIHJldHVybiBiWzNdIC8gKGJbMV0gKyBiWzJdICsgYlszXSArIGJbNF0gKyBiWzVdKQplbmSobWV0YWRhdGGDqXNob3dfbG9nc8OoZGlzYWJsZWTCrnNraXBfYXNfc2NyaXB0wqtjb2RlX2ZvbGRlZMLZJGFhYWEwMDA1LTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNYSnY2VsbF9pZNkkYWFhYTAwMDUtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDA1pGNvZGXaA+siIiJQdXJlLUp1bGlhIEVFRyBiYW5kIHBvd2Vyczogc3ludGhlc2l6ZSBhIDEyOC1zYW1wbGUgLyAxMjggSHogc2lnbmFsIChkZWx0YSt0aGV0YSsKYWxwaGErYmV0YStnYW1tYSksIHRha2UgdGhlIERGVCwgYW5kIGludGVncmF0ZSBwb3dlciBvdmVyIHRoZSBjbGluaWNhbCBiYW5kcy4iIiIKZnVuY3Rpb24gZWVnX2JhbmRfcG93ZXJzKGFscGhhX2FtcDo6RmxvYXQ2NCkKICAgIE4gPSAxMjg7IGZzID0gMTI4LjAKICAgIHggPSBWZWN0b3J7RmxvYXQ2NH0odW5kZWYsIE4pCiAgICBmb3IgbiBpbiAxOk4KICAgICAgICB0ID0gKG4gLSAxKSAvIGZzCiAgICAgICAgeFtuXSA9IDAuNSpzaW4oMs+AKjIqdCkgKyAwLjQqc2luKDLPgCo2KnQpICsgYWxwaGFfYW1wKnNpbigyz4AqMTAqdCkgKwogICAgICAgICAgICAgICAwLjMqc2luKDLPgCoyMCp0KSArIDAuMipzaW4oMs+AKjQwKnQpCiAgICBlbmQKICAgIGhhbGYgPSBOIMO3IDIKICAgIGJhbmRzID0gemVyb3MoRmxvYXQ2NCwgNSkKICAgIGZvciBrIGluIDA6aGFsZgogICAgICAgIHJlID0gMC4wOyBpbSA9IDAuMAogICAgICAgIGZvciBuIGluIDE6TgogICAgICAgICAgICDOuCA9IDLPgCAqIGsgKiAobiAtIDEpIC8gTgogICAgICAgICAgICByZSArPSB4W25dKmNvcyjOuCk7IGltIC09IHhbbl0qc2luKM64KQogICAgICAgIGVuZAogICAgICAgIHAgPSByZSpyZSArIGltKmltCiAgICAgICAgZiA9IGsgKiBmcyAvIE4KICAgICAgICBpZiAgICAgZiA+PSAwLjUgJiYgZiA8IDQ7ICBiYW5kc1sxXSArPSBwCiAgICAgICAgZWxzZWlmIGYgPCA4OyAgICAgICAgICAgICAgYmFuZHNbMl0gKz0gcAogICAgICAgIGVsc2VpZiBmIDwgMTM7ICAgICAgICAgICAgIGJhbmRzWzNdICs9IHAKICAgICAgICBlbHNlaWYgZiA8IDMwOyAgICAgICAgICAgICBiYW5kc1s0XSArPSBwCiAgICAgICAgZWxzZWlmIGYgPCA0NTsgICAgICAgICAgICAgYmFuZHNbNV0gKz0gcAogICAgICAgIGVuZAogICAgZW5kCiAgICByZXR1cm4gYmFuZHMKZW5kqG1ldGFkYXRhg6lzaG93X2xvZ3PDqGRpc2FibGVkwq5za2lwX2FzX3NjcmlwdMKrY29kZV9mb2xkZWTC2SRhYWFhMDAwMi0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDKEp2NlbGxfaWTZJGFhYWEwMDAyLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMqRjb2Rl2gGkbWQiIiIjIEVFRyBzcGVjdHJhbCBiYW5kLXBvd2VyIGZlYXR1cmVzCgpBIHNlbGYtY29udGFpbmVkIEVFRyBmZWF0dXJlIGV4dHJhY3RvcjogYSBzeW50aGV0aWMgc2lnbmFsIChzdW0gb2YgcGh5c2lvbG9naWNhbApyaHl0aG1zKSBpcyBhbmFseXNlZCB3aXRoIGEgKipwdXJlLUp1bGlhIERGVCoqIGFuZCByZWR1Y2VkIHRvIHRoZSBjYW5vbmljYWwgY2xpbmljYWwKYmFuZCBwb3dlcnMuIEV2ZXJ5dGhpbmcgYmVsb3cgdGhlIHNsaWRlciBydW5zICoqaW4geW91ciBicm93c2VyIGFzIFdlYkFzc2VtYmx5Kiog4oCUIG5vCkp1bGlhIHNlcnZlciwgbm8gaW5zdGFsbC4gRHJhZyB0aGUgc2xpZGVyIHRvIGNoYW5nZSB0aGUgKiphbHBoYSByaHl0aG0gYW1wbGl0dWRlKiogYW5kCndhdGNoIHRoZSBiYW5kIHBvd2VycyB1cGRhdGUgbGl2ZS4KIiIiqG1ldGFkYXRhg6lzaG93X2xvZ3PDqGRpc2FibGVkwq5za2lwX2FzX3NjcmlwdMKrY29kZV9mb2xkZWTD2SRhYWFhMDAwMS0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDGEp2NlbGxfaWTZJGFhYWEwMDAxLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMaRjb2RlrXVzaW5nIFBsdXRvVUmobWV0YWRhdGGDqXNob3dfbG9nc8OoZGlzYWJsZWTCrnNraXBfYXNfc2NyaXB0wqtjb2RlX2ZvbGRlZMKrbm90ZWJvb2tfaWTZJDYwYTYwZGI2LTcwMjctMTFmMS05NmEwLWU3MTUzYjJlZDZmZatpbl90ZW1wX2RpcsKobWV0YWRhdGGBq2Zyb250bWF0dGVyhKVvcmRlcqIxM6V0aXRsZbdFRUcgYmFuZC1wb3dlciBmZWF0dXJlc6R0YWdzk6ZzaWduYWyjZWVnpmJlYWNvbqtkZXNjcmlwdGlvbtl3SW50ZXJhY3RpdmUgRUVHIHNwZWN0cmFsIGJhbmQtcG93ZXIgZmVhdHVyZSBleHRyYWN0aW9uIOKAlCBwdXJlIEp1bGlhLCBydW5zIGluIHRoZSBicm93c2VyIHZpYSBXZWJBc3NlbWJseSAobm8gc2VydmVyKS4=";
-window.pluto_preamble_html = undefined;
-window.pluto_recording_url = undefined;
-window.pluto_recording_audio_url = undefined;
+pluto-tree > pluto-tree-prefix::before {
+    display: inline-block;
+    position: relative;
+    content: "";
+    background-size: 100%;
+    height: 1em;
+    width: 1em;
+    bottom: -2px;
+    opacity: 0.5;
+    cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/caret-down-outline.svg");
+    filter: var(--image-filters);
+}
+
+pluto-tree.collapsed pluto-tree > pluto-tree-prefix::before {
+    display: none;
+}
+
+pluto-tree.collapsed > pluto-tree-prefix::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/caret-forward-outline.svg");
+}
+
+pluto-tree p-r > p-v {
+    display: inline-flex;
+    color: var(--pluto-output-color);
+}
+
+pluto-tree.collapsed pluto-tree-items.Array > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.Set > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.Tuple > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.struct > p-r > p-k {
+    display: none;
+}
+
+pluto-tree > pluto-tree-prefix > .long {
+    display: block;
+}
+pluto-tree > pluto-tree-prefix > .short {
+    display: none;
+}
+pluto-tree.collapsed > pluto-tree-prefix > .long {
+    display: none;
+}
+pluto-tree.collapsed > pluto-tree-prefix > .short {
+    display: block;
+}
+
+/*  */
+
+pluto-tree p-r {
+    margin-left: 3em;
+}
+pluto-tree.collapsed p-r {
+    margin-left: 0.5em;
+}
+
+pluto-tree.collapsed p-r:first-child {
+    margin-left: 0;
+}
+
+pluto-tree pluto-tree-items.Array > p-r > p-k,
+pluto-tree pluto-tree-items.Set > p-r > p-k,
+pluto-tree pluto-tree-items.Tuple > p-r > p-k {
+    margin-right: 1em;
+    opacity: 0.5;
+    user-select: none;
+}
+
+/*  */
+
+pluto-tree.Array > pluto-tree-prefix::after {
+    content: "[";
+}
+
+pluto-tree pluto-tree-items.Array::after {
+    content: "]";
+}
+
+pluto-tree.Set > pluto-tree-prefix::after {
+    content: "([";
+}
+
+pluto-tree pluto-tree-items.Set::after {
+    content: "])";
+}
+
+pluto-tree.Tuple > pluto-tree-prefix::after,
+pluto-tree.Dict > pluto-tree-prefix::after,
+pluto-tree.NamedTuple > pluto-tree-prefix::after,
+pluto-tree.struct > pluto-tree-prefix::after {
+    content: "(";
+}
+
+pluto-tree pluto-tree-items.Tuple::after,
+pluto-tree pluto-tree-items.Dict::after,
+pluto-tree pluto-tree-items.NamedTuple::after,
+pluto-tree pluto-tree-items.struct::after {
+    content: ")";
+}
+
+/*  */
+
+pluto-tree pluto-tree-items.Array > p-r > p-k::after,
+pluto-tree pluto-tree-items.Set > p-r > p-k::after,
+pluto-tree pluto-tree-items.Tuple > p-r > p-k::after {
+    content: ":";
+}
+
+pluto-tree-pair > p-r > p-k::after,
+pluto-tree pluto-tree-items.Dict > p-r > p-k::after {
+    content: " => ";
+}
+
+pluto-tree pluto-tree-items.NamedTuple > p-r > p-k::after,
+pluto-tree pluto-tree-items.struct > p-r > p-k::after {
+    content: " = ";
+}
+
+pluto-tree.collapsed p-r::after {
+    content: ",";
+}
+
+pluto-tree.collapsed p-r:last-child::after {
+    content: "";
+}
+
+pluto-tree-more {
+    display: inline-block;
+    padding: 0.6em 0em;
+    cursor: pointer;
+    /* this only affects pluto-tree-more inside a table */
+    width: 100%;
+    white-space: nowrap;
+}
+
+pluto-tree-more.disabled {
+    cursor: not-allowed;
+}
+
+pluto-tree-more::before {
+    margin-left: 0.2em;
+    margin-right: 0.5em;
+    bottom: -0.1em;
+    display: inline-block;
+    position: relative;
+    content: "";
+    background-size: 100%;
+    height: 1em;
+    width: 1em;
+    opacity: 0.5;
+    filter: var(--image-filters);
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/ellipsis-vertical.svg");
+}
+
+pluto-tree-more.loading::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/sync-outline.svg");
+    animation: loadspin 3s ease-in-out infinite;
+}
+
+@keyframes loadspin {
+    0% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(180deg);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+    75% {
+        transform: rotate(360deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+pluto-tree.collapsed pluto-tree-more {
+    margin: 0em;
+}
+pluto-tree.collapsed pluto-tree-more::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/ellipsis-horizontal.svg");
+}
+
+/*  */
+
+pluto-tree.collapsed img {
+    max-width: 4rem;
+    max-height: 4rem;
+}
+
+pluto-tree img {
+    max-width: 12rem;
+    max-height: 8rem;
+}
+
+pluto-tree p-r pre {
+    white-space: pre;
+    word-break: normal;
+}
+
+/*  */
+
+jlerror {
+    font-size: 0.75rem;
+    font-family: var(--julia-mono-font-stack);
+}
+jlerror {
+    display: block;
+    padding: 1em;
+    background-color: var(--code-section-bg-color);
+    border: 3px solid var(--pkg-terminal-border-color);
+    border-radius: 0.6em;
+    margin: 1em 0;
+    overflow-wrap: break-word;
+}
+
+jlerror > header {
+    color: var(--jlerror-header-color);
+    border-left: 3px solid var(--jlerror-header-color);
+    padding: 0.7rem;
+    background: var(--white);
+    border-radius: 3px;
+}
+jlerror > header > p {
+    margin-block-end: 0.2em;
+    white-space: pre-wrap;
+}
+jlerror > header > p:first-child {
+    font-weight: bold;
+    margin-block-start: 0;
+}
+jlerror .stacktrace-header,
+jlerror .error-header {
+    font-family: var(--system-ui-font-stack);
+}
+jlerror .error-header {
+    margin-block-end: 1em;
+}
+jlerror secret-h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--pluto-output-h-color);
+}
+jlerror > section {
+    border-block-start: 3px dashed var(--pkg-terminal-border-color);
+    margin-block-start: 1rem;
+    padding-block-start: 1rem;
+}
+jlerror .stacktrace-waiting-to-view {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 1rem 0 0 0;
+}
+jlerror .stacktrace-waiting-to-view button {
+    background: var(--white);
+    border: 3px solid var(--pkg-terminal-border-color);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5em 1em;
+    color: var(--pluto-output-color);
+    font-family: var(--system-ui-font-stack);
+    cursor: pointer;
+    font-weight: 700;
+}
+jlerror > section > ol {
+    line-height: 1.6;
+    /* transform: perspective(29rem) rotateX(-12.7deg); */
+    /* transform-origin: top; */
+    /* perspective-origin: top; */
+}
+jlerror > section > ol > li {
+    margin-block-end: 1em;
+}
+
+jlerror > section > ol > li:not(.important):not(:hover) {
+    opacity: 0.5;
+}
+
+jlerror > section > ol > li:not(.important)::marker {
+    font-weight: 100;
+}
+jlerror > section > ol > li.from_this_notebook {
+    --bg: var(--jl-info-acccolor);
+    background: var(--bg);
+    outline: 3px solid var(--bg);
+    padding: 0.4em 0em;
+    border-radius: 0.6em;
+}
+jlerror > section .classical-frame > mark {
+    background: var(--jlerror-mark-bg-color);
+    border-radius: 6px;
+    color: var(--jlerror-mark-color);
+    font-family: var(--julia-mono-font-stack);
+    font-variant-ligatures: none;
+}
+jlerror > section .classical-frame > mark > strong {
+    color: var(--black);
+}
+jlerror > section .classical-frame s-span {
+    /* color: var(--cm-color-type); */
+}
+jlerror > section .classical-frame s-span .argument_name {
+    color: var(--jlerror-mark-color);
+    color: var(--cm-color-variable);
+    color: var(--cm-color-type);
+}
+jlerror > section .frame-source {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    /* justify-content: flex-end; */
+}
+jlerror > section .frame-source > a {
+    background: var(--jlerror-a-bg-color);
+    border-radius: 4px;
+    padding: 1px 7px;
+    text-decoration: none;
+    border-left: 3px solid var(--jlerror-a-border-left-color);
+    /* font-family: var(--system-ui-font-stack); */
+}
+jlerror > section .frame-source > a:not([href]) {
+    filter: grayscale(1);
+}
+jlerror > section .frame-source > a[href].remote-url {
+    filter: hue-rotate(160deg);
+}
+jlerror > section li.from_this_notebook:not(.from_this_cell) .frame-source > a[href] {
+    filter: hue-rotate(50deg);
+}
+jlerror > section .frame-source > span {
+    opacity: 0.4;
+    padding: 0px 0.2em;
+}
+jlerror > section .doclink {
+    user-select: none;
+}
+
+jlerror li::marker {
+    background: red;
+    border: 3px solid red;
+    /* font-size: 0.7rem; */
+    font-weight: 900;
+    color: var(--pluto-logs-key-color);
+}
+
+jlerror li.from_this_notebook .classical-frame {
+    /* opacity: 0.4; */
+}
+
+jlerror li a.frame-line-preview {
+    display: block;
+    text-decoration: none;
+    border: 3px solid var(--cm-color-clickable-underline);
+    --br: 0.6em;
+    border-radius: var(--br);
+    --crop: -0.5em;
+}
+jlerror li .frame-line-preview pre:not(.asdfdsaf) {
+    background-color: var(--code-background);
+    padding: 0;
+    border-radius: var(--br);
+    overflow: hidden;
+    position: relative;
+    display: block;
+}
+
+jlerror li:not(.from_this_cell) .frame-line-preview pre::after {
+    content: "cell preview";
+    display: block;
+    position: absolute;
+    bottom: 0;
+    right: 1ch;
+    font-weight: 900;
+    opacity: 0.6;
+}
+
+jlerror li .frame-line-preview pre > code {
+    padding: 0;
+}
+jlerror li .frame-line-preview pre > code:not(:only-child).frame-line {
+    background: var(--cm-highlighted);
+}
+jlerror li .frame-line-preview pre > code:not(.frame-line) {
+    opacity: 0.7;
+}
+jlerror li .frame-line-preview pre > code::before {
+    content: var(--before-content);
+    color: var(--cm-color-line-numbers);
+    margin-right: 0.7em;
+    width: 2ch;
+    display: inline-block;
+    text-align: right;
+}
+
+jlerror li .frame-line-preview pre > code:first-of-type:not(.frame-line) {
+    margin-top: var(--crop);
+}
+jlerror li .frame-line-preview pre > code:last-of-type:not(.frame-line) {
+    margin-bottom: var(--crop);
+}
+
+jlerror .dont-panic {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5em;
+    background: var(--pluto-logs-debug-color);
+    color: var(--black);
+    border-radius: 0.2em;
+    font-family: var(--system-ui-font-stack);
+    font-size: 1.2rem;
+    font-weight: 700;
+    transform: rotate(6deg);
+}
+
+pluto-editor.disable_ui jlerror .dont-panic {
+    display: none;
+}
+
+pluto-logs jlerror .dont-panic {
+    display: none;
+}
+
+table.pluto-table {
+    table-layout: fixed;
+}
+
+table.pluto-table td {
+    max-width: 300px;
+    overflow: auto;
+}
+
+@supports (-moz-appearance: none) {
+    table.pluto-table td {
+        max-width: unset;
+        overflow: visible;
+    }
+
+    table.pluto-table td > div {
+        max-width: 300px;
+        overflow: auto;
+    }
+}
+
+table.pluto-table .schema-types {
+    color: var(--pluto-schema-types-color);
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+    opacity: 0;
+}
+
+table.pluto-table .schema-types th {
+    border-bottom: 1px solid var(--pluto-schema-types-border-color);
+    background-color: var(--main-bg-color);
+    height: 2rem;
+}
+
+table.pluto-table thead:hover .schema-types {
+    opacity: 1;
+}
+
+table.pluto-table .schema-names th {
+    transform: translate(0, 0.5em);
+    transition: transform 0.1s ease-in-out;
+}
+table.pluto-table .schema-names th:first-child,
+table.pluto-table .schema-types th:first-child {
+    z-index: 2;
+    left: -10px;
+}
+
+table.pluto-table .schema-names th,
+table.pluto-table .schema-types th:first-child {
+    background-color: var(--main-bg-color);
+    position: sticky;
+    top: calc(0.25rem - var(--pluto-cell-spacing));
+    height: 2rem;
+    z-index: 1;
+}
+
+table.pluto-table thead:hover .schema-names th {
+    transform: translate(0, 0);
+}
+
+table.pluto-table tbody th:first-child {
+    background-color: var(--main-bg-color);
+    position: sticky;
+    left: -10px; /* padding-left of pluto-output*/
+    white-space: nowrap;
+}
+
+table.pluto-table .pluto-tree-more-td {
+    text-align: left;
+    overflow: unset;
+}
+
+table.pluto-table .pluto-tree-more-td pluto-tree-more {
+    overflow: unset;
+    position: sticky;
+    left: 0;
+    top: 2rem;
+    max-width: 650px;
+}
+
+table.pluto-table tr.empty div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    font-size: 1.5rem;
+    flex-flow: column nowrap;
+}
+table.pluto-table tr.empty small {
+    font-size: 0.5rem;
+}
+
+pluto-tree.collapsed p-v > pre {
+    max-height: 2em;
+    overflow-y: hidden;
+}
+
+/* ─── VERBATIM: PlutoUI TableOfContents.jl style block (tags stripped) ─── */
+@media not print {
+
+.plutoui-toc {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
+	--main-bg-color: #fafafa;
+	--pluto-output-color: hsl(0, 0%, 36%);
+	--pluto-output-h-color: hsl(0, 0%, 21%);
+	--sidebar-li-active-bg: rgb(235, 235, 235);
+	--icon-filter: unset;
+}
+
+@media (prefers-color-scheme: dark) {
+	.plutoui-toc {
+		--main-bg-color: #303030;
+		--pluto-output-color: hsl(0, 0%, 90%);
+		--pluto-output-h-color: hsl(0, 0%, 97%);
+		--sidebar-li-active-bg: rgb(82, 82, 82);
+		--icon-filter: invert(1);
+	}
+}
+
+.plutoui-toc.aside {
+	color: var(--pluto-output-color);
+	position: fixed;
+	right: 1rem;
+	top: 5rem;
+	width: min(80vw, 300px);
+	padding: 0.5rem;
+	padding-top: 0em;
+	/* border: 3px solid rgba(0, 0, 0, 0.15); */
+	border-radius: 10px;
+	max-height: calc(100vh - 5rem - 90px);
+	overflow: auto;
+	z-index: 40;
+	background-color: var(--main-bg-color);
+	transition: transform 300ms cubic-bezier(0.18, 0.89, 0.45, 1.12);
+}
+
+.plutoui-toc.smallscreen:not(.hide) {
+	box-shadow: 0 0 11px 0px #00000010;
+}
+
+.plutoui-toc.aside.hide {
+	transform: translateX(calc(100% - 28px));
+	color: transparent;
+}
+.plutoui-toc.aside.hide section {
+	display: none;
+}
+.plutoui-toc.aside.hide header {
+	margin-bottom: 0em;
+	padding-bottom: 0em;
+	border-bottom: none;
+}
+}  /* End of Media print query */
+.plutoui-toc.aside.hide .open-toc,
+.plutoui-toc.aside:not(.hide) .closed-toc,
+.plutoui-toc:not(.aside) .closed-toc {
+	display: none;
+}
+
+@media (prefers-reduced-motion) {
+  .plutoui-toc.aside {
+	transition-duration: 0s;
+  }
+}
+
+.toc-toggle {
+	cursor: pointer;
+    padding: 1em;
+    margin: -1em;
+    margin-right: -0.7em;
+    line-height: 1em;
+    display: flex;
+}
+
+.toc-toggle::before {
+    content: "";
+    display: inline-block;
+    height: 1em;
+    width: 1em;
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/list-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LW88L3RpdGxlPjxsaW5lIHgxPSIxNjAiIHkxPSIxNDQiIHgyPSI0NDgiIHkyPSIxNDQiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDozMnB4Ii8+PGxpbmUgeDE9IjE2MCIgeTE9IjI1NiIgeDI9IjQ0OCIgeTI9IjI1NiIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6IzAwMDtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLXdpZHRoOjMycHgiLz48bGluZSB4MT0iMTYwIiB5MT0iMzY4IiB4Mj0iNDQ4IiB5Mj0iMzY4IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6MzJweCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iMTQ0IiByPSIxNiIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6IzAwMDtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLXdpZHRoOjMycHgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI1NiIgcj0iMTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDozMnB4Ii8+PGNpcmNsZSBjeD0iODAiIGN5PSIzNjgiIHI9IjE2IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6MzJweCIvPjwvc3ZnPg==");
+    background-size: 1em;
+	filter: var(--icon-filter);
+}
+
+.aside .toc-toggle.open-toc:hover::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/arrow-forward-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LWE8L3RpdGxlPjxwb2x5bGluZSBwb2ludHM9IjI2OCAxMTIgNDEyIDI1NiAyNjggNDAwIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6NDhweCIvPjxsaW5lIHgxPSIzOTIiIHkxPSIyNTYiIHgyPSIxMDAiIHkyPSIyNTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDo0OHB4Ii8+PC9zdmc+");
+}
+.aside .toc-toggle.closed-toc:hover::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/arrow-back-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LWE8L3RpdGxlPjxwb2x5bGluZSBwb2ludHM9IjI0NCA0MDAgMTAwIDI1NiAyNDQgMTEyIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6NDhweCIvPjxsaW5lIHgxPSIxMjAiIHkxPSIyNTYiIHgyPSI0MTIiIHkyPSIyNTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDo0OHB4Ii8+PC9zdmc+");
+}
+
+
+
+.plutoui-toc header {
+	display: flex;
+	align-items: center;
+	gap: .3em;
+	font-size: 1.5em;
+	/* margin-top: -0.1em; */
+	margin-bottom: 0.4em;
+	padding: 0.5rem;
+	margin-left: 0;
+	margin-right: 0;
+	font-weight: bold;
+	/* border-bottom: 2px solid rgba(0, 0, 0, 0.15); */
+	position: sticky;
+	top: 0px;
+	background: var(--main-bg-color);
+	z-index: 41;
+}
+.plutoui-toc.aside header {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.plutoui-toc section .toc-row {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: .1em;
+	border-radius: .2em;
+}
+
+.plutoui-toc section .toc-row.H1 {
+	margin-top: 1em;
+}
+
+
+.plutoui-toc.aside section .toc-row.in-view {
+	background: var(--sidebar-li-active-bg);
+}
+
+
+	
+.highlight-pluto-cell-shoulder {
+	background: rgba(0, 0, 0, 0.05);
+	background-clip: padding-box;
+}
+
+.plutoui-toc section a {
+	text-decoration: none;
+	font-weight: normal;
+	color: var(--pluto-output-color);
+}
+.plutoui-toc section a:hover {
+	color: var(--pluto-output-h-color);
+}
+
+.plutoui-toc.indent section a.H1 {
+	font-weight: 700;
+	line-height: 1em;
+}
+
+.plutoui-toc.indent section .after-H2 a { padding-left: 10px; }
+.plutoui-toc.indent section .after-H3 a { padding-left: 20px; }
+.plutoui-toc.indent section .after-H4 a { padding-left: 30px; }
+.plutoui-toc.indent section .after-H5 a { padding-left: 40px; }
+.plutoui-toc.indent section .after-H6 a { padding-left: 50px; }
+
+.plutoui-toc.indent section a.H1 { padding-left: 0px; }
+.plutoui-toc.indent section a.H2 { padding-left: 10px; }
+.plutoui-toc.indent section a.H3 { padding-left: 20px; }
+.plutoui-toc.indent section a.H4 { padding-left: 30px; }
+.plutoui-toc.indent section a.H5 { padding-left: 40px; }
+.plutoui-toc.indent section a.H6 { padding-left: 50px; }
+
+
+.plutoui-toc.indent section a.pluto-docs-binding-el,
+.plutoui-toc.indent section a.ASSIGNEE
+	{
+	font-family: JuliaMono, monospace;
+	font-size: .8em;
+	/* background: black; */
+	font-weight: 700;
+    font-style: italic;
+	color: var(--cm-var-color); /* this is stealing a variable from Pluto, but it's fine if that doesnt work */
+}
+.plutoui-toc.indent section a.pluto-docs-binding-el::before,
+.plutoui-toc.indent section a.ASSIGNEE::before
+	{
+	content: "> ";
+	opacity: .3;
+}
+
+/* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
+.plutoui-toc {
+  --main-bg-color: var(--color-base-100);
+  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-h-color: var(--color-base-content);
+  --sidebar-li-active-bg: var(--color-base-200);
+  --icon-filter: none;
+  --cm-var-color: var(--color-primary);
+  border: 1px solid var(--color-base-300);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: invert(1); } }
+
+
+/* ── ansi-colors.css (stdout colour) ── */
+
+/* ANSI color classes */
+
+:root {
+    --ansi-black: rgb(0, 0, 0);
+    --ansi-red: rgb(187, 0, 0);
+    --ansi-green: rgb(0, 187, 0);
+    --ansi-yellow: rgb(187, 187, 0);
+    --ansi-blue: rgb(0, 0, 187);
+    --ansi-magenta: rgb(187, 0, 187);
+    --ansi-cyan: rgb(0, 187, 187);
+    --ansi-white: rgb(255, 255, 255);
+    --ansi-bright-black: rgb(85, 85, 85);
+    --ansi-bright-red: rgb(255, 85, 85);
+    --ansi-bright-green: rgb(0, 255, 0);
+    --ansi-bright-yellow: rgb(255, 255, 85);
+    --ansi-bright-blue: rgb(85, 85, 255);
+    --ansi-bright-magenta: rgb(255, 85, 255);
+    --ansi-bright-cyan: rgb(85, 255, 255);
+    --ansi-bright-white: rgb(255, 255, 255);
+}
+
+/* Foreground colors */
+.ansi-black-fg {
+    color: var(--ansi-black);
+}
+.ansi-red-fg {
+    color: var(--ansi-red);
+}
+.ansi-green-fg {
+    color: var(--ansi-green);
+}
+.ansi-yellow-fg {
+    color: var(--ansi-yellow);
+}
+.ansi-blue-fg {
+    color: var(--ansi-blue);
+}
+.ansi-magenta-fg {
+    color: var(--ansi-magenta);
+}
+.ansi-cyan-fg {
+    color: var(--ansi-cyan);
+}
+.ansi-white-fg {
+    color: var(--ansi-white);
+}
+
+.ansi-bright-black-fg {
+    color: var(--ansi-bright-black);
+}
+.ansi-bright-red-fg {
+    color: var(--ansi-bright-red);
+}
+.ansi-bright-green-fg {
+    color: var(--ansi-bright-green);
+}
+.ansi-bright-yellow-fg {
+    color: var(--ansi-bright-yellow);
+}
+.ansi-bright-blue-fg {
+    color: var(--ansi-bright-blue);
+}
+.ansi-bright-magenta-fg {
+    color: var(--ansi-bright-magenta);
+}
+.ansi-bright-cyan-fg {
+    color: var(--ansi-bright-cyan);
+}
+.ansi-bright-white-fg {
+    color: var(--ansi-bright-white);
+}
+
+/* Background colors */
+.ansi-black-bg {
+    background-color: var(--ansi-black);
+}
+.ansi-red-bg {
+    background-color: var(--ansi-red);
+}
+.ansi-green-bg {
+    background-color: var(--ansi-green);
+}
+.ansi-yellow-bg {
+    background-color: var(--ansi-yellow);
+}
+.ansi-blue-bg {
+    background-color: var(--ansi-blue);
+}
+.ansi-magenta-bg {
+    background-color: var(--ansi-magenta);
+}
+.ansi-cyan-bg {
+    background-color: var(--ansi-cyan);
+}
+.ansi-white-bg {
+    background-color: var(--ansi-white);
+}
+
+.ansi-bright-black-bg {
+    background-color: var(--ansi-bright-black);
+}
+.ansi-bright-red-bg {
+    background-color: var(--ansi-bright-red);
+}
+.ansi-bright-green-bg {
+    background-color: var(--ansi-bright-green);
+}
+.ansi-bright-yellow-bg {
+    background-color: var(--ansi-bright-yellow);
+}
+.ansi-bright-blue-bg {
+    background-color: var(--ansi-bright-blue);
+}
+.ansi-bright-magenta-bg {
+    background-color: var(--ansi-bright-magenta);
+}
+.ansi-bright-cyan-bg {
+    background-color: var(--ansi-bright-cyan);
+}
+.ansi-bright-white-bg {
+    background-color: var(--ansi-bright-white);
+}
+
+/* Some custom styles for stdout to improve contrast and readability */
+pluto-log-dot.Stdout {
+    --ansi-red: rgb(220, 0, 0);
+    --ansi-magenta: rgb(200, 0, 200);
+    --ansi-white: rgb(220, 220, 220);
+    --ansi-bright-black: rgb(50, 50, 50);
+    --ansi-bright-yellow: rgb(240, 240, 50);
+    --ansi-bright-blue: rgb(110, 110, 255);
+    --ansi-bright-white: rgb(240, 240, 240);
+    --ansi-bright-black: rgb(183 183 183);
+}
+
+pluto-log-dot.Stdout .ansi-bright-black-fg:is(.ansi-white-bg, .ansi-bright-white-bg) {
+    text-shadow: none;
+    color: black;
+}
+
+
+/* ── highlightjs.css (code highlight in output) ── */
+
+/* https://highlightjs.readthedocs.io/en/latest/css-classes-reference.html */
+pre code.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 1em;
+}
+code.hljs {
+    padding: 3px 5px;
+}
+.hljs {
+    color: var(--cm-color-editor-text);
+}
+
+.hljs-keyword { color: var(--cm-color-keyword); }
+
+.hljs-built_in,
+.hljs-type { color: var(--cm-color-builtin); }
+
+.hljs-literal,
+.hljs-number { color: var(--cm-color-literal); }
+
+.hljs-property { color: var(--cm-color-symbol); }
+
+.hljs-regexp,
+.hljs-string { color: var(--cm-color-string); }
+
+.hljs-char.escape { color: var(--cm-color-literal); }
+.hljs-subst { color: var(--cm-color-editor-text); }
+.hljs-symbol { color: var(--cm-color-symbol); }
+
+.hljs-variable,
+.hljs-title { color: var(--cm-color-variable); }
+
+.hljs-comment { color: var(--cm-color-comment); }
+.hljs-doctag { color: var(--cm-color-keyword); }
+
+.hljs-meta { color: var(--cm-color-macro); font-weight: 700; }
+
+.hljs-bullet { color: var(--cm-color-keyword); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+.hljs-link { color: var(--cm-color-string); text-decoration: underline; }
+.hljs-quote { color: var(--cm-color-comment); }
+
+.hljs-code,
+.hljs-formula { color: var(--cm-color-comment); }
+
+.hljs-selector-tag,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo { color: var(--cm-color-variable); }
+
+.hljs-template-tag { color: var(--cm-color-symbol); }
+.hljs-template-variable { color: var(--cm-color-variable); }
+
+/* .hljs-addition {} */
+/* .hljs-deletion {} */
+
+
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
+
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --inter-ui-font-stack:
+        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        system-ui, sans-serif;
+    --system-fonts-mono: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    color-scheme: light dark;
+    font-family: var(--inter-ui-font-stack);
+    font-size: 17px;
+
+    --black: black;
+    --gray1: gray;
+    --white: white;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --black: white;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
+        --white: black;
+    }
+}
+
+body {
+    max-width: 700px;
+    margin: 0 auto;
+    margin-top: 3rem;
+    padding: 1rem;
+}
+
+jlerror code,
+jlerror pre {
+    font-family: var(--system-fonts-mono);
+    color: var(--gray1);
+}
+jlerror pre code {
+    color: inherit;
+}
+jlerror code {
+    font-size: 0.9rem;
+}
+
+jlerror pre {
+    /* white-space: pre-wrap; */
+    overflow: auto;
+
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
+    padding-left: 1rem;
+}
+
+jlerror pre:first-line {
+    font-weight: bolder;
+    line-height: 2em;
+    /* font-style: italic; */
+    color: var(--black);
+
+    /* padding: 6em; */
+    /* display: block; */
+}
+
+a {
+    font-weight: bolder;
+    color: unset;
+}
+
+a:visited {
+    /* color: red; */
+}
+</style>
+</head>
+<body>
+
+<main>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="EEG-spectral-band-power-features">EEG spectral band-power features</h1>
+<p>A self-contained EEG feature extractor: a synthetic signal &#40;sum of physiological rhythms&#41; is analysed with a <strong>pure-Julia DFT</strong> and reduced to the canonical clinical band powers. Everything below the slider runs <strong>in your browser as WebAssembly</strong> — no Julia server, no install. Drag the slider to change the <strong>alpha rhythm amplitude</strong> and watch the band powers update live.</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pre class="pl-code"><code class="pl-jl">using PlutoUI</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>Alpha &#40;8–13 Hz&#41; amplitude:</strong></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="alpha_amp" unique_id="wwlctkwwkucz"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
+					const input_el = currentScript.previousElementSibling
+					const output_el = currentScript.nextElementSibling
+					const displays = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0"]
+
+					let update_output = () => {
+						output_el.value = displays[input_el.valueAsNumber - 1]
+					}
+					
+					input_el.addEventListener("input", update_output)
+					// We also poll for changes because the `input_el.value` can change from the outside, e.g. https://github.com/JuliaPluto/PlutoUI.jl/issues/277
+					let id = setInterval(update_output, 200)
+					invalidation.then(() => {
+						clearInterval(id)
+						input_el.removeEventListener("input", update_output)
+					})
+					
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+						font-family: system-ui;
+						font-variant-numeric: tabular-nums;
+    					font-size: 15px;
+    					margin-left: 3px;
+    					transform: translateY(-4px);
+    					display: inline-block;'>1.0</output></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind alpha_amp Slider(0.0:0.1:2.0, default=1.0, show_value=true)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<span id="eeg_band_powers">eeg_band_powers</span>
+<div class="markdown"><p>Pure-Julia EEG band powers: synthesize a 128-sample / 128 Hz signal &#40;delta&#43;theta&#43; alpha&#43;beta&#43;gamma&#41;, take the DFT, and integrate power over the clinical bands.</p>
+
+
+</div>
+</div>
+</pluto-output><pre class="pl-code"><code class="pl-jl">"""Pure-Julia EEG band powers: synthesize a 128-sample / 128 Hz signal (delta+theta+
+alpha+beta+gamma), take the DFT, and integrate power over the clinical bands."""
+function eeg_band_powers(alpha_amp::Float64)
+    N = 128; fs = 128.0
+    x = Vector{Float64}(undef, N)
+    for n in 1:N
+        t = (n - 1) / fs
+        x[n] = 0.5*sin(2π*2*t) + 0.4*sin(2π*6*t) + alpha_amp*sin(2π*10*t) +
+               0.3*sin(2π*20*t) + 0.2*sin(2π*40*t)
+    end
+    half = N ÷ 2
+    bands = zeros(Float64, 5)
+    for k in 0:half
+        re = 0.0; im = 0.0
+        for n in 1:N
+            θ = 2π * k * (n - 1) / N
+            re += x[n]*cos(θ); im -= x[n]*sin(θ)
+        end
+        p = re*re + im*im
+        f = k * fs / N
+        if     f &gt;= 0.5 &amp;&amp; f &lt; 4;  bands[1] += p
+        elseif f &lt; 8;              bands[2] += p
+        elseif f &lt; 13;             bands[3] += p
+        elseif f &lt; 30;             bands[4] += p
+        elseif f &lt; 45;             bands[5] += p
+        end
+    end
+    return bands
+end</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<span id="relative_alpha">relative_alpha</span>
+<div class="markdown"><p>Relative alpha power &#61; alpha-band power / total band power.</p>
+
+
+</div>
+</div>
+</pluto-output><pre class="pl-code"><code class="pl-jl">"Relative alpha power = alpha-band power / total band power."
+function relative_alpha(a::Float64)
+    b = eeg_band_powers(a)
+    return b[3] / (b[1] + b[2] + b[3] + b[4] + b[5])
+end</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-aaaa0007-0000-0000-0000-000000000007"></pluto-output><pre class="pl-code"><code class="pl-jl">rel = relative_alpha(alpha_amp)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-aaaa0008-0000-0000-0000-000000000008"></pluto-output></div>
+</main>
+<script src="eeg_features.islands/shim.js"></script>
+<script>
+(function () {
+  function collectBonds() {
+    const vals = {};
+    document.querySelectorAll("bond[def]").forEach(function (b) {
+      const inp = b.querySelector("input,select,textarea");
+      if (!inp) return;
+      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
+            : (inp.type === "checkbox") ? inp.checked
+            : inp.value;
+      vals[b.getAttribute("def")] = v;
+    });
+    return vals;
+  }
+  async function rerender() {
+    if (window.__pi_renderAll) { try { await window.__pi_renderAll(collectBonds()); } catch (e) { console.warn(e); } }
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.closest && e.target.closest("bond[def]")) rerender();
+  });
+  (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
+})();
 </script>
 
-<meta name="pluto-insertion-spot-parameters">
+<script>
+(function () {
+  function render(root) { (root || document).querySelectorAll(".tex").forEach(function (s) {
+    if (s.dataset.r) return;
+    var t = s.textContent.trim();
+    var disp = t.indexOf("$$") === 0;
+    t = t.replace(/^\$\$?/, "").replace(/\$\$?$/, "");
+    try { katex.render(t, s, { displayMode: disp, throwOnError: false }); s.dataset.r = "1"; } catch (e) {}
+  }); }
+  (function wait() { window.katex ? render() : setTimeout(wait, 80); })();
+  new MutationObserver(function () { window.katex && render(); }).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 
-    <script src="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/editor.c026cb75.js" type="module" defer=""></script>
-    <script src="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/frontend.ae6e0116.js"></script>
+<script type="module">
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function hl(code) {
+  const tree = parser.parse(code); let out = "", pos = 0;
+  highlightTree(tree, classHighlighter, (from, to, cls) => {
+    if (from > pos) out += esc(code.slice(pos, from));
+    out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
+  });
+  out += esc(code.slice(pos)); return out;
+}
+document.querySelectorAll("code.pl-jl").forEach(el => {
+  try { el.innerHTML = hl(el.textContent); } catch (e) { console.warn("pl-hl", e); }
+});
+</script>
 
-    <!-- This script will be enabled by JS after the notebook has initialized to prevent taking up bandwidth during the initial load. -->
-    <link rel="pluto-external-source" id="MathJax-script" href="https://cdn.jsdelivr.net/gh/JuliaPluto/Pluto.jl@0.20.28/frontend-dist/tex-svg-full.b78c0ac1.js" type="text/javascript">
-    
-    
-<meta name="pluto-insertion-spot-preload">
+<script>
+document.addEventListener("click", function (e) {
+  if (!e.target.closest) return;
+  var pre = e.target.closest("pluto-tree > pluto-tree-prefix");
+  if (pre && pre.parentElement) pre.parentElement.classList.toggle("collapsed");
+});
+</script>
 
-</head>
-
-<body class="no-MαθJax">
-    <div style="min-height:100vh;display:flex">
-        <pluto-editor class="loading fullscreen" translate="no">
-            <progress style="filter:grayscale()" class="statefile-fetch-progress delete-me-when-live" max="100"></progress>
-        </pluto-editor>
-    </div>
-
-
-
-</body></html>
+</body>
+</html>

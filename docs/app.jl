@@ -31,6 +31,9 @@ app = App(
     output_dir = "dist",
     base_path = ENV["PIDOCS_BASE"],
     layout = :Layout,
+    # CSS is built by npm Tailwind v4 + DaisyUI (see build.sh + input.css); Therapy's
+    # standalone CLI can't load @plugin "daisyui". Layout injects the <link> itself.
+    tailwind = false,
 )
 
 # Load file-based routes + components first so the per-notebook route
@@ -58,7 +61,8 @@ let index_path = joinpath(@__DIR__, "notebooks-static", "index.json"),
     elseif isfile(index_path)
         for e in JSON.parsefile(index_path)
             e["status"] == "failed" && continue
-            route = "/notebooks/$(e["slug"])/"
+            # %20-encode spaces so the route matches the (encoded) gallery-card href
+            route = "/notebooks/$(replace(e["slug"], " " => "%20"))/"
             push!(app.routes, route => let np = NotebookPage,
                     slug = e["slug"], title = e["title"], html = e["html"],
                     status = e["status"], islands = Int(get(e, "islands", 0)),

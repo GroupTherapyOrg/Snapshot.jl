@@ -546,6 +546,11 @@ function write_island_assets(
     islands::Vector{CompiledIsland};
     bond_graph::Union{Nothing,Dict{String,Vector{String}}}=nothing,
     fallback_warnings::Bool=true,
+    # Font dedup: the WasmMakie font atlas (~1.9 MB) is byte-identical in every
+    # notebook. When `shared_fonts_path` is given, write the atlas ONCE there and
+    # have each island fetch it by URL instead of inlining it per-notebook — a big
+    # size win for multi-notebook collections. nothing ⇒ inline as before.
+    shared_fonts_path::Union{Nothing,AbstractString}=nothing,
 )
     mkpath(dir)
     manifest = Dict(
@@ -586,6 +591,27 @@ function write_island_assets(
             end for (k, island) in enumerate(islands)
         ],
     )
+    # Externalize the (identical) font atlas to a single shared file, referenced by
+    # URL, so it isn't inlined into every notebook's manifest.
+    if shared_fonts_path !== nothing
+        fonts = nothing
+        for g in manifest["groups"]
+            if get(g, "canvas_fonts", nothing) !== nothing
+                fonts = g["canvas_fonts"]
+                break
+            end
+        end
+        if fonts !== nothing
+            if !isfile(shared_fonts_path)
+                mkpath(dirname(shared_fonts_path))
+                write(shared_fonts_path, fonts)
+            end
+            manifest["fonts_url"] = relpath(shared_fonts_path, dir)
+            for g in manifest["groups"]
+                g["canvas_fonts"] = nothing
+            end
+        end
+    end
     manifest_path = joinpath(dir, "islands.json")
     write(manifest_path, JSON.json(manifest))
     shim = read(joinpath(@__DIR__, "..", "assets", "shim.js"), String)

@@ -1,0 +1,100 @@
+# /how-it-works/ — the lean "notebook → native Therapy component" pipeline:
+# extraction → wasm islands → SSR cells → signals/hydration → DaisyUI theming.
+
+() -> begin
+    base = get(ENV, "PIDOCS_BASE", "")
+
+    section(title, children...) = Div(:class => "space-y-4",
+        H2(:class => "sn-display text-2xl font-semibold text-base-content", title), children...)
+    para(children...) = P(:class => "text-base-content/70 leading-relaxed", children...)
+    code(s) = Code(:class => "sn-mono text-primary", s)
+    italic(s) = Span(:class => "italic", s)
+
+    step(n, title, body...) = Div(:class => "flex gap-4",
+        Div(:class => "shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center sn-mono text-sm font-bold", string(n)),
+        Div(:class => "space-y-1",
+            H3(:class => "font-semibold text-base-content", title),
+            P(:class => "text-sm text-base-content/60 leading-relaxed", body...)))
+
+    maprow(pluto, therapy, note) = Div(:class => "grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-3 border-b border-base-300 last:border-0",
+        Div(:class => "sn-mono text-sm text-base-content", pluto),
+        Span(:class => "text-primary sn-mono", "→"),
+        Div(:class => "space-y-0.5",
+            Div(:class => "sn-mono text-sm text-base-content", therapy),
+            Div(:class => "text-xs text-base-content/50", note)))
+
+    usecard(title, desc, codestr) = Div(:class => "bg-base-100 rounded-box sn-bubble p-5 space-y-3",
+        H3(:class => "sn-display font-semibold text-base-content", title),
+        P(:class => "text-sm text-base-content/60 leading-relaxed", desc),
+        Pre(:class => "bg-neutral text-neutral-content p-4 rounded-box overflow-x-auto sn-mono text-xs",
+            Code(codestr)))
+
+    Div(:class => "space-y-14 max-w-3xl mx-auto",
+        Div(:class => "space-y-5 pt-4",
+            Span(:class => "badge badge-primary badge-sm sn-mono uppercase", "How it works"),
+            H1(:class => "sn-display text-4xl md:text-5xl font-semibold text-base-content",
+                "A Pluto notebook becomes a Therapy component"),
+            para("PlutoIslands takes a ",
+                A(:href => "https://plutojl.org", :target => "_blank", :class => "link link-primary", "Pluto.jl"),
+                " notebook and emits a ", Strong("lean, self-contained Therapy component"),
+                " — interactive sliders and plots that run entirely in the browser as WebAssembly, ",
+                "with no Julia server, no Pluto frontend, and no multi-megabyte statefile. ",
+                "It drops into any static host as a standalone page, or into a Therapy app as native DOM — ",
+                "themeable, with or without reactivity.")),
+        section("The problem it solves",
+            para("Pluto's classic static export is faithful but heavy: it bakes the entire session ",
+                "state (~2.6 MB) into the HTML and ships the full Pluto frontend to re-hydrate it. ",
+                "For a page of sliders and a plot, that's a lot of bytes — and it locks the look to Pluto's chrome."),
+            para("The lean export keeps everything that makes the notebook ", italic("work"),
+                " and drops everything that only reconstructed Pluto's editor. Megabytes become tens of kilobytes.")),
+        section("The pipeline",
+            para("At export time the notebook runs once in Pluto. Then, per notebook:"),
+            Div(:class => "space-y-5 pt-2",
+                step(1, "Extract the reactive graph",
+                    "Pluto already knows the dependency graph + which cells depend on a ", code("@bind"),
+                    " widget. PlutoIslands groups co-dependent bond cells and lifts each dependent cell into a pure function."),
+                step(2, "Compile to WebAssembly islands",
+                    "Each bond group compiles to a small WasmGC module via ", code("WasmTarget.jl"),
+                    " — verified at export time against real notebook re-runs before it ships."),
+                step(3, "Server-render every cell",
+                    "Each cell's output is written straight into the page as HTML, following Pluto's own decisions about ordering, output, and visibility. Nothing structural is invented."),
+                step(4, "Hydrate with signals + islands",
+                    "A tiny runtime wires each ", code("<bond>"), " input to the wasm island that owns it. Move a slider and only the dependent cells recompute — figures redraw on a live ", code("<canvas>"), ", numbers update in place."))),
+        section("Why it maps cleanly",
+            para("Pluto's reactive model and Therapy's signals model are the same idea, so the translation is direct:"),
+            Div(:class => "bg-base-100 rounded-box sn-bubble p-5",
+                maprow("@bind x Slider(…)", "signal + <input>", "a shared reactive value the widget writes + cells read"),
+                maprow("bond-dependent cell", "island / effect", "wasm recomputes it when its inputs change"),
+                maprow("static cell", "SSR HTML", "rendered once at export, no runtime"),
+                maprow("figure output", "live <canvas>", "redrawn by WasmMakie, not a baked image"),
+                maprow("text / number", "reactive DOM node", "updated in place — divs, not canvas"))),
+        section("Theming: copy Pluto, swap the variables",
+            para("The export ports Pluto's own output CSS almost verbatim — markdown, admonitions, tables, ",
+                "code, the tree viewer, the table of contents — and re-points every Pluto color variable at a ",
+                A(:href => "https://daisyui.com", :target => "_blank", :class => "link link-primary", "DaisyUI"), " token."),
+            para("So the notebook renders exactly as Pluto does, but one attribute — ", code("data-theme=\"…\""),
+                " on ", code("<html>"), " — restyles the whole site at once. The ", code("🎨"),
+                " picker in the nav sets it: because each notebook is native DOM (no iframe), the chrome ",
+                "and every notebook reskin together, seamlessly, with one click.")),
+        section("Two ways to use it",
+            Div(:class => "grid grid-cols-1 md:grid-cols-2 gap-4",
+                usecard("Standalone page",
+                    "Export a notebook and serve the HTML anywhere — GitHub Pages, S3, a CDN. No server.",
+                    "export_notebook(\"notebook.jl\";\n    therapy=true)\n# → notebook.html + .islands/"),
+                usecard("Component in a Therapy app",
+                    "Embed the notebook inside a larger Therapy site and let the host's theme drive it. This gallery does exactly that.",
+                    "export_notebook(\"notebook.jl\";\n    therapy=true,\n    theme_picker=false)"))),
+        section("The classic export (not recommended)",
+            para("Omitting ", code("therapy=true"), " falls back to the ", Strong("original full-Pluto export"),
+                " — Pluto's standard static HTML plus a JavaScript bundle that hydrates the ", code("@bind"),
+                " cells, all in one self-contained file. It still works:"),
+            Pre(:class => "bg-neutral text-neutral-content p-4 rounded-box overflow-x-auto sn-mono text-xs",
+                Code("export_notebook(\"notebook.jl\")   # therapy=false is the default")),
+            Div(:class => "alert alert-warning text-sm",
+                Span("Not the recommended path: it ships the full Pluto frontend plus a baked ~2.6 MB statefile (much heavier), isn't a native Therapy component, and isn't as heavily tested. Prefer therapy=true unless you specifically need the classic export."))),
+        Div(:class => "bg-base-100 rounded-box sn-bubble p-6 flex flex-col sm:flex-row items-center justify-between gap-4",
+            Div(:class => "space-y-1",
+                H3(:class => "sn-display font-semibold text-base-content", "See it in action"),
+                P(:class => "text-sm text-base-content/60", "Every notebook in the gallery is a live Therapy component. Try the theme picker.")),
+            A(:href => "$(base)/notebooks/", :class => "btn btn-primary shrink-0", "Browse the Notebooks →")))
+end

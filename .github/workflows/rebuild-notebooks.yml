@@ -1,0 +1,223 @@
+name: Rebuild Notebook Exports (parallel)
+
+# Re-exports the featured notebooks to WASM islands IN PARALLEL — one job per
+# notebook (strategy.matrix), since each export needs the full heavy toolchain
+# (Julia + WasmTarget + Pluto + per-notebook WasmMakie + node) and is slow.
+#
+# NORMAL flow keeps the committed model: docs/notebooks-static/<slug>.* is built
+# locally + committed, and docs.yml deploys around it. THIS workflow lets you
+# regenerate those exports in CI instead of serially on your laptop. By default
+# it only UPLOADS the rebuilt exports as artifacts for review; an optional
+# (commented) step can commit them back.
+#
+# ⚠️ This is a DESIGN pending a real CI run — see the README notes at the bottom.
+# It has NOT been validated on a runner (WasmTarget path-dep resolution, WasmMakie
+# compiling on ubuntu-latest, and the artifact path/merge plumbing all need a live
+# run to confirm).
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force rebuild even if the source hash is unchanged"
+        type: boolean
+        default: true
+  # Optional: also rebuild when a featured notebook's source changes.
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'test/notebooks/featured/**'
+  #     - 'test/notebooks/demo.jl'
+  #     - 'test/notebooks/two_groups.jl'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rebuild-notebooks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. discover ────────────────────────────────────────────────────────────
+  # Emit the notebook slug list as a JSON array → consumed by the matrix below.
+  # Mirrors docs/export_notebooks.jl's job list: featured/*.jl (minus *backup*),
+  # plus the two demo notebooks. `slug` is the export pattern (matches the source
+  # filename, spaces and all); `name` is a space-free id for artifact names.
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import glob, os, json
+          slugs = [os.path.basename(f)[:-3]
+                   for f in sorted(glob.glob("test/notebooks/featured/*.jl"))
+                   if "backup" not in os.path.basename(f)]
+          slugs += ["two_groups", "wasm islands demo"]  # demo.jl exports as this slug
+          arr = [{"slug": s, "name": s.replace(" ", "_")} for s in slugs]
+          print("matrix=" + json.dumps(arr))
+          PY
+
+  # ── 2. export (parallel, one notebook per job) ─────────────────────────────
+  export:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false        # one bad notebook must not cancel the rest
+      max-parallel: 6         # tune for runner availability / cost
+      matrix:
+        notebook: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      # PI.jl and WasmTarget.jl must be SIBLINGS: PI's Project.toml has
+      # [sources] WasmTarget = {path = "../WasmTarget.jl"}.
+      - name: Checkout PlutoIslands.jl
+        uses: actions/checkout@v4
+        with:
+          path: PlutoIslands.jl
+      - name: Checkout WasmTarget.jl (path-dep sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: GroupTherapyOrg/WasmTarget.jl
+          path: WasmTarget.jl
+          # ref: main   # pin if needed
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v2
+      - name: Setup Node            # the island compile + oracle shell out to `node`
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instantiate PI project
+        working-directory: PlutoIslands.jl
+        run: |
+          julia --project=. -e '
+            using Pkg
+            Pkg.Registry.add("General")
+            Pkg.resolve()
+            Pkg.instantiate()
+          '
+
+      - name: Export this notebook → WASM islands
+        working-directory: PlutoIslands.jl
+        env:
+          FORCE_NB_REBUILD: ${{ inputs.force && '1' || '0' }}
+        run: |
+          # The pattern is occursin(slug, "<slug>.jl") → exports exactly this notebook.
+          # Pluto pulls the notebook's own deps (e.g. WasmMakie from its GitHub URL)
+          # into its nbpkg env during the run, so no extra install step is needed.
+          julia --project=. --optimize=3 docs/export_notebooks.jl "${{ matrix.notebook.slug }}"
+
+      - name: Stage just this notebook's outputs
+        working-directory: PlutoIslands.jl
+        run: |
+          mkdir -p _nbout
+          slug='${{ matrix.notebook.slug }}'
+          # html + fragment + islands dir (slugs may contain spaces → quote)
+          cp -v "docs/notebooks-static/${slug}.html"          "_nbout/" 2>/dev/null || true
+          cp -v "docs/notebooks-static/${slug}.fragment.html" "_nbout/" 2>/dev/null || true
+          cp -rv "docs/notebooks-static/${slug}.islands"      "_nbout/" 2>/dev/null || true
+          # extract ONLY this slug's index.json entry (the matrix job rebuilt one
+          # notebook; its index.json otherwise carries stale entries for the rest).
+          python3 - "$slug" '${{ matrix.notebook.name }}' <<'PY'
+          import sys, json
+          slug, name = sys.argv[1], sys.argv[2]
+          idx = json.load(open("docs/notebooks-static/index.json"))
+          e = next((x for x in idx if x.get("slug") == slug), None)
+          json.dump(e, open(f"_nbout/_entry_{name}.json", "w"))
+          PY
+
+      - name: Upload notebook export
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-${{ matrix.notebook.name }}
+          path: PlutoIslands.jl/_nbout
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ── 3. gather (merge all per-notebook exports + a combined index.json) ─────
+  gather:
+    needs: export
+    if: ${{ always() }}     # merge whatever succeeded even if some notebooks failed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all notebook artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: nb-*
+          path: _artifacts
+          merge-multiple: true     # flatten all nb-* artifacts into one dir
+      - name: Merge into docs/notebooks-static + rebuild index.json
+        run: |
+          mkdir -p docs/notebooks-static
+          # copy every notebook's files (html, fragment, islands dirs) over the
+          # committed copies; _entry_*.json carry the per-notebook index entries.
+          shopt -s dotglob nullglob
+          for item in _artifacts/*; do
+            base=$(basename "$item")
+            case "$base" in
+              _entry_*.json) : ;;                       # handled below
+              *) cp -rv "$item" "docs/notebooks-static/" ;;
+            esac
+          done
+          python3 - <<'PY'
+          import glob, json, os
+          entries = []
+          for f in sorted(glob.glob("_artifacts/_entry_*.json")):
+              try:
+                  d = json.load(open(f))
+              except Exception:
+                  d = None
+              if d:
+                  entries.append(d)
+          entries.sort(key=lambda e: e.get("slug", ""))
+          json.dump(entries, open("docs/notebooks-static/index.json", "w"), indent=2)
+          print(f"combined index.json: {len(entries)} notebooks")
+          PY
+      - name: Upload combined notebooks-static (for review)
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebooks-static
+          path: docs/notebooks-static
+          retention-days: 7
+
+      # ── OPTIONAL: commit the rebuilt exports back to the branch ──────────────
+      # Off by default — review the artifact first. To enable, give the job
+      # `permissions: contents: write` and uncomment:
+      #
+      # - name: Commit rebuilt exports
+      #   run: |
+      #     git config user.name  "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add docs/notebooks-static
+      #     git diff --cached --quiet || git commit -m "ci: rebuild notebook WASM exports"
+      #     git push
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # ALTERNATIVE (commented): single shared-env job using the 2026 parallel/
+  # background step keywords instead of a matrix. One setup, then each export
+  # runs as a background step (max 10 concurrent), then wait-all. Trades the
+  # matrix's per-job isolation (a crashing notebook can't take down siblings,
+  # independent caches) for less repeated setup. Sketch:
+  #
+  # export-oneenv:
+  #   needs: discover
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4 { path: PlutoIslands.jl }
+  #     - uses: actions/checkout@v4 { repository: GroupTherapyOrg/WasmTarget.jl, path: WasmTarget.jl }
+  #     - uses: julia-actions/setup-julia@v2 { version: '1.12' }
+  #     - uses: actions/setup-node@v4 { node-version: '20' }
+  #     - run: julia --project=PlutoIslands.jl -e 'using Pkg; Pkg.instantiate()'
+  #     - parallel:                       # implicit wait-all after the group
+  #         - name: newton
+  #           run: julia --project=PlutoIslands.jl PlutoIslands.jl/docs/export_notebooks.jl newton
+  #         - name: fractals
+  #           run: julia --project=PlutoIslands.jl PlutoIslands.jl/docs/export_notebooks.jl fractals
+  #         # … (≤10 concurrent; would need a generated list, not matrix-driven)

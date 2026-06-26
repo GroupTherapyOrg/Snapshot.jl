@@ -3,7 +3,8 @@ name: Build and Deploy Docs
 # The notebook exports under docs/notebooks-static/ are pre-rendered locally
 # (julia --project=. docs/export_notebooks.jl) and COMMITTED — hash-cached, so
 # they only change when a notebook's source changes. CI never runs notebooks:
-# it builds the Therapy.jl site around the committed exports and deploys.
+# it builds the Therapy.jl site (+ the npm Tailwind/DaisyUI stylesheet) around
+# the committed exports and deploys.
 
 on:
   push:
@@ -31,16 +32,33 @@ jobs:
         with:
           version: '1.12'
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - uses: julia-actions/cache@v2
 
-      - name: Install docs dependencies
-        run: |
-          julia --project=docs -e '
-            using Pkg
-            Pkg.Registry.add("General")
-            Pkg.resolve()
-            Pkg.instantiate()
-          '
+      # The two independent prep steps run CONCURRENTLY (GitHub Actions parallel-
+      # steps syntax, 2026): the slow Julia precompile alongside the npm Tailwind v4
+      # + DaisyUI build (app.jl is tailwind=false, so we own the stylesheet). The
+      # group implicitly waits for both before the next step. Both write the docs
+      # site needs: the instantiated Julia env + docs/assets/styles.css.
+      - parallel:
+          - name: Install Julia docs dependencies
+            run: |
+              julia --project=docs -e '
+                using Pkg
+                Pkg.Registry.add("General")
+                Pkg.resolve()
+                Pkg.instantiate()
+              '
+
+          - name: Build DaisyUI stylesheet (Tailwind v4)
+            working-directory: docs
+            run: |
+              npm install
+              npm run css   # tailwindcss -i input.css -o assets/styles.css --minify
 
       - name: Build docs site
         run: |

@@ -124,7 +124,10 @@ for (i, (path, slug)) in enumerate(jobs)
         "image" => something(frontmatter_field(src, "image"), "island-demo.svg"),
     )
     try
-        PlutoIslands.export_notebook(path; output_dir=OUT)
+        # therapy=true → LEAN Therapy-component export (SSR cells + wasm islands,
+        # no Pluto frontend / 2.6 MB statefile). theme_picker=false: the docs
+        # NotebookPage supplies one shared DaisyUI picker that drives every iframe.
+        PlutoIslands.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false)
         isfile(joinpath(OUT, html_name)) || error("export produced no HTML (notebook failed to run?)")
         # island (group) + accurate cell-level counts from the export's report/coverage
         apply_counts!(entry, read_counts(slug))
