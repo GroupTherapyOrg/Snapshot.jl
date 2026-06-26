@@ -100,9 +100,11 @@ import JSON
                                 Span(:class => "text-xs text-accent-600 dark:text-accent-400 font-medium", "Open notebook →")
                         )
                     )
-                    # data-no-router → FULL page load so the inline notebook's island
-                    # scripts run fresh (reactive), not a client-router innerHTML swap.
-                    status == "failed" ? card_inner : A(:href => href, Symbol("data-no-router") => "", :class => "no-underline block", card_inner)
+                    # FULL page load so the inline notebook's island scripts run fresh
+                    # (reactive), not a client-router innerHTML swap. The docs' Therapy
+                    # router build predates `data-no-router`, but it DOES skip links with
+                    # a `target` attribute — so target="_self" reliably forces the reload.
+                    status == "failed" ? card_inner : A(:href => href, :target => "_self", Symbol("data-no-router") => "", :class => "no-underline block", card_inner)
                 end
             )
     )
