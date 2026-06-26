@@ -389,6 +389,26 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         folded = cell.code_folded
         body = cell.output.body
         bodystr = body isa AbstractString ? body : ""
+        # Pluto runs each cell <script> in an ISOLATED scope with `currentScript` (the
+        # script element) and `invalidation` (a cleanup promise) bound as locals. Our
+        # lean export would otherwise run them as plain GLOBAL inline scripts → top-level
+        # `const input_el = …` collides across cells ("already declared") and bare
+        # `currentScript`/`invalidation` are undefined. Wrap each inline output <script>
+        # in an IIFE binding those, mimicking Pluto's runner — fixes e.g. Slider
+        # show_value (its script wires the input to update the displayed <output>).
+        bodystr = replace(bodystr, r"<script>(.*?)</script>"s => function (whole)
+            inner = match(r"<script>(.*?)</script>"s, whole).captures[1]
+            # capture currentScript DURING parse (valid only then), but DEFER the body to
+            # DOMContentLoaded — at parse time the script's following siblings (e.g. the
+            # Slider's <output>) aren't in the DOM yet, so currentScript.nextElementSibling
+            # would be null. Wrapping the body in __run() also makes top-level `return`s legal.
+            string("<script>(function(){",
+                "const currentScript=document.currentScript;",
+                "const invalidation=new Promise(function(){});",
+                "const __run=function(){\n", inner, "\n};",
+                "document.readyState===\"loading\"?document.addEventListener(\"DOMContentLoaded\",__run):__run();",
+                "})();</script>")
+        end)
         # PlutoUI.TableOfContents needs Pluto's own DOM — skip its (non-functional)
         # widget output and render a lean aside ToC in the shell instead.
         if occursin("TableOfContents", code)

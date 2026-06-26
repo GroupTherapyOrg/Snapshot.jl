@@ -1339,7 +1339,8 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="&quot;The-Starry-Night&quot;">&quot;<em>The Starry Night</em>&quot;</h2>
 <p>Vincent van Gogh &#40;1889&#41;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="GO_gogh" unique_id="fcivdpeksfew"><span><input type="button" value='Another one!'><script>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="GO_gogh" unique_id="aqzetmrmvkfi"><span><input type="button" value='Another one!'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 let count = 0
 const span = currentScript.parentElement
 const button = span.firstElementChild
@@ -1353,7 +1354,8 @@ span.dispatchEvent(new CustomEvent("input"))
 e.stopPropagation()
 	
 })
-</script></span></bond></pluto-output></div>
+
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script></span></bond></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-70402e12-22c2-47fd-99be-aa6cd15ce2c3"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">draw_star (generic function with 1 method)</pluto-output><pre class="pl-code"><code class="pl-jl">function draw_star(turtle, points, size)
 	for i in 1:points
@@ -1365,7 +1367,8 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="&quot;Tableau-I&quot;">&quot;<em>Tableau I</em>&quot;</h2>
 <p>Piet Mondriaan &#40;1913&#41;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="GO_mondriaan" unique_id="jmzqcoxafbtl"><span><input type="button" value='Another one!'><script>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="GO_mondriaan" unique_id="huiffqqqhfvr"><span><input type="button" value='Another one!'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 let count = 0
 const span = currentScript.parentElement
 const button = span.firstElementChild
@@ -1379,15 +1382,16 @@ span.dispatchEvent(new CustomEvent("input"))
 e.stopPropagation()
 	
 })
-</script></span></bond></pluto-output></div>
+
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script></span></bond></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-d400d8d6-de2c-4886-86b9-ffd9e5f4e073"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">draw_mondriaan (generic function with 1 method)</pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="&quot;Een-Boom&quot;">&quot;<em>Een Boom</em>&quot;</h2>
 <p>Luka van der Plas &#40;2020&#41;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="fractal_angle" unique_id="besqyannaoor"><input type='range' min='1' max='91' value='50'></bond></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="fractal_tilt" unique_id="lmetpfkgpyuc"><input type='range' min='1' max='91' value='37'></bond></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="fractal_base" unique_id="terzkcbslumc"><input type='range' min='1' max='201' value='101'></bond></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="fractal_angle" unique_id="lzbaethmwvau"><input type='range' min='1' max='91' value='50'></bond></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="fractal_tilt" unique_id="liohrfsrqhrc"><input type='range' min='1' max='91' value='37'></bond></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="fractal_base" unique_id="xeyrlufsytnr"><input type='range' min='1' max='201' value='101'></bond></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-83cd894b-2be0-48c7-b5e7-8db7ed96c13f"></pluto-output><pre class="pl-code"><code class="pl-jl"># Built inline (a plain `let`, NOT a `do` closure): the L-system is written
 # ITERATIVELY with an explicit work-stack of (x, y, heading, depth), so we never
 # mutate-and-restore turtle fields across recursive calls — and we don't pass a
@@ -1428,7 +1432,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="&quot;Een-coole-spiraal&quot;">&quot;<em>Een coole spiraal</em>&quot;</h2>
 <p>fonsi &#40;2020&#41;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="angle" unique_id="mglehtwsivgl"><input type='range' min='1' max='91' value='21'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind angle Slider(0:90; default=20)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="angle" unique_id="kdchrhqgprhv"><input type='range' min='1' max='91' value='21'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind angle Slider(0:90; default=20)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-c668c791-9c3b-4eed-babe-9a484a88b68e"></pluto-output><pre class="pl-code"><code class="pl-jl">turtle_drawing() do t
 
 	let i = 0.0

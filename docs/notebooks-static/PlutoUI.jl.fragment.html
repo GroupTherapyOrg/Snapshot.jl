@@ -1339,11 +1339,12 @@ pluto-tree.collapsed p-v > pre {
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Slider">Slider</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="xrhcipsrdptb"><input type='range' min='1' max='11' value='1'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x Slider(5:15)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="stmpbvntpuhn"><input type='range' min='1' max='11' value='1'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x Slider(5:15)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-a4488984-c760-11ea-2930-871f6b400ef5"></pluto-output><pre class="pl-code"><code class="pl-jl">x</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Using keyword arguments, you can set the <strong>default value</strong>, and you can ask to <strong>show the current value</strong>:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="y" unique_id="lucsungkgibp"><input type='range' min='1' max='101' value='51'><script>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="y" unique_id="yboupktyuxlq"><input type='range' min='1' max='101' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
 					const displays = ["20.0", "20.1", "20.2", "20.3", "20.4", "20.5", "20.6", "20.7", "20.8", "20.9", "21.0", "21.1", "21.2", "21.3", "21.4", "21.5", "21.6", "21.7", "21.8", "21.9", "22.0", "22.1", "22.2", "22.3", "22.4", "22.5", "22.6", "22.7", "22.8", "22.9", "23.0", "23.1", "23.2", "23.3", "23.4", "23.5", "23.6", "23.7", "23.8", "23.9", "24.0", "24.1", "24.2", "24.3", "24.4", "24.5", "24.6", "24.7", "24.8", "24.9", "25.0", "25.1", "25.2", "25.3", "25.4", "25.5", "25.6", "25.7", "25.8", "25.9", "26.0", "26.1", "26.2", "26.3", "26.4", "26.5", "26.6", "26.7", "26.8", "26.9", "27.0", "27.1", "27.2", "27.3", "27.4", "27.5", "27.6", "27.7", "27.8", "27.9", "28.0", "28.1", "28.2", "28.3", "28.4", "28.5", "28.6", "28.7", "28.8", "28.9", "29.0", "29.1", "29.2", "29.3", "29.4", "29.5", "29.6", "29.7", "29.8", "29.9", "30.0"]
@@ -1359,7 +1360,8 @@ pluto-tree.collapsed p-v > pre {
 						clearInterval(id)
 						input_el.removeEventListener("input", update_output)
 					})
-					</script><output style='
+					
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1370,7 +1372,7 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Not-just-number-ranges&#33;">Not just number ranges&#33;</h3>
 <p>The first argument is range, but it can also be a Vector &#40;not necessarily in increasing order&#41;. And the elements can be of any type, not just numbers&#33;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="which_function" unique_id="jfwjxlrtcres"><input type='range' min='1' max='3' value='1'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind which_function Slider(["sin", "cos", "sqrt"])</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="which_function" unique_id="hszgbizsownv"><input type='range' min='1' max='3' value='1'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind which_function Slider(["sin", "cos", "sqrt"])</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-b7788c4c-feb6-45cd-87ca-ae28c5ba3d07"></pluto-output><pre class="pl-code"><code class="pl-jl">which_function == "sin" ? sin(π) : which_function == "cos" ? cos(π) : sqrt(π)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><details>
 	<summary><div class='summary-title-outer'>
@@ -1424,7 +1426,8 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <p><code>Scrubbable</code> makes a number interactive – you can <strong>click and drag</strong> its value left or right using your mouse or touch screen. </p>
 <p>Try it in the text below:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>If Alice has <bond def="a" unique_id="wxvtumlooain"><script>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>If Alice has <bond def="a" unique_id="wopqbfeskdan"><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 			// weird import to make it faster. The `await import` can still delay execution by one frame if it is already loaded...
 			window.d3format = window.d3format ?? await import("https://cdn.jsdelivr.net/npm/d3-format@2/+esm")
 
@@ -1511,7 +1514,9 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 
 			return el
 
-			</script></bond> apples,  and she gives <bond def="b" unique_id="fztolirgxebu"><script>
+			
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script></bond> apples,  and she gives <bond def="b" unique_id="hwzgdjctpykf"><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 			// weird import to make it faster. The `await import` can still delay execution by one frame if it is already loaded...
 			window.d3format = window.d3format ?? await import("https://cdn.jsdelivr.net/npm/d3-format@2/+esm")
 
@@ -1598,7 +1603,8 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 
 			return el
 
-			</script></bond> apples to Bob...</em></p>
+			
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script></bond> apples to Bob...</em></p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-c07c5a9e-61f9-4247-86e7-7c3f9956d0ff"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Use the Live Docs to learn more about <code>Scrubbable</code>&#33;</p>
@@ -1674,7 +1680,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>You can also use <code>NumberField</code> without a range, and without a default:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x_very_different" unique_id="rsobfwcocwaq"><input type='number' value='NaN'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x_very_different NumberField()</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x_very_different" unique_id="qvdluyrsnxoi"><input type='number' value='NaN'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x_very_different NumberField()</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-78ecdf26-26a1-45e3-a44d-e65594a24ada"></pluto-output><pre class="pl-code"><code class="pl-jl">x_very_different</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><details>
 	<summary><div class='summary-title-outer'>
@@ -1728,7 +1734,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Switch">Switch</h2>
 <p>A <code>Boolean</code> input.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="z" unique_id="xkegxzlyfdnk"><input type="checkbox"  class=pui-switch><style>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="z" unique_id="muepwqxxvihs"><input type="checkbox"  class=pui-switch><style>
 .pui-switch {
 	--width: 2.2em;
 	--height: 1em;
@@ -1767,7 +1773,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output" id="out-b787ead6-c761-11ea-3b17-41c0a5434f9b"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Default value:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="having_fun" unique_id="dugkchxjaahd"><input type="checkbox" checked class=pui-switch><style>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="having_fun" unique_id="ajzfulgvmgrj"><input type="checkbox" checked class=pui-switch><style>
 .pui-switch {
 	--width: 2.2em;
 	--height: 1em;
@@ -1871,7 +1877,7 @@ end</code></pre>
 <p>A <code>Boolean</code> input.</p>
 <p><code>CheckBox</code> is the same as a <code>Switch</code>, but in a different visual style.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="check_me" unique_id="aiisfjyveluu"><input type="checkbox"></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind check_me CheckBox()</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="check_me" unique_id="wvcfkcpqmpsr"><input type="checkbox"></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind check_me CheckBox()</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-c1d728e8-4833-4be8-bb7e-7f564b844b84"></pluto-output><pre class="pl-code"><code class="pl-jl">check_me</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><details>
 	<summary><div class='summary-title-outer'>
@@ -1921,15 +1927,15 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 </pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="TextField">TextField</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="s" unique_id="tutvyeapwesc"><input type='text' dir='auto' value=''></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind s TextField()</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="s" unique_id="igrfdiwavckw"><input type='text' dir='auto' value=''></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind s TextField()</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-e4c262d6-c761-11ea-36b2-055419bfc981"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>With a default value:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="sentence" unique_id="urkxkrqfmhqa"><input type='text' dir='auto' value='te dansen omdat men leeft'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind sentence TextField(default="te dansen omdat men leeft")</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="sentence" unique_id="ozuaesuxwnuz"><input type='text' dir='auto' value='te dansen omdat men leeft'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind sentence TextField(default="te dansen omdat men leeft")</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-f985c8de-c761-11ea-126c-1fd79d547b79"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>You can also create a <strong>multi-line</strong> text box&#33;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="poem" unique_id="jslqissucmmf"><textarea dir='auto' cols='30' rows='3'>Je opent en sluit je armen,
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="poem" unique_id="dgiisfvyptsn"><textarea dir='auto' cols='30' rows='3'>Je opent en sluit je armen,
 Maar houdt niets vast.
 Het is net zwemmen.</textarea></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind poem TextField((30, 3), "Je opent en sluit je armen,\nMaar houdt niets vast.\nHet is net zwemmen.")
 
@@ -2001,13 +2007,13 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 </pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Select">Select</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="vegetable" unique_id="aljwhbmpeuff"><select><option value='puiselect-1'>potato</option><option value='puiselect-2'>carrot</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind vegetable Select(["potato", "carrot"])</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="vegetable" unique_id="qesstqyglqwz"><select><option value='puiselect-1'>potato</option><option value='puiselect-2'>carrot</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind vegetable Select(["potato", "carrot"])</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-705662e2-c763-11ea-2f6d-cdaffc1fc73a"></pluto-output><pre class="pl-code"><code class="pl-jl">vegetable</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="favourite_function" unique_id="elasnfzezjon"><select><option value='puiselect-1'>sin</option><option value='puiselect-2'>cos</option><option value='puiselect-3'>tan</option><option value='puiselect-4'>sqrt</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind favourite_function Select(["sin", "cos", "tan", "sqrt"])</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="favourite_function" unique_id="dvfeclqvkhhl"><select><option value='puiselect-1'>sin</option><option value='puiselect-2'>cos</option><option value='puiselect-3'>tan</option><option value='puiselect-4'>sqrt</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind favourite_function Select(["sin", "cos", "tan", "sqrt"])</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-9128d2c1-364c-4446-baaa-6d0593edda47"></pluto-output><pre class="pl-code"><code class="pl-jl">favourite_function == "sin" ? sin(2) : favourite_function == "cos" ? cos(2) : favourite_function == "tan" ? tan(2) : sqrt(2)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Instead of an array of values, you can also give an array of <strong>pairs</strong>, where the first item is the bound value, and the second item is displayed. </p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="fruit" unique_id="cemqrugatlxw"><select><option value='puiselect-1'>🍎</option><option value='puiselect-2'>🍉</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind fruit Select(["apple" =&gt; "🍎", "melon" =&gt; "🍉"])</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="fruit" unique_id="fbptunqvicui"><select><option value='puiselect-1'>🍎</option><option value='puiselect-2'>🍉</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind fruit Select(["apple" =&gt; "🍎", "melon" =&gt; "🍉"])</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-dcda9ad2-c763-11ea-3ec6-093b823ba66d"></pluto-output><pre class="pl-code"><code class="pl-jl">fruit</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Like <a href="#Slider"><code>Slider</code></a>, you use a vector with any type of object, not just Strings. The <code>default</code> keyword argument controls the initial setting.</p>
 </div></pluto-output></div>
@@ -2069,7 +2075,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="MultiSelect">MultiSelect</h2>
 <p>This widget allows the user to select multiple element by holding <code>Ctrl</code> / <code>Cmd</code> while clicking a more items.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="vegetable_basket" unique_id="fqjnvwbaahyr"><select title='Cmd+Click or Ctrl+Click to select multiple items.' multiple size='3'><option value='1'>potato</option><option value='2'>carrot</option><option value='3'>boerenkool</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind vegetable_basket MultiSelect(["potato", "carrot", "boerenkool"])</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="vegetable_basket" unique_id="qojlbawaxrkp"><select title='Cmd+Click or Ctrl+Click to select multiple items.' multiple size='3'><option value='1'>potato</option><option value='2'>carrot</option><option value='3'>boerenkool</option></select></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind vegetable_basket MultiSelect(["potato", "carrot", "boerenkool"])</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-a20e30f2-f0fe-11ea-0ca7-c5195c9eb24a"></pluto-output><pre class="pl-code"><code class="pl-jl">vegetable_basket</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Just like <code>Select</code>, you can also give an array of pairs.</p>
 </div></pluto-output></div>
@@ -2140,7 +2146,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="MultiCheckBox">MultiCheckBox</h2>
 <p>This widget allows the user to select multiple elements using checkboxes.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="fruit_basket" unique_id="alznwizcxbvt">        <plj-multi-checkbox style="flex-direction: row;"></plj-multi-checkbox>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="fruit_basket" unique_id="bpxjcojmdgxy">        <plj-multi-checkbox style="flex-direction: row;"></plj-multi-checkbox>
         <script type="text/javascript">
 		const labels = ["apple", "blueberry", "mango"];
 		const values = [1, 2, 3];
@@ -2301,7 +2307,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output" id="out-2c7811cb-d9ea-470c-8cb7-2b3803489f3f"></pluto-output><pre class="pl-code"><code class="pl-jl">fruit_basket</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>You can use <code>MultiSelect</code> and <code>MultiCheckBox</code> with any vector of objects, not just strings:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="my_functions" unique_id="ujsuhremxfqf">        <plj-multi-checkbox style="flex-direction: row;"></plj-multi-checkbox>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="my_functions" unique_id="gimyziwhnssn">        <plj-multi-checkbox style="flex-direction: row;"></plj-multi-checkbox>
         <script type="text/javascript">
 		const labels = ["sin", "cos", "tan"];
 		const values = [1, 2, 3];
@@ -2530,7 +2536,8 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output"><br><br><br></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="CounterButton">CounterButton</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="clicked" unique_id="yxzputokeqbt"><span><input type="button" value='Hello world'><script>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="clicked" unique_id="sflcsbabloaw"><span><input type="button" value='Hello world'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 let count = 0
 const span = currentScript.parentElement
 const button = span.firstElementChild
@@ -2544,12 +2551,14 @@ span.dispatchEvent(new CustomEvent("input"))
 e.stopPropagation()
 	
 })
-</script></span></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind clicked CounterButton("Hello world")</code></pre></div>
+
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script></span></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind clicked CounterButton("Hello world")</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-7a14e496-c765-11ea-20a1-6fb960009251"></pluto-output><pre class="pl-code"><code class="pl-jl">clicked</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Button-as-reactive-trigger">Button as reactive trigger</h3>
 <p>In the example above, <em>any cell that references <code>clicked</code> will re-evaluate</em> when you click the button. This means that you can a button as a <strong>reactive trigger</strong>, by referencing its value in another cell.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="go" unique_id="iddjagprutsc"><span><input type="button" value='Recompute'><script>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="go" unique_id="bakqhuwxdhoa"><span><input type="button" value='Recompute'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 let count = 0
 const span = currentScript.parentElement
 const button = span.firstElementChild
@@ -2563,7 +2572,8 @@ span.dispatchEvent(new CustomEvent("input"))
 e.stopPropagation()
 	
 })
-</script></span></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind go CounterButton("Recompute")</code></pre></div>
+
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script></span></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind go CounterButton("Recompute")</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-bb356b12-c765-11ea-2c36-697f4314bb93"></pluto-output><pre class="pl-code"><code class="pl-jl">let
 	# deterministic "random-feeling" age derived from the click count, so the
 	# wasm island reproduces it exactly (rand() can't — it's non-deterministic)
@@ -2801,7 +2811,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <div class="pl-cell"><pluto-output class="rich_output"><br><br><br></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Clock">Clock</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="t" unique_id="pmjnctgstkeb">	<plutoui-clock class=' stopped' data-max-value=nothing data-repeat=false>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="t" unique_id="blohtamvqgyb">	<plutoui-clock class=' stopped' data-max-value=nothing data-repeat=false>
 		<plutoui-analog>
 			<plutoui-back><?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
@@ -3007,7 +3017,8 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 		<input type="number" value="1"  min=0 step=any lang="en-001">
 		<span id="unit" title="Click to invert"></span>
 	</plutoui-clock>
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		// const clock = this.querySelector("clock")
 const clock = (currentScript ?? this.currentScript).previousElementSibling
 const tpsInput = clock.querySelector("input")
@@ -3068,7 +3079,8 @@ button.onclick = (e) => {
     }
 }
 
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 	<style>
 		plutoui-clock {
     display: flex;
@@ -3175,7 +3187,7 @@ plutoui-clock.fixed input {
 <div class="pl-cell"><pluto-output class="rich_output" id="out-49e7cd06-c760-11ea-3f5d-2741d94278a6"></pluto-output><pre class="pl-code"><code class="pl-jl">t</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>You can set the interval &#40;<code>5.0</code> seconds&#41;, and disable the UI &#40;<code>true</code>&#41;:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="t_slow" unique_id="ahkkyqzeoohm">	<plutoui-clock class=' fixed stopped' data-max-value=nothing data-repeat=false>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="t_slow" unique_id="xbbwasjauxpj">	<plutoui-clock class=' fixed stopped' data-max-value=nothing data-repeat=false>
 		<plutoui-analog>
 			<plutoui-back><?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
@@ -3381,7 +3393,8 @@ plutoui-clock.fixed input {
 		<input type="number" value="5.0"  min=0 step=any lang="en-001">
 		<span id="unit" title="Click to invert"></span>
 	</plutoui-clock>
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		// const clock = this.querySelector("clock")
 const clock = (currentScript ?? this.currentScript).previousElementSibling
 const tpsInput = clock.querySelector("input")
@@ -3442,7 +3455,8 @@ button.onclick = (e) => {
     }
 }
 
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 	<style>
 		plutoui-clock {
     display: flex;
@@ -3602,23 +3616,23 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>With <strong><code>@bind</code></strong>:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="test1" unique_id="nryjtjebruaf"><input type='range' min='1' max='20' value='1'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind test1 Slider(1:20)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="test1" unique_id="aqyvzpfpwuvg"><input type='range' min='1' max='20' value='1'></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind test1 Slider(1:20)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-33df82f5-2223-4f77-8bff-b6665040070b"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>With <strong><code>@bindname</code></strong>, you see the name &#40;<strong><code>test2</code></strong>&#41;:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>test2&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="test2" unique_id="lttdxdmceeme"><input type='range' min='1' max='20' value='1'></bond></label></pluto-output><pre class="pl-code"><code class="pl-jl">@bindname test2 Slider(1:20)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>test2&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="test2" unique_id="jcypwhtcpwuj"><input type='range' min='1' max='20' value='1'></bond></label></pluto-output><pre class="pl-code"><code class="pl-jl">@bindname test2 Slider(1:20)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-21347c66-ad0f-46db-a7dd-d9ef7a22c61b"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="High-level-inputs">High-level inputs</h1>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Confirm">Confirm</h2>
 <p>Normally, when you move a <a href="@ref"><code>Slider</code></a> or type in a <a href="@ref"><code>TextField</code></a>, all intermediate values are sent back to <code>@bind</code>. By wrapping an input element in <code>confirm</code>, you get a button to manually <strong>control when the value is sent</strong>, intermediate updates are hidden from Pluto.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="distance" unique_id="odjzjimdpmeq"><span style='display: contents;'>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="distance" unique_id="uztmkqgjqkih"><span style='display: contents;'>
 	<input type='range' min='1' max='100' value='1'>
-	<input type=submit id='cbgysszwon'>
-	<script id='cbgysszwon'>
+	<input type=submit id='vycrvwwtdw'>
+	<script id='vycrvwwtdw'>
 
-let key = "cbgysszwon"
+let key = "vycrvwwtdw"
 
 let div = currentScript.parentElement
 let button = currentScript.previousElementSibling
@@ -3817,19 +3831,19 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <p>Using <code>combine</code>, you can create a single input out of multiple existing ones&#33; In the example below, we <strong>create a new input, <code>wind_speed_input</code></strong>. Notice that the list of wind directions is <em>dynamic</em>: if you add a new direction, a 5th slider will appear&#33;</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">import PlutoUI: combine</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="speeds" unique_id="onbavocyjukq"><span style='display: contents;'><div class="markdown"><h4 id="Wind-speeds">Wind speeds</h4>
-<p>North: <pl-combined-child key='bsjqonexoj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="speeds" unique_id="lveioustberz"><span style='display: contents;'><div class="markdown"><h4 id="Wind-speeds">Wind speeds</h4>
+<p>North: <pl-combined-child key='neuletxvtj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
 
-<p>East: <pl-combined-child key='bsjqonexoj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
+<p>East: <pl-combined-child key='neuletxvtj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
 
-<p>South: <pl-combined-child key='bsjqonexoj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
+<p>South: <pl-combined-child key='neuletxvtj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
 
-<p>West: <pl-combined-child key='bsjqonexoj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
+<p>West: <pl-combined-child key='neuletxvtj' style='display: contents;'><input type='range' min='1' max='100' value='1'></pl-combined-child></p>
 
 
-</div><script id='bsjqonexoj'>
+</div><script id='neuletxvtj'>
 const div = currentScript.parentElement
-let key = "bsjqonexoj"
+let key = "neuletxvtj"
 const inputs = div.querySelectorAll(`pl-combined-child[key='${key}'] > *:first-child`)
 
 const values = Array(inputs.length)
@@ -4293,7 +4307,8 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <p>PlutoUI contains a handy widget to display the estimated reading time of the current document. </p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">											
-<script>
+<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 // Text processing utilities
 window.PlutoReadingTimeUtils = {
     countWordsInText: function(text) {
@@ -4937,7 +4952,8 @@ window.PlutoReadingTimeObserver = {
 	})();
 
 	return readingTimeNode
-</script>
+
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 <style>
 .pluto-reading-time {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -5493,7 +5509,8 @@ This information is in the sidebar!
 	</div>
 </div>
 
-<script>
+<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 	const notebook_html_url = "https://plutojl.org/en/docs/expressionexplorer/"
 	const white_svg_uri = "data:image/svg+xml;utf8,<\svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100%' height='100%' fill='ivory'/><\/svg>"
 
@@ -5514,7 +5531,8 @@ This information is in the sidebar!
 		q(".pe-about p").innerText = head.querySelector('meta[name="description"]')?.content ?? 
 			""
 	})
-</script>
+
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 
 <style>
 

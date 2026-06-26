@@ -1335,7 +1335,7 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Bound-variables">Bound variables</h2>
 <p>A basic interactive cell looks like this: we use the <code>@bind</code> macro, define a Julia variable, and add a bit of HTML code that creates an <code>&lt;input&gt;</code> element. The HTML element will be rendered as the cell&#39;s output.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="wugmrknitdkp"><input type=range></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x html"&lt;input type=range&gt;"</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="qktngnjsusrt"><input type=range></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x html"&lt;input type=range&gt;"</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>That&#39;s all you need&#33; Pluto will synchronise the value of <code>x</code> with the latest value of the HTML input. Try moving the slider&#33; 👆</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-cb1fd532-7eac-11ea-307c-ab16b1977819"></pluto-output><pre class="pl-code"><code class="pl-jl">x</code></pre></div>
@@ -1348,10 +1348,10 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Input-types">Input types</h2>
 <p>You can use binds with anything that fires an <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/input_event"><code>input</code> event</a>. For example:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="a" unique_id="gtgegjjvwkbo"><input type=range ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind a html"&lt;input type=range &gt;"</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="b" unique_id="onklwzslguzc"><input type=text ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind b html"&lt;input type=text &gt;"</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="c" unique_id="dfxavpexoxdl"><input type=checkbox ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind c html"&lt;input type=checkbox &gt;"</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="d" unique_id="dzjvaorjtcjr"><select>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="a" unique_id="vavtqjmihueu"><input type=range ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind a html"&lt;input type=range &gt;"</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="b" unique_id="zbidjimpydyn"><input type=text ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind b html"&lt;input type=text &gt;"</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="c" unique_id="lceriztgmohr"><input type=checkbox ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind c html"&lt;input type=checkbox &gt;"</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="d" unique_id="ugpmugnowthr"><select>
 	<option value='one'>First</option>
 	<option value='two'>Second</option>
 </select>
@@ -1361,8 +1361,8 @@ pluto-tree.collapsed p-v > pre {
 	&lt;option value='two'&gt;Second&lt;/option&gt;
 &lt;/select&gt;
 """</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="e" unique_id="mgvxmiobkkha"><input type=color ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind e html"&lt;input type=color &gt;"</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="f" unique_id="efsqxeiajnqo"><input type=date></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind f html"&lt;input type=date&gt;"</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="e" unique_id="xabletzscugi"><input type=color ></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind e html"&lt;input type=color &gt;"</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="f" unique_id="ncvqfsamqpoj"><input type=date></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind f html"&lt;input type=date&gt;"</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-ede8009e-7f15-11ea-192a-a5c6135a9dcf"></pluto-output><pre class="pl-code"><code class="pl-jl">(a, b, c, d, e, f)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Scripting-inputs-with-Javascript">Scripting inputs with Javascript</h2>
 <p>You can also use Javascript to write more complicated inputs. </p>
@@ -1372,9 +1372,11 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div>
 	Let's make something interactive here!
 	
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		const div = currentScript.parentElement;
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 </div>
 </pluto-output><pre class="pl-code"><code class="pl-jl">html"""
 &lt;div&gt;
@@ -1390,7 +1392,8 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div>
 	<button>Click me!</button>
 	
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		const div = currentScript.parentElement;
 		const button = div.querySelector("button");
 		var clicks = 0;
@@ -1398,7 +1401,8 @@ pluto-tree.collapsed p-v > pre {
 		button.addEventListener("click", e => {
 			clicks += 1;
 		});
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 </div>
 </pluto-output><pre class="pl-code"><code class="pl-jl">html"""
 &lt;div&gt;
@@ -1427,7 +1431,8 @@ pluto-tree.collapsed p-v > pre {
 <div class="pl-cell"><pluto-output class="rich_output"><div>
 	<button>Click me!</button>
 	
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		const div = currentScript.parentElement;
 		const button = div.querySelector("button");
 		var clicks = 0;
@@ -1444,7 +1449,8 @@ pluto-tree.collapsed p-v > pre {
 
 		// fire an event with the initial value immediately
 		update();
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 </div>
 </pluto-output><pre class="pl-code"><code class="pl-jl">html"""
 &lt;div&gt;
@@ -1472,10 +1478,11 @@ pluto-tree.collapsed p-v > pre {
 """</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Okay, now we can use this HTML snippet with a <code>@bind</code> macro and see the result&#33;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="counter" unique_id="bjvxbkaigpws"><div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="counter" unique_id="xnfaiwkztnyw"><div>
 	<button>Click me!</button>
 	
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		const div = currentScript.parentElement;
 		const button = div.querySelector("button");
 		var clicks = 0;
@@ -1492,7 +1499,8 @@ pluto-tree.collapsed p-v > pre {
 
 		// fire an event with the initial value immediately
 		update();
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 </div>
 </bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind counter html"""
 &lt;div&gt;
@@ -1527,7 +1535,7 @@ pluto-tree.collapsed p-v > pre {
 <p>The most basic way to do this is string interpolation. In this example, you can change the value of <code>limit</code> in the code to affect the maximum value of the slider. Try it out&#33;</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">5</pluto-output><pre class="pl-code"><code class="pl-jl">limit = 5</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="limited" unique_id="pqhmkaejycdx">	<input type="range" min="0" max="5">
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="limited" unique_id="lieholwlmtvm">	<input type="range" min="0" max="5">
 </bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind limited HTML("""
 	&lt;input type="range" min="0" max="$(limit)"&gt;
 """)</code></pre></div>
@@ -1536,10 +1544,11 @@ pluto-tree.collapsed p-v > pre {
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>For something even fancier, you can also interpolate value in Javascript. For example, here I have adapted my counter so it won&#39;t count past <code>limit</code>:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="limited_counter" unique_id="bqeygweqmvma"><div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="limited_counter" unique_id="vepppujbbdpl"><div>
 	<button>Click me!</button>
 	
-	<script>
+	<script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+
 		const div = currentScript.parentElement;
 		const button = div.querySelector("button");
 		const max = 5;
@@ -1560,7 +1569,8 @@ pluto-tree.collapsed p-v > pre {
 
 		// fire an event with the initial value immediately
 		update();
-	</script>
+	
+};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script>
 </div>
 </bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind limited_counter HTML("""
 &lt;div&gt;
@@ -1600,8 +1610,8 @@ pluto-tree.collapsed p-v > pre {
 <p>Once you&#39;ve written some neat interactive element, you may want to use it a few times in notebook. The easiest way is to put the HTML literal in a variable.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">myslider = html"""&lt;input type="range" min=50 max=100 step=5 style="width: 100%"&gt;""";</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x1" unique_id="nbyxxoglrfye"><input type="range" min=50 max=100 step=5 style="width: 100%"></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x1 myslider</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x2" unique_id="owhmxyqkekcr"><input type="range" min=50 max=100 step=5 style="width: 100%"></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x2 myslider</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x1" unique_id="phimmrbqtakq"><input type="range" min=50 max=100 step=5 style="width: 100%"></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x1 myslider</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x2" unique_id="hmqpdvhbblty"><input type="range" min=50 max=100 step=5 style="width: 100%"></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x2 myslider</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-3297233b-9567-4d5e-8138-93ebe20fed48"></pluto-output><pre class="pl-code"><code class="pl-jl">x1, x2</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>It&#39;s as simple as that&#33;</p>
 </div></pluto-output></div>
