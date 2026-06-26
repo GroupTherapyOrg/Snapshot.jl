@@ -395,21 +395,30 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     # Pluto tree+object body (a Dict) → the same <pluto-tree>/<p-r>/<p-k>/<p-v> DOM
     # the shim emits, so the ported treeview.css styles it 1-1. Mirrors shim.js
     # tree_to_html: containers collapse to `[v1, v2, …]`, scalars are their text repr.
-    function _tree_html(b)
-        b isa AbstractString && return _esc(b)
+    # `budget` caps total rendered nodes (Pluto's treeview truncates large structures
+    # too); leaf strings are length-capped. Keeps a baked array/matrix preview small
+    # instead of inlining the whole thing.
+    function _tree_html(b, budget=Ref(120))
+        b isa AbstractString && return _esc(first(b, 4000))
         if b isa AbstractDict && haskey(b, :elements)
             kind = _esc(string(get(b, :type, "Array")))
-            io2 = IOBuffer()
-            for el in b[:elements]
+            els = b[:elements]; io2 = IOBuffer(); shown = 0
+            for el in els
+                budget[] -= 1
+                if budget[] <= 0
+                    print(io2, "<p-r><p-k></p-k><p-v>… ", length(els) - shown, " more</p-v></p-r>")
+                    break
+                end
+                shown += 1
                 tup = el isa Tuple || el isa AbstractVector
                 k = tup && length(el) >= 1 ? el[1] : ""
                 inner = tup && length(el) >= 2 ? el[2] : el
                 cbody = (inner isa Tuple || inner isa AbstractVector) && length(inner) >= 1 ? inner[1] : inner
-                print(io2, "<p-r><p-k>", _esc(string(k)), "</p-k><p-v>", _tree_html(cbody), "</p-v></p-r>")
+                print(io2, "<p-r><p-k>", _esc(string(k)), "</p-k><p-v>", _tree_html(cbody, budget), "</p-v></p-r>")
             end
             return string("<pluto-tree class=\"collapsed ", kind, "\"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class=\"", kind, "\">", String(take!(io2)), "</pluto-tree-items></pluto-tree>")
         end
-        return _esc(string(b))
+        return _esc(first(string(b), 4000))
     end
     has_toc = false
     cells_io = IOBuffer()
@@ -455,6 +464,11 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         # shim drops a loud !!! warning here — the captured value is ALWAYS shown, never
         # a blank. Empty body = Pluto suppressed it (trailing `;`) → no output div.
         baked = body isa AbstractString ? bodystr : _tree_html(body)
+        # an island RE-RENDERS its output, so baking a LARGE captured body (a big
+        # array tree, a base64 image) would only bloat the page as a redundant
+        # fallback — keep the base layer only when it's small (tuples, numbers,
+        # short values); large outputs rely on the island (+ the loud warning on fail).
+        is_island && length(baked) > 8192 && (baked = "")
         has_out = is_island || !isempty(strip(baked))
         (show_code || has_out) || continue
         print(cells_io, "<div class=\"pl-cell\">")
