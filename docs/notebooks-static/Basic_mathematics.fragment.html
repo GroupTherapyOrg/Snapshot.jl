@@ -1553,7 +1553,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1578,7 +1578,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1590,27 +1590,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1769,7 +1769,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h5 id="Let&#39;s-test-your-formula&#33;">Let&#39;s test your formula&#33;</h5>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Move the slider to change the number of cuts: </p>
-<bond def="n" unique_id="jyveyadbhaix"><input type=range max=50></bond>
+<bond def="n" unique_id="cltulplzdppr"><input type=range max=50></bond>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-e80986c6-d509-11ea-12e3-f79a54b5ab31"></pluto-output></div>
 </div>

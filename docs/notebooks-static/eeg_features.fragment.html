@@ -1553,7 +1553,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1578,7 +1578,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1590,27 +1590,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1640,7 +1640,7 @@ a:visited {
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">using PlutoUI</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>Alpha &#40;8–13 Hz&#41; amplitude:</strong></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="alpha_amp" unique_id="jvicrpdywqtf"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="alpha_amp" unique_id="eqwihfarfglr"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling

@@ -1558,7 +1558,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1583,7 +1583,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1595,27 +1595,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1689,7 +1689,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>To keep things simple, we will only deal with black and white images for now. So, for a black and white image, each pixel is a single number between 0 &#40;black&#41; and 1 &#40;white&#41;.</p>
 <p>Try it out&#33; Move the slider around to set the pixel below to get a different shade of gray.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="g" unique_id="pbtcdgnwgech"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="g" unique_id="ynctocxethbv"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2018,7 +2018,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>You can also try the other filters&#33;</p>
 <p>Pick a filter and adjust its strength below, then watch both the <strong>filter matrix</strong> &#40;shown as a small image&#41; and the <strong>filtered scene</strong> change. Can you tell the blur apart from the edge detector just by looking?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="filter_choice" unique_id="xjxvruivtjov"><input type='range' min='1' max='5' value='2'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="filter_choice" unique_id="rfztesliqomb"><input type='range' min='1' max='5' value='2'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2043,7 +2043,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>2</output></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind filter_choice PlutoUI.Slider(1:5; default=2, show_value=true)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>filter strength <bond def="filter_strength" unique_id="izkjjdugjtyz"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>filter strength <bond def="filter_strength" unique_id="kcfkejwsabux"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2099,7 +2099,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Blur-radius">Blur radius</h2>
 <p>The box blur above averages over the 3×3 neighbourhood. A bigger window means a blurrier image. Below we slide the <strong>blur radius</strong>: radius 0 is the original scene, larger radii average over a wider square of neighbours. This is the simplest convolution of all — pure averaging.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>blur radius <bond def="blur_radius" unique_id="fbxwaypfwvca"><input type='range' min='1' max='7' value='3'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>blur radius <bond def="blur_radius" unique_id="giekxgdcqovp"><input type='range' min='1' max='7' value='3'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2148,7 +2148,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Filtering-in-colour">Filtering in colour</h2>
 <p>A colour image is really <strong>three</strong> grayscale images stacked: one for red, one for green, one for blue. Here we build an RGB scene and blur it — convolution runs on each channel independently. Toggle the blur on and off to compare.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>blur the colour image <bond def="color_blur" unique_id="cbjlmrakqnmc"><input type="checkbox" checked></bond></p>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>blur the colour image <bond def="color_blur" unique_id="cdyawjbhesaz"><input type="checkbox" checked></bond></p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-d1174f21-5c74-4934-acdf-716671cfc2db"></pluto-output><pre class="pl-code"><code class="pl-jl">let
 	nr, nc = 72, 72

@@ -1558,7 +1558,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1583,7 +1583,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1595,27 +1595,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1678,7 +1678,7 @@ a:visited {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h4 id="Calculating-numbers">Calculating numbers</h4>
 <p>Step 1: choose an initial value <span class="tex">$z_0$</span> :</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>z0&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="z0" unique_id="nbsycdqsbwnn"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>z0&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="z0" unique_id="qgzesdwxgcaq"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1715,7 +1715,7 @@ a:visited {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Fun Julia Alert!</p><p>Now check out this piece of cool Julia code. Can you guess what it does?</p>
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>n&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="n" unique_id="ntxuexjsbhnr"><input type='range' min='1' max='10' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>n&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="n" unique_id="ursmiaxksgyq"><input type='range' min='1' max='10' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1750,7 +1750,7 @@ a:visited {
 end;</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-4135244d-fb5a-4e8d-ad4b-c4046781b70c"></pluto-output><pre class="pl-code"><code class="pl-jl">zₙ = Fⁿ(z0, n)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-57819281-a466-4f6c-af96-ffe512594270"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><bond def="show_answer" unique_id="nysobzjzdwjn"><input type="checkbox"></bond> Show answer</p>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><bond def="show_answer" unique_id="qscubxmuyddn"><input type="checkbox"></bond> Show answer</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="The-Sequence">The Sequence</h3>
 <p>Now let&#39;s put it together&#33; </p>
@@ -1769,7 +1769,7 @@ end;</code></pre></div>
 end;</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Change the initial value and n and observe how the series changes&#33;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$z_0 &#61;$</span> <bond def="initial_value" unique_id="bkarfzqypaew"><input type='range' min='1' max='21' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$z_0 &#61;$</span> <bond def="initial_value" unique_id="cbgeewtlxkeu"><input type='range' min='1' max='21' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1794,7 +1794,7 @@ end;</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-10</output></bond></p>
-<p><span class="tex">$n &#61;$</span> <bond def="max_n" unique_id="aoiiovjhnrlz"><input type='range' min='1' max='20' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p><span class="tex">$n &#61;$</span> <bond def="max_n" unique_id="tcecafifhyrx"><input type='range' min='1' max='20' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1868,7 +1868,7 @@ end;</code></pre></div>
 	end
 	return series
 end;</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>initial_value_with_c&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="initial_value_with_c" unique_id="qxlacmkatijd"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>initial_value_with_c&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="initial_value_with_c" unique_id="tznzvmppusze"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1926,7 +1926,7 @@ end;</code></pre></div>
  </pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>👇 Click anywhere to chose a point&#33;</strong></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="c" unique_id="mithczdxvzit"><script id="hello">
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="c" unique_id="vzgzbftxqaji"><script id="hello">
 
 		const wrapper = this ?? html`
 			<div class="PlutoImageCoordinatePicker">
@@ -1942,7 +1942,7 @@ end;</code></pre></div>
 		img.style.cssText = ""
 
 		const img_url = undefined
-		const img_data = /* See the documentation for AbstractPlutoDingetjes.Display.published_to_js */ getPublishedObject("eedddfcc-717c-11f1-8365-93f77d0aaf19/948a77168d191f42")
+		const img_data = /* See the documentation for AbstractPlutoDingetjes.Display.published_to_js */ getPublishedObject("b8b0e95e-7180-11f1-be75-1fcf6d65461f/747700c3d8651d99")
 		const mime = "image/svg+xml"
 
 		const pointer_url = "data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMjAiCmhlaWdodD0iMjAiCiAgdmlld0JveD0iMCAwIDIwIDIwIgogIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGNpcmNsZSBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJibGFjayIgY3g9IjEwIiBjeT0iMTAiIHI9IjgiIHN0cm9rZS13aWR0aD0iNCIgLz4KCjwvc3ZnPgoK"
@@ -2238,7 +2238,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-3dc2f13d-0238-444d-b440-5e7e2df0618f"></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>👇 Drag the sliders to choose the constant <span class="tex">$c &#61; c_x &#43; i\,c_y$</span>, zoom, and detail&#33;</strong></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$c_x &#61;$</span> <bond def="julia_cx" unique_id="xhkudfmqxfpq"><input type='range' min='1' max='101' value='49'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$c_x &#61;$</span> <bond def="julia_cx" unique_id="zooojmvcogob"><input type='range' min='1' max='101' value='49'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2263,7 +2263,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-0.04</output></bond></p>
-<p><span class="tex">$c_y &#61;$</span> <bond def="julia_cy" unique_id="levjwydkegej"><input type='range' min='1' max='101' value='87'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p><span class="tex">$c_y &#61;$</span> <bond def="julia_cy" unique_id="kxnsqvwbjmfj"><input type='range' min='1' max='101' value='87'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2288,7 +2288,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>0.72</output></bond></p>
-<p>zoom <bond def="julia_zoom" unique_id="fwcyvsotlmrk"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>zoom <bond def="julia_zoom" unique_id="rusbsgxurfqa"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2312,7 +2312,7 @@ end</code></pre></div>
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
-    					display: inline-block;'>1</output></bond> · detail <bond def="julia_iter" unique_id="ngzlvgccvsas"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+    					display: inline-block;'>1</output></bond> · detail <bond def="julia_iter" unique_id="iwghdwekolqu"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2343,7 +2343,7 @@ end</code></pre></div>
 <p>The <strong>Julia set</strong> above fixes one constant <span class="tex">$c$</span> and sweeps the <em>starting</em> point <span class="tex">$z_0$</span> across the plane. The <strong>Mandelbrot set</strong> does the opposite: it starts every pixel at <span class="tex">$z_0 &#61; 0$</span> and uses the pixel&#39;s own coordinate as <span class="tex">$c$</span>. The result is the single most famous fractal in mathematics — and the same simple loop <span class="tex">$z \\leftarrow z^2 &#43; c$</span> draws it.</p>
 <p>Pan with the centre sliders and zoom in to find miniature copies of the whole shape hiding along its edge.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>centre <span class="tex">$x$</span> <bond def="mb_cx" unique_id="bpohmowzswzw"><input type='range' min='1' max='151' value='76'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>centre <span class="tex">$x$</span> <bond def="mb_cx" unique_id="vjypzvhstdzs"><input type='range' min='1' max='151' value='76'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2368,7 +2368,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-0.5</output></bond></p>
-<p>centre <span class="tex">$y$</span> <bond def="mb_cy" unique_id="bpupltxtkcjq"><input type='range' min='1' max='126' value='63'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>centre <span class="tex">$y$</span> <bond def="mb_cy" unique_id="uinkuuolpnzd"><input type='range' min='1' max='126' value='63'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2393,7 +2393,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-0.01</output></bond></p>
-<p>zoom <bond def="mb_zoom" unique_id="xpoztmgytnmi"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>zoom <bond def="mb_zoom" unique_id="lzfxcrchxnpb"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2417,7 +2417,7 @@ end</code></pre></div>
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
-    					display: inline-block;'>1</output></bond> · detail <bond def="mb_iter" unique_id="ckqivbzcbsoj"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+    					display: inline-block;'>1</output></bond> · detail <bond def="mb_iter" unique_id="ubtngnqospkv"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling

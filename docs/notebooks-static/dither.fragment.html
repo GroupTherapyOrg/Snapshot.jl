@@ -1553,7 +1553,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1578,7 +1578,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1590,27 +1590,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1705,7 +1705,7 @@ function gray_figure(img::Vector{Float64}, nr::Int64, nc::Int64; px::Int64=320)
 	       Int64(nc), Int64(nr); interpolate = false)
 	return fig
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="xkrmdgnwhnwz"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="riugjjdtmvhu"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1776,7 +1776,7 @@ function quantize(img::Vector{Float64}, levels::Int64)
 	end
 	return out
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="johbyqgepmmc"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="probychgpfav"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling

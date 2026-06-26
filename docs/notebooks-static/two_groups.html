@@ -1558,7 +1558,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1583,7 +1583,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1595,27 +1595,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1639,10 +1639,10 @@ a:visited {
 
 <main>
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">import AbstractPlutoDingetjes.Bonds</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="cecprnmcoski"><input type=range value=1 min=1 max=20></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x TinySlider(20)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="oltpjyankosa"><input type=range value=1 min=1 max=20></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x TinySlider(20)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-bb000004-0000-4000-8000-000000000004"></pluto-output><pre class="pl-code"><code class="pl-jl">doubled = 2x</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-bb000005-0000-4000-8000-000000000005"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="z" unique_id="lhdaxyzultju"><input type=range value=1 min=1 max=10></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind z TinySlider(10)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="z" unique_id="qkgeitzddhze"><input type=range value=1 min=1 max=10></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind z TinySlider(10)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-bb000007-0000-4000-8000-000000000007"></pluto-output><pre class="pl-code"><code class="pl-jl">collect(1:z)</code></pre></div>
 </main>
 <script src="two_groups.islands/shim.js"></script>

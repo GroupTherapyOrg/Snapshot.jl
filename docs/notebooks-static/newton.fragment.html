@@ -1553,7 +1553,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1578,7 +1578,7 @@ code.hljs {
 @media (prefers-color-scheme: dark) {
     :root {
         --black: white;
-        --gray1: #c7c7c7;
+        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
         --white: black;
     }
 }
@@ -1590,27 +1590,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */
@@ -1651,7 +1651,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Pick-an-example-function">Pick an example function</h2>
 <table><tr><th align="center">choice</th><th align="center"><span class="tex">$f&#40;x&#41;$</span></th><th align="center"><span class="tex">$f&#39;&#40;x&#41;$</span></th><th align="center">a root</th></tr><tr><td align="center">1</td><td align="center"><span class="tex">$x^2 - 2$</span></td><td align="center"><span class="tex">$2x$</span></td><td align="center"><span class="tex">$\sqrt 2 \approx 1.41421$</span></td></tr><tr><td align="center">2</td><td align="center"><span class="tex">$x^3 - x$</span></td><td align="center"><span class="tex">$3x^2 - 1$</span></td><td align="center"><span class="tex">$0,\ \pm 1$</span></td></tr><tr><td align="center">3</td><td align="center"><span class="tex">$\cos x - x$</span></td><td align="center"><span class="tex">$-\sin x - 1$</span></td><td align="center"><span class="tex">$\approx 0.73909$</span></td></tr></table>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="ciavutelfurl"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="koaesqedkjmv"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1677,7 +1677,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="lvyuriahpttn"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="fybsngfdykoi"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1703,7 +1703,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>2.0</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="spseizshbgru"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="ztzkifkosatj"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
