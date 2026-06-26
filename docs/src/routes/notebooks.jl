@@ -100,7 +100,9 @@ import JSON
                                 Span(:class => "text-xs text-accent-600 dark:text-accent-400 font-medium", "Open notebook →")
                         )
                     )
-                    status == "failed" ? card_inner : A(:href => href, :class => "no-underline block", card_inner)
+                    # data-no-router → FULL page load so the inline notebook's island
+                    # scripts run fresh (reactive), not a client-router innerHTML swap.
+                    status == "failed" ? card_inner : A(:href => href, Symbol("data-no-router") => "", :class => "no-underline block", card_inner)
                 end
             )
     )

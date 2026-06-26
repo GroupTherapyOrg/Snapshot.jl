@@ -1,0 +1,1400 @@
+<div class="pi-notebook" data-theme="snapshot">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
+<style>
+@scope (.pi-notebook) {
+[data-theme=snapshot]{color-scheme:light;--color-base-100:#fffdf8;--color-base-200:#fbf7ec;--color-base-300:#f0e9d8;--color-base-content:#3f3a33;--color-primary:#5e7ad3;--color-primary-content:#fff}
+[data-theme=snapshot-dark]{color-scheme:dark;--color-base-100:#2a2620;--color-base-200:#1c1814;--color-base-300:#39322a;--color-base-content:#e8e1d4;--color-primary:#7b91cf;--color-primary-content:#fff}
+:scope{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
+:scope{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
+/* Pluto's tree/table/code use white-space:pre (no wrap); the output box must
+   scroll horizontally so wide content (long arrays, wide tables, long inline
+   math) stays inside the cell column instead of bleeding off-page — exactly
+   how Pluto's own cell output behaves. */
+pluto-output{display:block;overflow-x:auto;overflow-y:visible}
+.cell{margin:1.1rem 0}
+img.wasmmakie-island,.pi-reactive canvas{max-width:100%;height:auto}
+input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
+select,input[type=number]{accent-color:var(--color-primary)}
+bond{display:inline-block}
+a{color:var(--color-primary)}
+/* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
+   ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
+.pi-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
+.pi-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
+/* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
+   (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
+.pl-cell{margin:1.25rem 0}
+.pl-code{background:var(--color-base-200);border-radius:.4rem;padding:.5rem .75rem;overflow-x:auto;font-size:.8em;line-height:1.5;margin:.4rem 0 0}
+.pl-code code{background:none;padding:0;font-size:1em;white-space:pre;font-family:var(--julia-mono-font-stack,ui-monospace,Menlo,monospace)}
+/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+.tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
+.tok-string,.tok-character,.tok-special{color:#16a34a}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
+.tok-typeName{color:#0891b2}
+.tok-macroName{color:#db2777}
+.tok-function,.tok-definition{color:#2563eb}
+.tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PlutoIslands lean export — Pluto's OWN output CSS, re-themed via DaisyUI.
+   The rules below this block are COPIED VERBATIM from Pluto
+   (frontend/editor.css pluto-output rules + frontend/treeview.css) and
+   PlutoUI (TableOfContents.jl). We add NOTHING but this variable map, which
+   points every Pluto color variable at a DaisyUI --color-* token so the exact
+   Pluto rendering follows our snapshot / snapshot-dark theme (and any Worker
+   data-theme override) with zero edits to Pluto's rules.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* fonts + misc (non-color) */
+  --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --julia-mono-font-stack: "JuliaMono", ui-monospace, "SF Mono", Menlo, monospace;
+  --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
+  --pluto-cell-spacing: 12px;
+  --image-filters: none;
+  /* surfaces / text */
+  --main-bg-color: var(--color-base-100);
+  --pluto-output-bg-color: var(--color-base-100);
+  --pluto-output-color: var(--color-base-content);
+  --pluto-output-h-color: var(--color-base-content);
+  --rule-color: var(--color-base-300);
+  --cursor-color: var(--color-base-content);
+  --black: var(--color-base-content);
+  --white: var(--color-base-100);
+  /* links / quotes / code */
+  --a-underline: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --blockquote-bg: var(--color-base-200);
+  --code-background: var(--color-base-200);
+  --code-section-bg-color: var(--color-base-200);
+  /* tables */
+  --table-border-color: var(--color-base-300);
+  --table-bg-hover-color: var(--color-base-200);
+  --footnote-border-color: var(--color-base-300);
+  /* trees / schema */
+  --pluto-tree-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --pluto-schema-types-color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  --pluto-schema-types-border-color: var(--color-base-300);
+  --pluto-logs-key-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --pkg-terminal-border-color: var(--color-base-300);
+  /* admonitions (Documenter @info/@warn/…): tint a DaisyUI semantic over base */
+  --admonition-title-color: var(--color-primary-content);
+  --jl-message-color: color-mix(in oklab, var(--color-success, #16a34a) 16%, var(--color-base-100));
+  --jl-message-accent-color: var(--color-success, #16a34a);
+  --jl-info-color: color-mix(in oklab, var(--color-info, #3b82f6) 14%, var(--color-base-100));
+  --jl-info-acccolor: color-mix(in oklab, var(--color-info, #3b82f6) 14%, var(--color-base-100));
+  --jl-info-accent-color: var(--color-info, #3b82f6);
+  --jl-warn-color: color-mix(in oklab, var(--color-warning, #d97706) 16%, var(--color-base-100));
+  --jl-warn-accent-color: var(--color-warning, #d97706);
+  --jl-danger-color: color-mix(in oklab, var(--color-error, #dc2626) 14%, var(--color-base-100));
+  --jl-danger-accent-color: var(--color-error, #dc2626);
+  --jl-debug-color: color-mix(in oklab, var(--color-secondary, #7c3aed) 14%, var(--color-base-100));
+  --jl-debug-accent-color: var(--color-secondary, #7c3aed);
+  --pluto-logs-debug-color: color-mix(in oklab, var(--color-secondary, #7c3aed) 14%, var(--color-base-100));
+  /* error display */
+  --jlerror-header-color: var(--color-error, #dc2626);
+  --jlerror-mark-bg-color: var(--color-base-200);
+  --jlerror-mark-color: var(--color-base-content);
+  --jlerror-a-bg-color: color-mix(in oklab, var(--color-warning, #d97706) 14%, var(--color-base-100));
+  --jlerror-a-border-left-color: var(--color-error, #dc2626);
+  /* codemirror token vars referenced by output rules */
+  --cm-color-variable: var(--color-base-content);
+  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
+  --cm-color-clickable-underline: var(--color-primary);
+  --docs-binding-bg: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+}
+/* ─── VERBATIM: Pluto editor.css 122-528 (pluto-output output rules) ─── */
+pluto-output {
+    font-family: "Alegreya Sans", "Trebuchet MS", sans-serif;
+    font-size: 14.5px;
+    font-weight: 400;
+    color: var(--pluto-output-color);
+}
+
+pluto-output h1,
+pluto-output h2,
+pluto-output h3,
+pluto-output h4,
+pluto-output h5,
+pluto-output h6 {
+    font-family: "Vollkorn", Palatino, Georgia, serif;
+    font-feature-settings: "lnum", "pnum";
+    font-weight: 600;
+    color: var(--pluto-output-h-color);
+    margin-block-start: 1rem;
+    margin-block-end: 0rem;
+    line-height: 1.25em;
+}
+
+pluto-output h1,
+pluto-output h2 {
+    font-weight: 700;
+    margin-block-start: 2rem;
+}
+
+pluto-output h1:first-child,
+pluto-output h2:first-child {
+    margin-block-start: calc(2rem - var(--pluto-cell-spacing));
+}
+
+pluto-output h1 {
+    font-size: 2.2rem;
+    border-bottom: 3px solid var(--rule-color);
+    margin-bottom: 0.5rem;
+}
+
+pluto-output h2 {
+    font-size: 1.8rem;
+    border-bottom: 2px dotted var(--rule-color);
+    margin-bottom: 0.5rem;
+}
+
+pluto-output h1:empty,
+pluto-output h2:empty {
+    border-bottom: none;
+}
+
+pluto-output h3 {
+    font-size: 1.6rem;
+    /* border-bottom: 2px dotted rgba(0,0,0,.15); */
+}
+
+pluto-output h4 {
+    font-size: 1.4rem;
+}
+
+pluto-output h5 {
+    font-size: 1.2rem;
+}
+
+pluto-output h6 {
+    font-size: 1rem;
+}
+
+pluto-output h3:first-child,
+pluto-output h4:first-child,
+pluto-output h5:first-child,
+pluto-output h6:first-child {
+    margin-block-start: 0px;
+}
+
+pluto-output br,
+pluto-output p {
+    margin-block-start: 0px;
+    margin-block-end: var(--pluto-cell-spacing);
+    word-spacing: 0.053em;
+    line-height: 1.6em;
+}
+
+/* This allows a linebreak in Markdown using backslash with smaller spacing compared to paragraph in firefox */
+pluto-output br {
+    margin-block-end: 0;
+}
+
+pluto-output p:first-child {
+    margin-block-start: 0px;
+}
+
+/* https://github.com/necolas/normalize.css/blob/fc091cce1534909334c1911709a39c22d406977b/normalize.css#L96 */
+b,
+strong {
+    font-weight: bolder;
+}
+
+/* I actually just want to get rid of the margin-block-start on the p tag,
+    but css doesn't allow that. So I have to move the list up, instead of not moving it up */
+pluto-output li p + ul,
+pluto-output li p + ol {
+    margin-block-start: calc(var(--pluto-cell-spacing) * -1);
+}
+pluto-output p:last-child {
+    margin-block-end: 0px;
+}
+
+pluto-output img,
+pluto-output video {
+    max-width: 100%;
+}
+
+a {
+    color: var(--black);
+    /* font-weight: bold; */
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--a-underline);
+    /* text-shadow: 1px -1px 0px #ffffff33; */
+}
+a:hover {
+    text-decoration-color: var(--black);
+}
+
+.cm-cursor {
+    border-left: 1.2px solid var(--cursor-color) !important;
+}
+
+pluto-output code {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9em; /* not rem */
+    font-variant-ligatures: none;
+}
+
+pluto-output code .cm-editor .cm-line {
+    font-family: var(--julia-mono-font-stack);
+}
+
+pluto-output pre > code {
+    font-size: inherit;
+}
+
+pluto-output.rich_output code {
+    padding: 0.18em;
+    border-radius: 8px;
+    background-color: var(--pluto-output-bg-color);
+}
+pluto-output.rich_output pre > code {
+    padding: 0px;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+pluto-log-dot pre,
+pluto-output pre {
+    display: inline-block;
+    margin: 0px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    tab-size: 4;
+    -moz-tab-size: 4; /* https://bugzilla.mozilla.org/show_bug.cgi?id=737785 */
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.8rem;
+    font-variant-ligatures: none;
+}
+
+pluto-display pre {
+    white-space: pre;
+    word-break: normal;
+}
+
+pluto-output hr {
+    border: none;
+    border-top: 3px solid var(--rule-color);
+    margin-left: 0;
+    margin-right: 0;
+}
+
+pluto-output blockquote {
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+pluto-output.rich_output pre:not(.no-block),
+pluto-output blockquote {
+    margin-block-start: 0px;
+    margin-block-end: var(--pluto-cell-spacing);
+    display: block;
+    padding: 15px;
+    border-radius: 15px;
+    background-color: var(--blockquote-bg);
+    color: var(--blockquote-color);
+}
+pluto-output.rich_output pre:not(.no-block):last-child,
+pluto-output blockquote:last-child {
+    margin-block-end: 0px;
+}
+
+pluto-output div.admonition {
+    border-radius: 8px;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+pluto-output div.admonition .admonition-title {
+    font-family: "Vollkorn", Palatino, sans-serif;
+    font-feature-settings: "lnum", "pnum";
+    color: var(--admonition-title-color);
+    font-weight: 600;
+    margin-block-end: 0px;
+    padding-left: 0.3em;
+    font-size: 1.3em;
+}
+pluto-output div.admonition .admonition-title ~ * {
+    margin-block-end: 0.5em;
+    margin-block-start: 0.5em;
+    transition: filter linear 0.1s;
+}
+
+pluto-output div.admonition {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    background: var(--jl-message-color);
+    border: 5px solid var(--jl-message-accent-color);
+}
+pluto-output div.admonition .admonition-title {
+    background: var(--jl-message-accent-color);
+    margin: -1px; /* Fixes a rendering glitch in Chrome */
+    margin-left: -0.55rem;
+    margin-right: -0.55rem;
+}
+pluto-output div.admonition.note,
+pluto-output div.admonition.info,
+pluto-output div.admonition.hint {
+    background: var(--jl-info-color);
+    border: 5px solid var(--jl-info-accent-color);
+}
+pluto-output div.admonition.note > .admonition-title,
+pluto-output div.admonition.info > .admonition-title,
+pluto-output div.admonition.hint > .admonition-title {
+    background: var(--jl-info-accent-color);
+}
+pluto-output div.admonition.warning,
+pluto-output div.admonition.alert-danger {
+    background: var(--jl-warn-color);
+    border: 5px solid var(--jl-warn-accent-color);
+}
+pluto-output div.admonition.warning > .admonition-title,
+pluto-output div.admonition.alert-danger > .admonition-title {
+    background: var(--jl-warn-accent-color);
+}
+pluto-output div.admonition.danger {
+    background: var(--jl-danger-color);
+    border: 5px solid var(--jl-danger-accent-color);
+}
+pluto-output div.admonition.danger > .admonition-title {
+    background: var(--jl-danger-accent-color);
+}
+
+pluto-output div.admonition.hint > .admonition-title ~ * {
+    filter: blur(0.25em);
+}
+pluto-output div.admonition.hint:hover > .admonition-title ~ *,
+pluto-output div.admonition.hint:focus-within > .admonition-title ~ * {
+    filter: blur(0em);
+}
+
+pluto-output div.footnote {
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+
+pluto-output div.footnote p.footnote-title::before {
+    content: "[";
+}
+pluto-output div.footnote p.footnote-title::after {
+    content: "]: ";
+}
+pluto-output a.footnote,
+pluto-output div.footnote p.footnote-title {
+    font-family: var(--roboto-mono-font-stack);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-block-end: 0px;
+    letter-spacing: -0.05em;
+    /* font-variant: small-caps; */
+}
+
+pluto-output div.footnote p.footnote-title ~ * {
+    margin-left: 0.1em;
+    padding-left: 0.4em;
+    border-left: 5px solid var(--footnote-border-color);
+    padding-bottom: var(--pluto-cell-spacing);
+    margin-block-end: 0px;
+}
+pluto-output div.footnote p:last-child {
+    padding-bottom: 0px;
+}
+
+pluto-output.scroll_y {
+    max-height: 80vh;
+    max-height: 502px;
+    overflow: auto;
+}
+
+pluto-output table {
+    border-collapse: collapse;
+    border: 2px solid var(--table-border-color);
+    border-left: none;
+    border-right: none;
+    margin: 0 auto;
+    margin-block-start: var(--pluto-cell-spacing);
+    margin-block-end: var(--pluto-cell-spacing);
+}
+
+pluto-output table > thead {
+    border-bottom: 1px solid var(--table-border-color);
+}
+
+pluto-output table > tbody td {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+    font-variant-ligatures: none;
+}
+pluto-output table > tbody td code {
+    font-size: 0.75rem;
+}
+
+pluto-output table td,
+pluto-output table th {
+    padding: 0.2rem 0.5rem;
+}
+
+pluto-output table > tbody tr:hover {
+    background-color: var(--table-bg-hover-color);
+}
+pluto-output table pre {
+    white-space: pre;
+}
+
+pluto-output kbd,
+kbd {
+    letter-spacing: -0.7px;
+    border: 1px solid var(--kbd-border-color);
+    border-radius: 3px;
+    padding: 0.1em 0.4em;
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Avoid scrollbar in in-line latex with markdown, see https://github.com/JuliaPluto/Pluto.jl/issues/1309 */
+pluto-output mjx-assistive-mml {
+    height: 1px;
+}
+
+/* Allow horizontal scrolling of wide markdown content (e.g. long MathJax
+   expressions) while keeping vertical overflow hidden. This still prevents
+   scrollbars for simple headers but avoids clipping.  */
+.raw-html-wrapper > div.markdown {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+pluto-output details {
+    border: 1px solid var(--rule-color);
+    border-radius: 4px;
+    padding: 0.5em 0.5em 0;
+    margin-block-start: 0;
+    margin-block-end: var(--pluto-cell-spacing);
+}
+
+pluto-output details:first-child {
+    margin-block-start: 0;
+}
+
+pluto-output details:last-child {
+    margin-block-end: 0;
+}
+
+pluto-output details summary {
+    cursor: pointer;
+    font-family: var(--system-ui-font-stack);
+    font-weight: bold;
+    border-radius: 3px;
+    padding: 0.5em;
+    margin: -0.5em -0.5em 0;
+    transition:
+        color 0.25s ease-in-out,
+        background-color 0.25s ease-in-out;
+    /* Border may have transparency, let's not change the border with a background-color */
+    background-clip: padding-box;
+}
+
+pluto-output details summary:hover {
+    color: var(--blockquote-color);
+    background-color: var(--blockquote-bg);
+}
+
+pluto-output details[open] {
+    padding: 0.5em;
+}
+
+pluto-output details[open] summary {
+    border-bottom: 1px solid var(--rule-color);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-bottom: 0.5em;
+}
+
+/* ─── VERBATIM: Pluto editor.css 3044-3077 (.pluto-docs-binding output) ─── */
+.pluto-docs-binding {
+    margin: 0.5em;
+    padding: 1em;
+    border-radius: 1em;
+    background: var(--docs-binding-bg);
+    color: var(--pluto-output-color);
+}
+
+.pluto-docs-binding > span {
+    display: inline-block;
+    transform: translate(-1.2em, -73%);
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-top: -1em;
+    padding: 0.235rem;
+    border-radius: 0.4rem;
+    background: var(--pluto-output-bg-color);
+    color: var(--black);
+}
+
+.pluto-docs-binding h1 {
+    font-size: 1.4em;
+}
+
+.pluto-docs-binding h2 {
+    font-size: 1.3em;
+}
+.pluto-docs-binding h3,
+.pluto-docs-binding h4,
+.pluto-docs-binding h5,
+.pluto-docs-binding h6 {
+    font-size: 1.1em;
+}
+
+/* ─── VERBATIM: Pluto treeview.css (@charset/@import stripped) ─── */
+
+
+
+/*  */
+
+pluto-tree,
+pluto-tree-pair {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+}
+pluto-tree {
+    color: var(--pluto-tree-color);
+    white-space: pre;
+    cursor: pointer;
+}
+
+pluto-tree,
+pluto-tree-items {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    direction: ltr;
+}
+pluto-tree.collapsed,
+pluto-tree.collapsed pluto-tree,
+pluto-tree.collapsed pluto-tree-items {
+    flex-direction: row;
+    align-items: baseline;
+}
+
+pluto-tree-items {
+    cursor: auto;
+}
+
+pluto-tree-prefix {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: baseline;
+}
+
+pluto-tree > pluto-tree-prefix::before {
+    display: inline-block;
+    position: relative;
+    content: "";
+    background-size: 100%;
+    height: 1em;
+    width: 1em;
+    bottom: -2px;
+    opacity: 0.5;
+    cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/caret-down-outline.svg");
+    filter: var(--image-filters);
+}
+
+pluto-tree.collapsed pluto-tree > pluto-tree-prefix::before {
+    display: none;
+}
+
+pluto-tree.collapsed > pluto-tree-prefix::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/caret-forward-outline.svg");
+}
+
+pluto-tree p-r > p-v {
+    display: inline-flex;
+    color: var(--pluto-output-color);
+}
+
+pluto-tree.collapsed pluto-tree-items.Array > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.Set > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.Tuple > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.struct > p-r > p-k {
+    display: none;
+}
+
+pluto-tree > pluto-tree-prefix > .long {
+    display: block;
+}
+pluto-tree > pluto-tree-prefix > .short {
+    display: none;
+}
+pluto-tree.collapsed > pluto-tree-prefix > .long {
+    display: none;
+}
+pluto-tree.collapsed > pluto-tree-prefix > .short {
+    display: block;
+}
+
+/*  */
+
+pluto-tree p-r {
+    margin-left: 3em;
+}
+pluto-tree.collapsed p-r {
+    margin-left: 0.5em;
+}
+
+pluto-tree.collapsed p-r:first-child {
+    margin-left: 0;
+}
+
+pluto-tree pluto-tree-items.Array > p-r > p-k,
+pluto-tree pluto-tree-items.Set > p-r > p-k,
+pluto-tree pluto-tree-items.Tuple > p-r > p-k {
+    margin-right: 1em;
+    opacity: 0.5;
+    user-select: none;
+}
+
+/*  */
+
+pluto-tree.Array > pluto-tree-prefix::after {
+    content: "[";
+}
+
+pluto-tree pluto-tree-items.Array::after {
+    content: "]";
+}
+
+pluto-tree.Set > pluto-tree-prefix::after {
+    content: "([";
+}
+
+pluto-tree pluto-tree-items.Set::after {
+    content: "])";
+}
+
+pluto-tree.Tuple > pluto-tree-prefix::after,
+pluto-tree.Dict > pluto-tree-prefix::after,
+pluto-tree.NamedTuple > pluto-tree-prefix::after,
+pluto-tree.struct > pluto-tree-prefix::after {
+    content: "(";
+}
+
+pluto-tree pluto-tree-items.Tuple::after,
+pluto-tree pluto-tree-items.Dict::after,
+pluto-tree pluto-tree-items.NamedTuple::after,
+pluto-tree pluto-tree-items.struct::after {
+    content: ")";
+}
+
+/*  */
+
+pluto-tree pluto-tree-items.Array > p-r > p-k::after,
+pluto-tree pluto-tree-items.Set > p-r > p-k::after,
+pluto-tree pluto-tree-items.Tuple > p-r > p-k::after {
+    content: ":";
+}
+
+pluto-tree-pair > p-r > p-k::after,
+pluto-tree pluto-tree-items.Dict > p-r > p-k::after {
+    content: " => ";
+}
+
+pluto-tree pluto-tree-items.NamedTuple > p-r > p-k::after,
+pluto-tree pluto-tree-items.struct > p-r > p-k::after {
+    content: " = ";
+}
+
+pluto-tree.collapsed p-r::after {
+    content: ",";
+}
+
+pluto-tree.collapsed p-r:last-child::after {
+    content: "";
+}
+
+pluto-tree-more {
+    display: inline-block;
+    padding: 0.6em 0em;
+    cursor: pointer;
+    /* this only affects pluto-tree-more inside a table */
+    width: 100%;
+    white-space: nowrap;
+}
+
+pluto-tree-more.disabled {
+    cursor: not-allowed;
+}
+
+pluto-tree-more::before {
+    margin-left: 0.2em;
+    margin-right: 0.5em;
+    bottom: -0.1em;
+    display: inline-block;
+    position: relative;
+    content: "";
+    background-size: 100%;
+    height: 1em;
+    width: 1em;
+    opacity: 0.5;
+    filter: var(--image-filters);
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/ellipsis-vertical.svg");
+}
+
+pluto-tree-more.loading::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/sync-outline.svg");
+    animation: loadspin 3s ease-in-out infinite;
+}
+
+@keyframes loadspin {
+    0% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(180deg);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+    75% {
+        transform: rotate(360deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+pluto-tree.collapsed pluto-tree-more {
+    margin: 0em;
+}
+pluto-tree.collapsed pluto-tree-more::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/ellipsis-horizontal.svg");
+}
+
+/*  */
+
+pluto-tree.collapsed img {
+    max-width: 4rem;
+    max-height: 4rem;
+}
+
+pluto-tree img {
+    max-width: 12rem;
+    max-height: 8rem;
+}
+
+pluto-tree p-r pre {
+    white-space: pre;
+    word-break: normal;
+}
+
+/*  */
+
+jlerror {
+    font-size: 0.75rem;
+    font-family: var(--julia-mono-font-stack);
+}
+jlerror {
+    display: block;
+    padding: 1em;
+    background-color: var(--code-section-bg-color);
+    border: 3px solid var(--pkg-terminal-border-color);
+    border-radius: 0.6em;
+    margin: 1em 0;
+    overflow-wrap: break-word;
+}
+
+jlerror > header {
+    color: var(--jlerror-header-color);
+    border-left: 3px solid var(--jlerror-header-color);
+    padding: 0.7rem;
+    background: var(--white);
+    border-radius: 3px;
+}
+jlerror > header > p {
+    margin-block-end: 0.2em;
+    white-space: pre-wrap;
+}
+jlerror > header > p:first-child {
+    font-weight: bold;
+    margin-block-start: 0;
+}
+jlerror .stacktrace-header,
+jlerror .error-header {
+    font-family: var(--system-ui-font-stack);
+}
+jlerror .error-header {
+    margin-block-end: 1em;
+}
+jlerror secret-h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--pluto-output-h-color);
+}
+jlerror > section {
+    border-block-start: 3px dashed var(--pkg-terminal-border-color);
+    margin-block-start: 1rem;
+    padding-block-start: 1rem;
+}
+jlerror .stacktrace-waiting-to-view {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 1rem 0 0 0;
+}
+jlerror .stacktrace-waiting-to-view button {
+    background: var(--white);
+    border: 3px solid var(--pkg-terminal-border-color);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5em 1em;
+    color: var(--pluto-output-color);
+    font-family: var(--system-ui-font-stack);
+    cursor: pointer;
+    font-weight: 700;
+}
+jlerror > section > ol {
+    line-height: 1.6;
+    /* transform: perspective(29rem) rotateX(-12.7deg); */
+    /* transform-origin: top; */
+    /* perspective-origin: top; */
+}
+jlerror > section > ol > li {
+    margin-block-end: 1em;
+}
+
+jlerror > section > ol > li:not(.important):not(:hover) {
+    opacity: 0.5;
+}
+
+jlerror > section > ol > li:not(.important)::marker {
+    font-weight: 100;
+}
+jlerror > section > ol > li.from_this_notebook {
+    --bg: var(--jl-info-acccolor);
+    background: var(--bg);
+    outline: 3px solid var(--bg);
+    padding: 0.4em 0em;
+    border-radius: 0.6em;
+}
+jlerror > section .classical-frame > mark {
+    background: var(--jlerror-mark-bg-color);
+    border-radius: 6px;
+    color: var(--jlerror-mark-color);
+    font-family: var(--julia-mono-font-stack);
+    font-variant-ligatures: none;
+}
+jlerror > section .classical-frame > mark > strong {
+    color: var(--black);
+}
+jlerror > section .classical-frame s-span {
+    /* color: var(--cm-color-type); */
+}
+jlerror > section .classical-frame s-span .argument_name {
+    color: var(--jlerror-mark-color);
+    color: var(--cm-color-variable);
+    color: var(--cm-color-type);
+}
+jlerror > section .frame-source {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    /* justify-content: flex-end; */
+}
+jlerror > section .frame-source > a {
+    background: var(--jlerror-a-bg-color);
+    border-radius: 4px;
+    padding: 1px 7px;
+    text-decoration: none;
+    border-left: 3px solid var(--jlerror-a-border-left-color);
+    /* font-family: var(--system-ui-font-stack); */
+}
+jlerror > section .frame-source > a:not([href]) {
+    filter: grayscale(1);
+}
+jlerror > section .frame-source > a[href].remote-url {
+    filter: hue-rotate(160deg);
+}
+jlerror > section li.from_this_notebook:not(.from_this_cell) .frame-source > a[href] {
+    filter: hue-rotate(50deg);
+}
+jlerror > section .frame-source > span {
+    opacity: 0.4;
+    padding: 0px 0.2em;
+}
+jlerror > section .doclink {
+    user-select: none;
+}
+
+jlerror li::marker {
+    background: red;
+    border: 3px solid red;
+    /* font-size: 0.7rem; */
+    font-weight: 900;
+    color: var(--pluto-logs-key-color);
+}
+
+jlerror li.from_this_notebook .classical-frame {
+    /* opacity: 0.4; */
+}
+
+jlerror li a.frame-line-preview {
+    display: block;
+    text-decoration: none;
+    border: 3px solid var(--cm-color-clickable-underline);
+    --br: 0.6em;
+    border-radius: var(--br);
+    --crop: -0.5em;
+}
+jlerror li .frame-line-preview pre:not(.asdfdsaf) {
+    background-color: var(--code-background);
+    padding: 0;
+    border-radius: var(--br);
+    overflow: hidden;
+    position: relative;
+    display: block;
+}
+
+jlerror li:not(.from_this_cell) .frame-line-preview pre::after {
+    content: "cell preview";
+    display: block;
+    position: absolute;
+    bottom: 0;
+    right: 1ch;
+    font-weight: 900;
+    opacity: 0.6;
+}
+
+jlerror li .frame-line-preview pre > code {
+    padding: 0;
+}
+jlerror li .frame-line-preview pre > code:not(:only-child).frame-line {
+    background: var(--cm-highlighted);
+}
+jlerror li .frame-line-preview pre > code:not(.frame-line) {
+    opacity: 0.7;
+}
+jlerror li .frame-line-preview pre > code::before {
+    content: var(--before-content);
+    color: var(--cm-color-line-numbers);
+    margin-right: 0.7em;
+    width: 2ch;
+    display: inline-block;
+    text-align: right;
+}
+
+jlerror li .frame-line-preview pre > code:first-of-type:not(.frame-line) {
+    margin-top: var(--crop);
+}
+jlerror li .frame-line-preview pre > code:last-of-type:not(.frame-line) {
+    margin-bottom: var(--crop);
+}
+
+jlerror .dont-panic {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5em;
+    background: var(--pluto-logs-debug-color);
+    color: var(--black);
+    border-radius: 0.2em;
+    font-family: var(--system-ui-font-stack);
+    font-size: 1.2rem;
+    font-weight: 700;
+    transform: rotate(6deg);
+}
+
+pluto-editor.disable_ui jlerror .dont-panic {
+    display: none;
+}
+
+pluto-logs jlerror .dont-panic {
+    display: none;
+}
+
+table.pluto-table {
+    table-layout: fixed;
+}
+
+table.pluto-table td {
+    max-width: 300px;
+    overflow: auto;
+}
+
+@supports (-moz-appearance: none) {
+    table.pluto-table td {
+        max-width: unset;
+        overflow: visible;
+    }
+
+    table.pluto-table td > div {
+        max-width: 300px;
+        overflow: auto;
+    }
+}
+
+table.pluto-table .schema-types {
+    color: var(--pluto-schema-types-color);
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+    opacity: 0;
+}
+
+table.pluto-table .schema-types th {
+    border-bottom: 1px solid var(--pluto-schema-types-border-color);
+    background-color: var(--main-bg-color);
+    height: 2rem;
+}
+
+table.pluto-table thead:hover .schema-types {
+    opacity: 1;
+}
+
+table.pluto-table .schema-names th {
+    transform: translate(0, 0.5em);
+    transition: transform 0.1s ease-in-out;
+}
+table.pluto-table .schema-names th:first-child,
+table.pluto-table .schema-types th:first-child {
+    z-index: 2;
+    left: -10px;
+}
+
+table.pluto-table .schema-names th,
+table.pluto-table .schema-types th:first-child {
+    background-color: var(--main-bg-color);
+    position: sticky;
+    top: calc(0.25rem - var(--pluto-cell-spacing));
+    height: 2rem;
+    z-index: 1;
+}
+
+table.pluto-table thead:hover .schema-names th {
+    transform: translate(0, 0);
+}
+
+table.pluto-table tbody th:first-child {
+    background-color: var(--main-bg-color);
+    position: sticky;
+    left: -10px; /* padding-left of pluto-output*/
+    white-space: nowrap;
+}
+
+table.pluto-table .pluto-tree-more-td {
+    text-align: left;
+    overflow: unset;
+}
+
+table.pluto-table .pluto-tree-more-td pluto-tree-more {
+    overflow: unset;
+    position: sticky;
+    left: 0;
+    top: 2rem;
+    max-width: 650px;
+}
+
+table.pluto-table tr.empty div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    font-size: 1.5rem;
+    flex-flow: column nowrap;
+}
+table.pluto-table tr.empty small {
+    font-size: 0.5rem;
+}
+
+pluto-tree.collapsed p-v > pre {
+    max-height: 2em;
+    overflow-y: hidden;
+}
+
+/* ─── VERBATIM: PlutoUI TableOfContents.jl style block (tags stripped) ─── */
+@media not print {
+
+.plutoui-toc {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
+	--main-bg-color: #fafafa;
+	--pluto-output-color: hsl(0, 0%, 36%);
+	--pluto-output-h-color: hsl(0, 0%, 21%);
+	--sidebar-li-active-bg: rgb(235, 235, 235);
+	--icon-filter: unset;
+}
+
+@media (prefers-color-scheme: dark) {
+	.plutoui-toc {
+		--main-bg-color: #303030;
+		--pluto-output-color: hsl(0, 0%, 90%);
+		--pluto-output-h-color: hsl(0, 0%, 97%);
+		--sidebar-li-active-bg: rgb(82, 82, 82);
+		--icon-filter: invert(1);
+	}
+}
+
+.plutoui-toc.aside {
+	color: var(--pluto-output-color);
+	position: fixed;
+	right: 1rem;
+	top: 5rem;
+	width: min(80vw, 300px);
+	padding: 0.5rem;
+	padding-top: 0em;
+	/* border: 3px solid rgba(0, 0, 0, 0.15); */
+	border-radius: 10px;
+	max-height: calc(100vh - 5rem - 90px);
+	overflow: auto;
+	z-index: 40;
+	background-color: var(--main-bg-color);
+	transition: transform 300ms cubic-bezier(0.18, 0.89, 0.45, 1.12);
+}
+
+.plutoui-toc.smallscreen:not(.hide) {
+	box-shadow: 0 0 11px 0px #00000010;
+}
+
+.plutoui-toc.aside.hide {
+	transform: translateX(calc(100% - 28px));
+	color: transparent;
+}
+.plutoui-toc.aside.hide section {
+	display: none;
+}
+.plutoui-toc.aside.hide header {
+	margin-bottom: 0em;
+	padding-bottom: 0em;
+	border-bottom: none;
+}
+}  /* End of Media print query */
+.plutoui-toc.aside.hide .open-toc,
+.plutoui-toc.aside:not(.hide) .closed-toc,
+.plutoui-toc:not(.aside) .closed-toc {
+	display: none;
+}
+
+@media (prefers-reduced-motion) {
+  .plutoui-toc.aside {
+	transition-duration: 0s;
+  }
+}
+
+.toc-toggle {
+	cursor: pointer;
+    padding: 1em;
+    margin: -1em;
+    margin-right: -0.7em;
+    line-height: 1em;
+    display: flex;
+}
+
+.toc-toggle::before {
+    content: "";
+    display: inline-block;
+    height: 1em;
+    width: 1em;
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/list-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LW88L3RpdGxlPjxsaW5lIHgxPSIxNjAiIHkxPSIxNDQiIHgyPSI0NDgiIHkyPSIxNDQiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDozMnB4Ii8+PGxpbmUgeDE9IjE2MCIgeTE9IjI1NiIgeDI9IjQ0OCIgeTI9IjI1NiIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6IzAwMDtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLXdpZHRoOjMycHgiLz48bGluZSB4MT0iMTYwIiB5MT0iMzY4IiB4Mj0iNDQ4IiB5Mj0iMzY4IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6MzJweCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iMTQ0IiByPSIxNiIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6IzAwMDtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLXdpZHRoOjMycHgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI1NiIgcj0iMTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDozMnB4Ii8+PGNpcmNsZSBjeD0iODAiIGN5PSIzNjgiIHI9IjE2IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6MzJweCIvPjwvc3ZnPg==");
+    background-size: 1em;
+	filter: var(--icon-filter);
+}
+
+.aside .toc-toggle.open-toc:hover::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/arrow-forward-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LWE8L3RpdGxlPjxwb2x5bGluZSBwb2ludHM9IjI2OCAxMTIgNDEyIDI1NiAyNjggNDAwIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6NDhweCIvPjxsaW5lIHgxPSIzOTIiIHkxPSIyNTYiIHgyPSIxMDAiIHkyPSIyNTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDo0OHB4Ii8+PC9zdmc+");
+}
+.aside .toc-toggle.closed-toc:hover::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/arrow-back-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LWE8L3RpdGxlPjxwb2x5bGluZSBwb2ludHM9IjI0NCA0MDAgMTAwIDI1NiAyNDQgMTEyIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6NDhweCIvPjxsaW5lIHgxPSIxMjAiIHkxPSIyNTYiIHgyPSI0MTIiIHkyPSIyNTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDo0OHB4Ii8+PC9zdmc+");
+}
+
+
+
+.plutoui-toc header {
+	display: flex;
+	align-items: center;
+	gap: .3em;
+	font-size: 1.5em;
+	/* margin-top: -0.1em; */
+	margin-bottom: 0.4em;
+	padding: 0.5rem;
+	margin-left: 0;
+	margin-right: 0;
+	font-weight: bold;
+	/* border-bottom: 2px solid rgba(0, 0, 0, 0.15); */
+	position: sticky;
+	top: 0px;
+	background: var(--main-bg-color);
+	z-index: 41;
+}
+.plutoui-toc.aside header {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.plutoui-toc section .toc-row {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: .1em;
+	border-radius: .2em;
+}
+
+.plutoui-toc section .toc-row.H1 {
+	margin-top: 1em;
+}
+
+
+.plutoui-toc.aside section .toc-row.in-view {
+	background: var(--sidebar-li-active-bg);
+}
+
+
+	
+.highlight-pluto-cell-shoulder {
+	background: rgba(0, 0, 0, 0.05);
+	background-clip: padding-box;
+}
+
+.plutoui-toc section a {
+	text-decoration: none;
+	font-weight: normal;
+	color: var(--pluto-output-color);
+}
+.plutoui-toc section a:hover {
+	color: var(--pluto-output-h-color);
+}
+
+.plutoui-toc.indent section a.H1 {
+	font-weight: 700;
+	line-height: 1em;
+}
+
+.plutoui-toc.indent section .after-H2 a { padding-left: 10px; }
+.plutoui-toc.indent section .after-H3 a { padding-left: 20px; }
+.plutoui-toc.indent section .after-H4 a { padding-left: 30px; }
+.plutoui-toc.indent section .after-H5 a { padding-left: 40px; }
+.plutoui-toc.indent section .after-H6 a { padding-left: 50px; }
+
+.plutoui-toc.indent section a.H1 { padding-left: 0px; }
+.plutoui-toc.indent section a.H2 { padding-left: 10px; }
+.plutoui-toc.indent section a.H3 { padding-left: 20px; }
+.plutoui-toc.indent section a.H4 { padding-left: 30px; }
+.plutoui-toc.indent section a.H5 { padding-left: 40px; }
+.plutoui-toc.indent section a.H6 { padding-left: 50px; }
+
+
+.plutoui-toc.indent section a.pluto-docs-binding-el,
+.plutoui-toc.indent section a.ASSIGNEE
+	{
+	font-family: JuliaMono, monospace;
+	font-size: .8em;
+	/* background: black; */
+	font-weight: 700;
+    font-style: italic;
+	color: var(--cm-var-color); /* this is stealing a variable from Pluto, but it's fine if that doesnt work */
+}
+.plutoui-toc.indent section a.pluto-docs-binding-el::before,
+.plutoui-toc.indent section a.ASSIGNEE::before
+	{
+	content: "> ";
+	opacity: .3;
+}
+
+/* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
+.plutoui-toc {
+  --main-bg-color: var(--color-base-100);
+  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-h-color: var(--color-base-content);
+  --sidebar-li-active-bg: var(--color-base-200);
+  --icon-filter: none;
+  --cm-var-color: var(--color-primary);
+  border: 1px solid var(--color-base-300);
+}
+[data-theme=snapshot-dark] .plutoui-toc { --icon-filter: invert(1); }
+
+}
+</style>
+<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.pi-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<div class="pi-cells">
+<div class="pl-cell"><pre class="pl-code"><code class="pl-jl">import AbstractPlutoDingetjes.Bonds</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="quwmfircfsbr"><input type=range value=1 min=1 max=20></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x TinySlider(20)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-bb000004-0000-4000-8000-000000000004"></pluto-output><pre class="pl-code"><code class="pl-jl">doubled = 2x</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-bb000005-0000-4000-8000-000000000005"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="z" unique_id="wjwexnkzuqaj"><input type=range value=1 min=1 max=10></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind z TinySlider(10)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-bb000007-0000-4000-8000-000000000007"></pluto-output><pre class="pl-code"><code class="pl-jl">collect(1:z)</code></pre></div>
+</div>
+<script src="__PI_ASSETS_BASE__/two_groups.islands/shim.js"></script>
+<script>
+(function () {
+  function collectBonds() {
+    const vals = {};
+    document.querySelectorAll("bond[def]").forEach(function (b) {
+      const inp = b.querySelector("input,select,textarea");
+      if (!inp) return;
+      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
+            : (inp.type === "checkbox") ? inp.checked
+            : inp.value;
+      vals[b.getAttribute("def")] = v;
+    });
+    return vals;
+  }
+  async function rerender() {
+    if (window.__pi_renderAll) { try { await window.__pi_renderAll(collectBonds()); } catch (e) { console.warn(e); } }
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.closest && e.target.closest("bond[def]")) rerender();
+  });
+  (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
+})();
+</script>
+
+<script>
+(function () {
+  function render(root) { (root || document).querySelectorAll(".tex").forEach(function (s) {
+    if (s.dataset.r) return;
+    var t = s.textContent.trim();
+    var disp = t.indexOf("$$") === 0;
+    t = t.replace(/^\$\$?/, "").replace(/\$\$?$/, "");
+    try { katex.render(t, s, { displayMode: disp, throwOnError: false }); s.dataset.r = "1"; } catch (e) {}
+  }); }
+  (function wait() { window.katex ? render() : setTimeout(wait, 80); })();
+  new MutationObserver(function () { window.katex && render(); }).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
+<script type="module">
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function hl(code) {
+  const tree = parser.parse(code); let out = "", pos = 0;
+  highlightTree(tree, classHighlighter, (from, to, cls) => {
+    if (from > pos) out += esc(code.slice(pos, from));
+    out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
+  });
+  out += esc(code.slice(pos)); return out;
+}
+document.querySelectorAll("code.pl-jl").forEach(el => {
+  try { el.innerHTML = hl(el.textContent); } catch (e) { console.warn("pl-hl", e); }
+});
+</script>
+
+<script>
+document.addEventListener("click", function (e) {
+  if (!e.target.closest) return;
+  var pre = e.target.closest("pluto-tree > pluto-tree-prefix");
+  if (pre && pre.parentElement) pre.parentElement.classList.toggle("collapsed");
+});
+</script>
+
+</div>

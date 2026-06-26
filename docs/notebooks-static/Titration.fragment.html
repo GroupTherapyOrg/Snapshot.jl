@@ -1,0 +1,1706 @@
+<div class="pi-notebook" data-theme="snapshot">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
+<style>
+@scope (.pi-notebook) {
+[data-theme=snapshot]{color-scheme:light;--color-base-100:#fffdf8;--color-base-200:#fbf7ec;--color-base-300:#f0e9d8;--color-base-content:#3f3a33;--color-primary:#5e7ad3;--color-primary-content:#fff}
+[data-theme=snapshot-dark]{color-scheme:dark;--color-base-100:#2a2620;--color-base-200:#1c1814;--color-base-300:#39322a;--color-base-content:#e8e1d4;--color-primary:#7b91cf;--color-primary-content:#fff}
+:scope{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
+:scope{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
+/* Pluto's tree/table/code use white-space:pre (no wrap); the output box must
+   scroll horizontally so wide content (long arrays, wide tables, long inline
+   math) stays inside the cell column instead of bleeding off-page — exactly
+   how Pluto's own cell output behaves. */
+pluto-output{display:block;overflow-x:auto;overflow-y:visible}
+.cell{margin:1.1rem 0}
+img.wasmmakie-island,.pi-reactive canvas{max-width:100%;height:auto}
+input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
+select,input[type=number]{accent-color:var(--color-primary)}
+bond{display:inline-block}
+a{color:var(--color-primary)}
+/* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
+   ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
+.pi-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
+.pi-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
+/* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
+   (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
+.pl-cell{margin:1.25rem 0}
+.pl-code{background:var(--color-base-200);border-radius:.4rem;padding:.5rem .75rem;overflow-x:auto;font-size:.8em;line-height:1.5;margin:.4rem 0 0}
+.pl-code code{background:none;padding:0;font-size:1em;white-space:pre;font-family:var(--julia-mono-font-stack,ui-monospace,Menlo,monospace)}
+/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+.tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
+.tok-string,.tok-character,.tok-special{color:#16a34a}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
+.tok-typeName{color:#0891b2}
+.tok-macroName{color:#db2777}
+.tok-function,.tok-definition{color:#2563eb}
+.tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PlutoIslands lean export — Pluto's OWN output CSS, re-themed via DaisyUI.
+   The rules below this block are COPIED VERBATIM from Pluto
+   (frontend/editor.css pluto-output rules + frontend/treeview.css) and
+   PlutoUI (TableOfContents.jl). We add NOTHING but this variable map, which
+   points every Pluto color variable at a DaisyUI --color-* token so the exact
+   Pluto rendering follows our snapshot / snapshot-dark theme (and any Worker
+   data-theme override) with zero edits to Pluto's rules.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* fonts + misc (non-color) */
+  --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --julia-mono-font-stack: "JuliaMono", ui-monospace, "SF Mono", Menlo, monospace;
+  --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
+  --pluto-cell-spacing: 12px;
+  --image-filters: none;
+  /* surfaces / text */
+  --main-bg-color: var(--color-base-100);
+  --pluto-output-bg-color: var(--color-base-100);
+  --pluto-output-color: var(--color-base-content);
+  --pluto-output-h-color: var(--color-base-content);
+  --rule-color: var(--color-base-300);
+  --cursor-color: var(--color-base-content);
+  --black: var(--color-base-content);
+  --white: var(--color-base-100);
+  /* links / quotes / code */
+  --a-underline: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --blockquote-bg: var(--color-base-200);
+  --code-background: var(--color-base-200);
+  --code-section-bg-color: var(--color-base-200);
+  /* tables */
+  --table-border-color: var(--color-base-300);
+  --table-bg-hover-color: var(--color-base-200);
+  --footnote-border-color: var(--color-base-300);
+  /* trees / schema */
+  --pluto-tree-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --pluto-schema-types-color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  --pluto-schema-types-border-color: var(--color-base-300);
+  --pluto-logs-key-color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  --pkg-terminal-border-color: var(--color-base-300);
+  /* admonitions (Documenter @info/@warn/…): tint a DaisyUI semantic over base */
+  --admonition-title-color: var(--color-primary-content);
+  --jl-message-color: color-mix(in oklab, var(--color-success, #16a34a) 16%, var(--color-base-100));
+  --jl-message-accent-color: var(--color-success, #16a34a);
+  --jl-info-color: color-mix(in oklab, var(--color-info, #3b82f6) 14%, var(--color-base-100));
+  --jl-info-acccolor: color-mix(in oklab, var(--color-info, #3b82f6) 14%, var(--color-base-100));
+  --jl-info-accent-color: var(--color-info, #3b82f6);
+  --jl-warn-color: color-mix(in oklab, var(--color-warning, #d97706) 16%, var(--color-base-100));
+  --jl-warn-accent-color: var(--color-warning, #d97706);
+  --jl-danger-color: color-mix(in oklab, var(--color-error, #dc2626) 14%, var(--color-base-100));
+  --jl-danger-accent-color: var(--color-error, #dc2626);
+  --jl-debug-color: color-mix(in oklab, var(--color-secondary, #7c3aed) 14%, var(--color-base-100));
+  --jl-debug-accent-color: var(--color-secondary, #7c3aed);
+  --pluto-logs-debug-color: color-mix(in oklab, var(--color-secondary, #7c3aed) 14%, var(--color-base-100));
+  /* error display */
+  --jlerror-header-color: var(--color-error, #dc2626);
+  --jlerror-mark-bg-color: var(--color-base-200);
+  --jlerror-mark-color: var(--color-base-content);
+  --jlerror-a-bg-color: color-mix(in oklab, var(--color-warning, #d97706) 14%, var(--color-base-100));
+  --jlerror-a-border-left-color: var(--color-error, #dc2626);
+  /* codemirror token vars referenced by output rules */
+  --cm-color-variable: var(--color-base-content);
+  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+  --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
+  --cm-color-clickable-underline: var(--color-primary);
+  --docs-binding-bg: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+}
+/* ─── VERBATIM: Pluto editor.css 122-528 (pluto-output output rules) ─── */
+pluto-output {
+    font-family: "Alegreya Sans", "Trebuchet MS", sans-serif;
+    font-size: 14.5px;
+    font-weight: 400;
+    color: var(--pluto-output-color);
+}
+
+pluto-output h1,
+pluto-output h2,
+pluto-output h3,
+pluto-output h4,
+pluto-output h5,
+pluto-output h6 {
+    font-family: "Vollkorn", Palatino, Georgia, serif;
+    font-feature-settings: "lnum", "pnum";
+    font-weight: 600;
+    color: var(--pluto-output-h-color);
+    margin-block-start: 1rem;
+    margin-block-end: 0rem;
+    line-height: 1.25em;
+}
+
+pluto-output h1,
+pluto-output h2 {
+    font-weight: 700;
+    margin-block-start: 2rem;
+}
+
+pluto-output h1:first-child,
+pluto-output h2:first-child {
+    margin-block-start: calc(2rem - var(--pluto-cell-spacing));
+}
+
+pluto-output h1 {
+    font-size: 2.2rem;
+    border-bottom: 3px solid var(--rule-color);
+    margin-bottom: 0.5rem;
+}
+
+pluto-output h2 {
+    font-size: 1.8rem;
+    border-bottom: 2px dotted var(--rule-color);
+    margin-bottom: 0.5rem;
+}
+
+pluto-output h1:empty,
+pluto-output h2:empty {
+    border-bottom: none;
+}
+
+pluto-output h3 {
+    font-size: 1.6rem;
+    /* border-bottom: 2px dotted rgba(0,0,0,.15); */
+}
+
+pluto-output h4 {
+    font-size: 1.4rem;
+}
+
+pluto-output h5 {
+    font-size: 1.2rem;
+}
+
+pluto-output h6 {
+    font-size: 1rem;
+}
+
+pluto-output h3:first-child,
+pluto-output h4:first-child,
+pluto-output h5:first-child,
+pluto-output h6:first-child {
+    margin-block-start: 0px;
+}
+
+pluto-output br,
+pluto-output p {
+    margin-block-start: 0px;
+    margin-block-end: var(--pluto-cell-spacing);
+    word-spacing: 0.053em;
+    line-height: 1.6em;
+}
+
+/* This allows a linebreak in Markdown using backslash with smaller spacing compared to paragraph in firefox */
+pluto-output br {
+    margin-block-end: 0;
+}
+
+pluto-output p:first-child {
+    margin-block-start: 0px;
+}
+
+/* https://github.com/necolas/normalize.css/blob/fc091cce1534909334c1911709a39c22d406977b/normalize.css#L96 */
+b,
+strong {
+    font-weight: bolder;
+}
+
+/* I actually just want to get rid of the margin-block-start on the p tag,
+    but css doesn't allow that. So I have to move the list up, instead of not moving it up */
+pluto-output li p + ul,
+pluto-output li p + ol {
+    margin-block-start: calc(var(--pluto-cell-spacing) * -1);
+}
+pluto-output p:last-child {
+    margin-block-end: 0px;
+}
+
+pluto-output img,
+pluto-output video {
+    max-width: 100%;
+}
+
+a {
+    color: var(--black);
+    /* font-weight: bold; */
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--a-underline);
+    /* text-shadow: 1px -1px 0px #ffffff33; */
+}
+a:hover {
+    text-decoration-color: var(--black);
+}
+
+.cm-cursor {
+    border-left: 1.2px solid var(--cursor-color) !important;
+}
+
+pluto-output code {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9em; /* not rem */
+    font-variant-ligatures: none;
+}
+
+pluto-output code .cm-editor .cm-line {
+    font-family: var(--julia-mono-font-stack);
+}
+
+pluto-output pre > code {
+    font-size: inherit;
+}
+
+pluto-output.rich_output code {
+    padding: 0.18em;
+    border-radius: 8px;
+    background-color: var(--pluto-output-bg-color);
+}
+pluto-output.rich_output pre > code {
+    padding: 0px;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+pluto-log-dot pre,
+pluto-output pre {
+    display: inline-block;
+    margin: 0px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    tab-size: 4;
+    -moz-tab-size: 4; /* https://bugzilla.mozilla.org/show_bug.cgi?id=737785 */
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.8rem;
+    font-variant-ligatures: none;
+}
+
+pluto-display pre {
+    white-space: pre;
+    word-break: normal;
+}
+
+pluto-output hr {
+    border: none;
+    border-top: 3px solid var(--rule-color);
+    margin-left: 0;
+    margin-right: 0;
+}
+
+pluto-output blockquote {
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+pluto-output.rich_output pre:not(.no-block),
+pluto-output blockquote {
+    margin-block-start: 0px;
+    margin-block-end: var(--pluto-cell-spacing);
+    display: block;
+    padding: 15px;
+    border-radius: 15px;
+    background-color: var(--blockquote-bg);
+    color: var(--blockquote-color);
+}
+pluto-output.rich_output pre:not(.no-block):last-child,
+pluto-output blockquote:last-child {
+    margin-block-end: 0px;
+}
+
+pluto-output div.admonition {
+    border-radius: 8px;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+pluto-output div.admonition .admonition-title {
+    font-family: "Vollkorn", Palatino, sans-serif;
+    font-feature-settings: "lnum", "pnum";
+    color: var(--admonition-title-color);
+    font-weight: 600;
+    margin-block-end: 0px;
+    padding-left: 0.3em;
+    font-size: 1.3em;
+}
+pluto-output div.admonition .admonition-title ~ * {
+    margin-block-end: 0.5em;
+    margin-block-start: 0.5em;
+    transition: filter linear 0.1s;
+}
+
+pluto-output div.admonition {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    background: var(--jl-message-color);
+    border: 5px solid var(--jl-message-accent-color);
+}
+pluto-output div.admonition .admonition-title {
+    background: var(--jl-message-accent-color);
+    margin: -1px; /* Fixes a rendering glitch in Chrome */
+    margin-left: -0.55rem;
+    margin-right: -0.55rem;
+}
+pluto-output div.admonition.note,
+pluto-output div.admonition.info,
+pluto-output div.admonition.hint {
+    background: var(--jl-info-color);
+    border: 5px solid var(--jl-info-accent-color);
+}
+pluto-output div.admonition.note > .admonition-title,
+pluto-output div.admonition.info > .admonition-title,
+pluto-output div.admonition.hint > .admonition-title {
+    background: var(--jl-info-accent-color);
+}
+pluto-output div.admonition.warning,
+pluto-output div.admonition.alert-danger {
+    background: var(--jl-warn-color);
+    border: 5px solid var(--jl-warn-accent-color);
+}
+pluto-output div.admonition.warning > .admonition-title,
+pluto-output div.admonition.alert-danger > .admonition-title {
+    background: var(--jl-warn-accent-color);
+}
+pluto-output div.admonition.danger {
+    background: var(--jl-danger-color);
+    border: 5px solid var(--jl-danger-accent-color);
+}
+pluto-output div.admonition.danger > .admonition-title {
+    background: var(--jl-danger-accent-color);
+}
+
+pluto-output div.admonition.hint > .admonition-title ~ * {
+    filter: blur(0.25em);
+}
+pluto-output div.admonition.hint:hover > .admonition-title ~ *,
+pluto-output div.admonition.hint:focus-within > .admonition-title ~ * {
+    filter: blur(0em);
+}
+
+pluto-output div.footnote {
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
+
+pluto-output div.footnote p.footnote-title::before {
+    content: "[";
+}
+pluto-output div.footnote p.footnote-title::after {
+    content: "]: ";
+}
+pluto-output a.footnote,
+pluto-output div.footnote p.footnote-title {
+    font-family: var(--roboto-mono-font-stack);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-block-end: 0px;
+    letter-spacing: -0.05em;
+    /* font-variant: small-caps; */
+}
+
+pluto-output div.footnote p.footnote-title ~ * {
+    margin-left: 0.1em;
+    padding-left: 0.4em;
+    border-left: 5px solid var(--footnote-border-color);
+    padding-bottom: var(--pluto-cell-spacing);
+    margin-block-end: 0px;
+}
+pluto-output div.footnote p:last-child {
+    padding-bottom: 0px;
+}
+
+pluto-output.scroll_y {
+    max-height: 80vh;
+    max-height: 502px;
+    overflow: auto;
+}
+
+pluto-output table {
+    border-collapse: collapse;
+    border: 2px solid var(--table-border-color);
+    border-left: none;
+    border-right: none;
+    margin: 0 auto;
+    margin-block-start: var(--pluto-cell-spacing);
+    margin-block-end: var(--pluto-cell-spacing);
+}
+
+pluto-output table > thead {
+    border-bottom: 1px solid var(--table-border-color);
+}
+
+pluto-output table > tbody td {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+    font-variant-ligatures: none;
+}
+pluto-output table > tbody td code {
+    font-size: 0.75rem;
+}
+
+pluto-output table td,
+pluto-output table th {
+    padding: 0.2rem 0.5rem;
+}
+
+pluto-output table > tbody tr:hover {
+    background-color: var(--table-bg-hover-color);
+}
+pluto-output table pre {
+    white-space: pre;
+}
+
+pluto-output kbd,
+kbd {
+    letter-spacing: -0.7px;
+    border: 1px solid var(--kbd-border-color);
+    border-radius: 3px;
+    padding: 0.1em 0.4em;
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Avoid scrollbar in in-line latex with markdown, see https://github.com/JuliaPluto/Pluto.jl/issues/1309 */
+pluto-output mjx-assistive-mml {
+    height: 1px;
+}
+
+/* Allow horizontal scrolling of wide markdown content (e.g. long MathJax
+   expressions) while keeping vertical overflow hidden. This still prevents
+   scrollbars for simple headers but avoids clipping.  */
+.raw-html-wrapper > div.markdown {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+pluto-output details {
+    border: 1px solid var(--rule-color);
+    border-radius: 4px;
+    padding: 0.5em 0.5em 0;
+    margin-block-start: 0;
+    margin-block-end: var(--pluto-cell-spacing);
+}
+
+pluto-output details:first-child {
+    margin-block-start: 0;
+}
+
+pluto-output details:last-child {
+    margin-block-end: 0;
+}
+
+pluto-output details summary {
+    cursor: pointer;
+    font-family: var(--system-ui-font-stack);
+    font-weight: bold;
+    border-radius: 3px;
+    padding: 0.5em;
+    margin: -0.5em -0.5em 0;
+    transition:
+        color 0.25s ease-in-out,
+        background-color 0.25s ease-in-out;
+    /* Border may have transparency, let's not change the border with a background-color */
+    background-clip: padding-box;
+}
+
+pluto-output details summary:hover {
+    color: var(--blockquote-color);
+    background-color: var(--blockquote-bg);
+}
+
+pluto-output details[open] {
+    padding: 0.5em;
+}
+
+pluto-output details[open] summary {
+    border-bottom: 1px solid var(--rule-color);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-bottom: 0.5em;
+}
+
+/* ─── VERBATIM: Pluto editor.css 3044-3077 (.pluto-docs-binding output) ─── */
+.pluto-docs-binding {
+    margin: 0.5em;
+    padding: 1em;
+    border-radius: 1em;
+    background: var(--docs-binding-bg);
+    color: var(--pluto-output-color);
+}
+
+.pluto-docs-binding > span {
+    display: inline-block;
+    transform: translate(-1.2em, -73%);
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-top: -1em;
+    padding: 0.235rem;
+    border-radius: 0.4rem;
+    background: var(--pluto-output-bg-color);
+    color: var(--black);
+}
+
+.pluto-docs-binding h1 {
+    font-size: 1.4em;
+}
+
+.pluto-docs-binding h2 {
+    font-size: 1.3em;
+}
+.pluto-docs-binding h3,
+.pluto-docs-binding h4,
+.pluto-docs-binding h5,
+.pluto-docs-binding h6 {
+    font-size: 1.1em;
+}
+
+/* ─── VERBATIM: Pluto treeview.css (@charset/@import stripped) ─── */
+
+
+
+/*  */
+
+pluto-tree,
+pluto-tree-pair {
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+}
+pluto-tree {
+    color: var(--pluto-tree-color);
+    white-space: pre;
+    cursor: pointer;
+}
+
+pluto-tree,
+pluto-tree-items {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    direction: ltr;
+}
+pluto-tree.collapsed,
+pluto-tree.collapsed pluto-tree,
+pluto-tree.collapsed pluto-tree-items {
+    flex-direction: row;
+    align-items: baseline;
+}
+
+pluto-tree-items {
+    cursor: auto;
+}
+
+pluto-tree-prefix {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: baseline;
+}
+
+pluto-tree > pluto-tree-prefix::before {
+    display: inline-block;
+    position: relative;
+    content: "";
+    background-size: 100%;
+    height: 1em;
+    width: 1em;
+    bottom: -2px;
+    opacity: 0.5;
+    cursor: pointer;
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/caret-down-outline.svg");
+    filter: var(--image-filters);
+}
+
+pluto-tree.collapsed pluto-tree > pluto-tree-prefix::before {
+    display: none;
+}
+
+pluto-tree.collapsed > pluto-tree-prefix::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/caret-forward-outline.svg");
+}
+
+pluto-tree p-r > p-v {
+    display: inline-flex;
+    color: var(--pluto-output-color);
+}
+
+pluto-tree.collapsed pluto-tree-items.Array > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.Set > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.Tuple > p-r > p-k,
+pluto-tree.collapsed pluto-tree-items.struct > p-r > p-k {
+    display: none;
+}
+
+pluto-tree > pluto-tree-prefix > .long {
+    display: block;
+}
+pluto-tree > pluto-tree-prefix > .short {
+    display: none;
+}
+pluto-tree.collapsed > pluto-tree-prefix > .long {
+    display: none;
+}
+pluto-tree.collapsed > pluto-tree-prefix > .short {
+    display: block;
+}
+
+/*  */
+
+pluto-tree p-r {
+    margin-left: 3em;
+}
+pluto-tree.collapsed p-r {
+    margin-left: 0.5em;
+}
+
+pluto-tree.collapsed p-r:first-child {
+    margin-left: 0;
+}
+
+pluto-tree pluto-tree-items.Array > p-r > p-k,
+pluto-tree pluto-tree-items.Set > p-r > p-k,
+pluto-tree pluto-tree-items.Tuple > p-r > p-k {
+    margin-right: 1em;
+    opacity: 0.5;
+    user-select: none;
+}
+
+/*  */
+
+pluto-tree.Array > pluto-tree-prefix::after {
+    content: "[";
+}
+
+pluto-tree pluto-tree-items.Array::after {
+    content: "]";
+}
+
+pluto-tree.Set > pluto-tree-prefix::after {
+    content: "([";
+}
+
+pluto-tree pluto-tree-items.Set::after {
+    content: "])";
+}
+
+pluto-tree.Tuple > pluto-tree-prefix::after,
+pluto-tree.Dict > pluto-tree-prefix::after,
+pluto-tree.NamedTuple > pluto-tree-prefix::after,
+pluto-tree.struct > pluto-tree-prefix::after {
+    content: "(";
+}
+
+pluto-tree pluto-tree-items.Tuple::after,
+pluto-tree pluto-tree-items.Dict::after,
+pluto-tree pluto-tree-items.NamedTuple::after,
+pluto-tree pluto-tree-items.struct::after {
+    content: ")";
+}
+
+/*  */
+
+pluto-tree pluto-tree-items.Array > p-r > p-k::after,
+pluto-tree pluto-tree-items.Set > p-r > p-k::after,
+pluto-tree pluto-tree-items.Tuple > p-r > p-k::after {
+    content: ":";
+}
+
+pluto-tree-pair > p-r > p-k::after,
+pluto-tree pluto-tree-items.Dict > p-r > p-k::after {
+    content: " => ";
+}
+
+pluto-tree pluto-tree-items.NamedTuple > p-r > p-k::after,
+pluto-tree pluto-tree-items.struct > p-r > p-k::after {
+    content: " = ";
+}
+
+pluto-tree.collapsed p-r::after {
+    content: ",";
+}
+
+pluto-tree.collapsed p-r:last-child::after {
+    content: "";
+}
+
+pluto-tree-more {
+    display: inline-block;
+    padding: 0.6em 0em;
+    cursor: pointer;
+    /* this only affects pluto-tree-more inside a table */
+    width: 100%;
+    white-space: nowrap;
+}
+
+pluto-tree-more.disabled {
+    cursor: not-allowed;
+}
+
+pluto-tree-more::before {
+    margin-left: 0.2em;
+    margin-right: 0.5em;
+    bottom: -0.1em;
+    display: inline-block;
+    position: relative;
+    content: "";
+    background-size: 100%;
+    height: 1em;
+    width: 1em;
+    opacity: 0.5;
+    filter: var(--image-filters);
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/ellipsis-vertical.svg");
+}
+
+pluto-tree-more.loading::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/sync-outline.svg");
+    animation: loadspin 3s ease-in-out infinite;
+}
+
+@keyframes loadspin {
+    0% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(180deg);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+    75% {
+        transform: rotate(360deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+pluto-tree.collapsed pluto-tree-more {
+    margin: 0em;
+}
+pluto-tree.collapsed pluto-tree-more::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/ellipsis-horizontal.svg");
+}
+
+/*  */
+
+pluto-tree.collapsed img {
+    max-width: 4rem;
+    max-height: 4rem;
+}
+
+pluto-tree img {
+    max-width: 12rem;
+    max-height: 8rem;
+}
+
+pluto-tree p-r pre {
+    white-space: pre;
+    word-break: normal;
+}
+
+/*  */
+
+jlerror {
+    font-size: 0.75rem;
+    font-family: var(--julia-mono-font-stack);
+}
+jlerror {
+    display: block;
+    padding: 1em;
+    background-color: var(--code-section-bg-color);
+    border: 3px solid var(--pkg-terminal-border-color);
+    border-radius: 0.6em;
+    margin: 1em 0;
+    overflow-wrap: break-word;
+}
+
+jlerror > header {
+    color: var(--jlerror-header-color);
+    border-left: 3px solid var(--jlerror-header-color);
+    padding: 0.7rem;
+    background: var(--white);
+    border-radius: 3px;
+}
+jlerror > header > p {
+    margin-block-end: 0.2em;
+    white-space: pre-wrap;
+}
+jlerror > header > p:first-child {
+    font-weight: bold;
+    margin-block-start: 0;
+}
+jlerror .stacktrace-header,
+jlerror .error-header {
+    font-family: var(--system-ui-font-stack);
+}
+jlerror .error-header {
+    margin-block-end: 1em;
+}
+jlerror secret-h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--pluto-output-h-color);
+}
+jlerror > section {
+    border-block-start: 3px dashed var(--pkg-terminal-border-color);
+    margin-block-start: 1rem;
+    padding-block-start: 1rem;
+}
+jlerror .stacktrace-waiting-to-view {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 1rem 0 0 0;
+}
+jlerror .stacktrace-waiting-to-view button {
+    background: var(--white);
+    border: 3px solid var(--pkg-terminal-border-color);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5em 1em;
+    color: var(--pluto-output-color);
+    font-family: var(--system-ui-font-stack);
+    cursor: pointer;
+    font-weight: 700;
+}
+jlerror > section > ol {
+    line-height: 1.6;
+    /* transform: perspective(29rem) rotateX(-12.7deg); */
+    /* transform-origin: top; */
+    /* perspective-origin: top; */
+}
+jlerror > section > ol > li {
+    margin-block-end: 1em;
+}
+
+jlerror > section > ol > li:not(.important):not(:hover) {
+    opacity: 0.5;
+}
+
+jlerror > section > ol > li:not(.important)::marker {
+    font-weight: 100;
+}
+jlerror > section > ol > li.from_this_notebook {
+    --bg: var(--jl-info-acccolor);
+    background: var(--bg);
+    outline: 3px solid var(--bg);
+    padding: 0.4em 0em;
+    border-radius: 0.6em;
+}
+jlerror > section .classical-frame > mark {
+    background: var(--jlerror-mark-bg-color);
+    border-radius: 6px;
+    color: var(--jlerror-mark-color);
+    font-family: var(--julia-mono-font-stack);
+    font-variant-ligatures: none;
+}
+jlerror > section .classical-frame > mark > strong {
+    color: var(--black);
+}
+jlerror > section .classical-frame s-span {
+    /* color: var(--cm-color-type); */
+}
+jlerror > section .classical-frame s-span .argument_name {
+    color: var(--jlerror-mark-color);
+    color: var(--cm-color-variable);
+    color: var(--cm-color-type);
+}
+jlerror > section .frame-source {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    /* justify-content: flex-end; */
+}
+jlerror > section .frame-source > a {
+    background: var(--jlerror-a-bg-color);
+    border-radius: 4px;
+    padding: 1px 7px;
+    text-decoration: none;
+    border-left: 3px solid var(--jlerror-a-border-left-color);
+    /* font-family: var(--system-ui-font-stack); */
+}
+jlerror > section .frame-source > a:not([href]) {
+    filter: grayscale(1);
+}
+jlerror > section .frame-source > a[href].remote-url {
+    filter: hue-rotate(160deg);
+}
+jlerror > section li.from_this_notebook:not(.from_this_cell) .frame-source > a[href] {
+    filter: hue-rotate(50deg);
+}
+jlerror > section .frame-source > span {
+    opacity: 0.4;
+    padding: 0px 0.2em;
+}
+jlerror > section .doclink {
+    user-select: none;
+}
+
+jlerror li::marker {
+    background: red;
+    border: 3px solid red;
+    /* font-size: 0.7rem; */
+    font-weight: 900;
+    color: var(--pluto-logs-key-color);
+}
+
+jlerror li.from_this_notebook .classical-frame {
+    /* opacity: 0.4; */
+}
+
+jlerror li a.frame-line-preview {
+    display: block;
+    text-decoration: none;
+    border: 3px solid var(--cm-color-clickable-underline);
+    --br: 0.6em;
+    border-radius: var(--br);
+    --crop: -0.5em;
+}
+jlerror li .frame-line-preview pre:not(.asdfdsaf) {
+    background-color: var(--code-background);
+    padding: 0;
+    border-radius: var(--br);
+    overflow: hidden;
+    position: relative;
+    display: block;
+}
+
+jlerror li:not(.from_this_cell) .frame-line-preview pre::after {
+    content: "cell preview";
+    display: block;
+    position: absolute;
+    bottom: 0;
+    right: 1ch;
+    font-weight: 900;
+    opacity: 0.6;
+}
+
+jlerror li .frame-line-preview pre > code {
+    padding: 0;
+}
+jlerror li .frame-line-preview pre > code:not(:only-child).frame-line {
+    background: var(--cm-highlighted);
+}
+jlerror li .frame-line-preview pre > code:not(.frame-line) {
+    opacity: 0.7;
+}
+jlerror li .frame-line-preview pre > code::before {
+    content: var(--before-content);
+    color: var(--cm-color-line-numbers);
+    margin-right: 0.7em;
+    width: 2ch;
+    display: inline-block;
+    text-align: right;
+}
+
+jlerror li .frame-line-preview pre > code:first-of-type:not(.frame-line) {
+    margin-top: var(--crop);
+}
+jlerror li .frame-line-preview pre > code:last-of-type:not(.frame-line) {
+    margin-bottom: var(--crop);
+}
+
+jlerror .dont-panic {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5em;
+    background: var(--pluto-logs-debug-color);
+    color: var(--black);
+    border-radius: 0.2em;
+    font-family: var(--system-ui-font-stack);
+    font-size: 1.2rem;
+    font-weight: 700;
+    transform: rotate(6deg);
+}
+
+pluto-editor.disable_ui jlerror .dont-panic {
+    display: none;
+}
+
+pluto-logs jlerror .dont-panic {
+    display: none;
+}
+
+table.pluto-table {
+    table-layout: fixed;
+}
+
+table.pluto-table td {
+    max-width: 300px;
+    overflow: auto;
+}
+
+@supports (-moz-appearance: none) {
+    table.pluto-table td {
+        max-width: unset;
+        overflow: visible;
+    }
+
+    table.pluto-table td > div {
+        max-width: 300px;
+        overflow: auto;
+    }
+}
+
+table.pluto-table .schema-types {
+    color: var(--pluto-schema-types-color);
+    font-family: var(--julia-mono-font-stack);
+    font-size: 0.75rem;
+    opacity: 0;
+}
+
+table.pluto-table .schema-types th {
+    border-bottom: 1px solid var(--pluto-schema-types-border-color);
+    background-color: var(--main-bg-color);
+    height: 2rem;
+}
+
+table.pluto-table thead:hover .schema-types {
+    opacity: 1;
+}
+
+table.pluto-table .schema-names th {
+    transform: translate(0, 0.5em);
+    transition: transform 0.1s ease-in-out;
+}
+table.pluto-table .schema-names th:first-child,
+table.pluto-table .schema-types th:first-child {
+    z-index: 2;
+    left: -10px;
+}
+
+table.pluto-table .schema-names th,
+table.pluto-table .schema-types th:first-child {
+    background-color: var(--main-bg-color);
+    position: sticky;
+    top: calc(0.25rem - var(--pluto-cell-spacing));
+    height: 2rem;
+    z-index: 1;
+}
+
+table.pluto-table thead:hover .schema-names th {
+    transform: translate(0, 0);
+}
+
+table.pluto-table tbody th:first-child {
+    background-color: var(--main-bg-color);
+    position: sticky;
+    left: -10px; /* padding-left of pluto-output*/
+    white-space: nowrap;
+}
+
+table.pluto-table .pluto-tree-more-td {
+    text-align: left;
+    overflow: unset;
+}
+
+table.pluto-table .pluto-tree-more-td pluto-tree-more {
+    overflow: unset;
+    position: sticky;
+    left: 0;
+    top: 2rem;
+    max-width: 650px;
+}
+
+table.pluto-table tr.empty div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    font-size: 1.5rem;
+    flex-flow: column nowrap;
+}
+table.pluto-table tr.empty small {
+    font-size: 0.5rem;
+}
+
+pluto-tree.collapsed p-v > pre {
+    max-height: 2em;
+    overflow-y: hidden;
+}
+
+/* ─── VERBATIM: PlutoUI TableOfContents.jl style block (tags stripped) ─── */
+@media not print {
+
+.plutoui-toc {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
+	--main-bg-color: #fafafa;
+	--pluto-output-color: hsl(0, 0%, 36%);
+	--pluto-output-h-color: hsl(0, 0%, 21%);
+	--sidebar-li-active-bg: rgb(235, 235, 235);
+	--icon-filter: unset;
+}
+
+@media (prefers-color-scheme: dark) {
+	.plutoui-toc {
+		--main-bg-color: #303030;
+		--pluto-output-color: hsl(0, 0%, 90%);
+		--pluto-output-h-color: hsl(0, 0%, 97%);
+		--sidebar-li-active-bg: rgb(82, 82, 82);
+		--icon-filter: invert(1);
+	}
+}
+
+.plutoui-toc.aside {
+	color: var(--pluto-output-color);
+	position: fixed;
+	right: 1rem;
+	top: 5rem;
+	width: min(80vw, 300px);
+	padding: 0.5rem;
+	padding-top: 0em;
+	/* border: 3px solid rgba(0, 0, 0, 0.15); */
+	border-radius: 10px;
+	max-height: calc(100vh - 5rem - 90px);
+	overflow: auto;
+	z-index: 40;
+	background-color: var(--main-bg-color);
+	transition: transform 300ms cubic-bezier(0.18, 0.89, 0.45, 1.12);
+}
+
+.plutoui-toc.smallscreen:not(.hide) {
+	box-shadow: 0 0 11px 0px #00000010;
+}
+
+.plutoui-toc.aside.hide {
+	transform: translateX(calc(100% - 28px));
+	color: transparent;
+}
+.plutoui-toc.aside.hide section {
+	display: none;
+}
+.plutoui-toc.aside.hide header {
+	margin-bottom: 0em;
+	padding-bottom: 0em;
+	border-bottom: none;
+}
+}  /* End of Media print query */
+.plutoui-toc.aside.hide .open-toc,
+.plutoui-toc.aside:not(.hide) .closed-toc,
+.plutoui-toc:not(.aside) .closed-toc {
+	display: none;
+}
+
+@media (prefers-reduced-motion) {
+  .plutoui-toc.aside {
+	transition-duration: 0s;
+  }
+}
+
+.toc-toggle {
+	cursor: pointer;
+    padding: 1em;
+    margin: -1em;
+    margin-right: -0.7em;
+    line-height: 1em;
+    display: flex;
+}
+
+.toc-toggle::before {
+    content: "";
+    display: inline-block;
+    height: 1em;
+    width: 1em;
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/list-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LW88L3RpdGxlPjxsaW5lIHgxPSIxNjAiIHkxPSIxNDQiIHgyPSI0NDgiIHkyPSIxNDQiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDozMnB4Ii8+PGxpbmUgeDE9IjE2MCIgeTE9IjI1NiIgeDI9IjQ0OCIgeTI9IjI1NiIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6IzAwMDtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLXdpZHRoOjMycHgiLz48bGluZSB4MT0iMTYwIiB5MT0iMzY4IiB4Mj0iNDQ4IiB5Mj0iMzY4IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6MzJweCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iMTQ0IiByPSIxNiIgc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6IzAwMDtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLXdpZHRoOjMycHgiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjI1NiIgcj0iMTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDozMnB4Ii8+PGNpcmNsZSBjeD0iODAiIGN5PSIzNjgiIHI9IjE2IiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6MzJweCIvPjwvc3ZnPg==");
+    background-size: 1em;
+	filter: var(--icon-filter);
+}
+
+.aside .toc-toggle.open-toc:hover::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/arrow-forward-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LWE8L3RpdGxlPjxwb2x5bGluZSBwb2ludHM9IjI2OCAxMTIgNDEyIDI1NiAyNjggNDAwIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6NDhweCIvPjxsaW5lIHgxPSIzOTIiIHkxPSIyNTYiIHgyPSIxMDAiIHkyPSIyNTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDo0OHB4Ii8+PC9zdmc+");
+}
+.aside .toc-toggle.closed-toc:hover::before {
+    background-image: url("https://cdn.jsdelivr.net/gh/ionic-team/ionicons@5.5.1/src/svg/arrow-back-outline.svg");
+	/* generated using https://dopiaza.org/tools/datauri/index.php */
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHRpdGxlPmlvbmljb25zLXY1LWE8L3RpdGxlPjxwb2x5bGluZSBwb2ludHM9IjI0NCA0MDAgMTAwIDI1NiAyNDQgMTEyIiBzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2Utd2lkdGg6NDhweCIvPjxsaW5lIHgxPSIxMjAiIHkxPSIyNTYiIHgyPSI0MTIiIHkyPSIyNTYiIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS13aWR0aDo0OHB4Ii8+PC9zdmc+");
+}
+
+
+
+.plutoui-toc header {
+	display: flex;
+	align-items: center;
+	gap: .3em;
+	font-size: 1.5em;
+	/* margin-top: -0.1em; */
+	margin-bottom: 0.4em;
+	padding: 0.5rem;
+	margin-left: 0;
+	margin-right: 0;
+	font-weight: bold;
+	/* border-bottom: 2px solid rgba(0, 0, 0, 0.15); */
+	position: sticky;
+	top: 0px;
+	background: var(--main-bg-color);
+	z-index: 41;
+}
+.plutoui-toc.aside header {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.plutoui-toc section .toc-row {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: .1em;
+	border-radius: .2em;
+}
+
+.plutoui-toc section .toc-row.H1 {
+	margin-top: 1em;
+}
+
+
+.plutoui-toc.aside section .toc-row.in-view {
+	background: var(--sidebar-li-active-bg);
+}
+
+
+	
+.highlight-pluto-cell-shoulder {
+	background: rgba(0, 0, 0, 0.05);
+	background-clip: padding-box;
+}
+
+.plutoui-toc section a {
+	text-decoration: none;
+	font-weight: normal;
+	color: var(--pluto-output-color);
+}
+.plutoui-toc section a:hover {
+	color: var(--pluto-output-h-color);
+}
+
+.plutoui-toc.indent section a.H1 {
+	font-weight: 700;
+	line-height: 1em;
+}
+
+.plutoui-toc.indent section .after-H2 a { padding-left: 10px; }
+.plutoui-toc.indent section .after-H3 a { padding-left: 20px; }
+.plutoui-toc.indent section .after-H4 a { padding-left: 30px; }
+.plutoui-toc.indent section .after-H5 a { padding-left: 40px; }
+.plutoui-toc.indent section .after-H6 a { padding-left: 50px; }
+
+.plutoui-toc.indent section a.H1 { padding-left: 0px; }
+.plutoui-toc.indent section a.H2 { padding-left: 10px; }
+.plutoui-toc.indent section a.H3 { padding-left: 20px; }
+.plutoui-toc.indent section a.H4 { padding-left: 30px; }
+.plutoui-toc.indent section a.H5 { padding-left: 40px; }
+.plutoui-toc.indent section a.H6 { padding-left: 50px; }
+
+
+.plutoui-toc.indent section a.pluto-docs-binding-el,
+.plutoui-toc.indent section a.ASSIGNEE
+	{
+	font-family: JuliaMono, monospace;
+	font-size: .8em;
+	/* background: black; */
+	font-weight: 700;
+    font-style: italic;
+	color: var(--cm-var-color); /* this is stealing a variable from Pluto, but it's fine if that doesnt work */
+}
+.plutoui-toc.indent section a.pluto-docs-binding-el::before,
+.plutoui-toc.indent section a.ASSIGNEE::before
+	{
+	content: "> ";
+	opacity: .3;
+}
+
+/* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
+.plutoui-toc {
+  --main-bg-color: var(--color-base-100);
+  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-h-color: var(--color-base-content);
+  --sidebar-li-active-bg: var(--color-base-200);
+  --icon-filter: none;
+  --cm-var-color: var(--color-primary);
+  border: 1px solid var(--color-base-300);
+}
+[data-theme=snapshot-dark] .plutoui-toc { --icon-filter: invert(1); }
+
+}
+</style>
+<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.pi-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<div class="pi-cells">
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Simulating-Titrations">Simulating Titrations</h1>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>In this notebook we use the interactive features of Pluto to understand one of the most common analytical techniques in chemistry: <strong>titrations</strong>. Everything below the sliders is computed and plotted <strong>in your browser as WebAssembly</strong> — no Julia server, no install.</p>
+<div class="admonition question"><p class="admonition-title">Is this for me?</p><p>This notebook is intended for highschool students, university students studying chemistry or another natural science, or anyone curious. Basic chemistry knowledge is recommended &#40;acids and bases, the pH scale&#41;, but short reminders are included. Feel free to give the notebook a try nonetheless.</p>
+</div>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="The-Basics">The Basics</h2>
+<p>📚 <em>The explanations are based on <a href="https://en.wikipedia.org/wiki/Titration">Titration &#40;Wikipedia&#41;</a>, <a href="https://en.wikipedia.org/wiki/Acid&#37;E2&#37;80&#37;93base_titration">Acid-base titration &#40;Wikipedia&#41;</a> and <a href="https://doi.org/10.1007/978-3-662-45067-3">Binnewies et al., 2016</a>.</em></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Titrations are used to analyse samples and determine unknown concentrations. One of the most common types is the acid-base titration. To find the concentration of an analyte, e.g. an acid like hydrochloric acid &#40;HCl&#41;, you use a titrant solution, e.g. a base like sodium hydroxide &#40;NaOH&#41;, with a known concentration. The base and acid react in a neutralisation reaction to form water.</p>
+<p class="tex">$$\mathrm&#123;H_&#123;3&#125;O^&#123;&#43;&#125;&#125; &#43; \mathrm&#123;OH^&#123;-&#125;&#125; \rightarrow \mathrm&#123;H_&#123;2&#125;O&#125;$$</p>
+<p>By measuring how much base is needed to convert the acid completely, the concentration of the acid is determined.</p>
+<div class="admonition question"><p class="admonition-title">Is that always the case?</p><p>This brief explanation is only valid for very strong acids and bases, which dissociate completely, while weaker acids and bases do not. Only for very strong acids is the concentration of hydronium ions &#40;<span class="tex">$\mathrm&#123;H_&#123;3&#125;O^&#123;&#43;&#125;&#125;$</span>&#41; equal to the concentration of acid &#40;<span class="tex">$\mathrm&#123;HA&#125;$</span> in general form&#41;.</p>
+<p class="tex">$$c\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; c\mathrm&#123;&#40;HA&#41;&#125;$$</p>
+<p>For weaker acids the chemistry is a bit more complex, which is exactly what the interactive curve below lets you explore.</p>
+</div>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Titration-Curves">Titration Curves</h3>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>To see whether the acid is completely converted, the pH value at each point of added base can be measured with a pH electrode. This allows the plotting of a <strong>titration curve</strong>. The inflection point of this curve is the <strong>equivalence point</strong>, where the acid has reacted completely with the added base.</p>
+<p>For a <strong>strong</strong> acid &#40;HCl&#41; titrated with a strong base &#40;NaOH&#41;, the neutralisation gives a neutral salt solution and the equivalence point sits at pH 7. For a <strong>weak</strong> acid &#40;e.g. acetic acid, <span class="tex">$\mathrm&#123;CH_3COOH&#125;$</span>&#41; the curve is different: it starts at a higher pH, has a flat <strong>buffer region</strong> where <span class="tex">$\mathrm&#123;pH&#125; &#61; \mathrm&#123;p&#125;K_\mathrm&#123;a&#125;$</span> at the half-equivalence point, and the equivalence point lies above pH 7.</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Weaker acids do not dissociate completely; instead an equilibrium</p>
+<p class="tex">$$\mathrm&#123;HA&#125; &#43; \mathrm&#123;H_2O&#125; \longleftrightarrow \mathrm&#123;A^-&#125; &#43; \mathrm&#123;H_3O^&#43;&#125;$$</p>
+<p>is formed, described by the acid constant <span class="tex">$K_&#123;\mathrm&#123;a&#125;&#125;$</span>, usually reported as</p>
+<p class="tex">$$\mathrm&#123;p&#125;K\mathrm&#123;_a&#125; &#61; -\log&#123;K_&#123;\mathrm&#123;a&#125;&#125;&#125;.$$</p>
+<p>The lower the <span class="tex">$\mathrm&#123;p&#125;K\mathrm&#123;_a&#125;$</span>, the stronger the acid: very strong acids <span class="tex">$\mathrm&#123;p&#125;K\mathrm&#123;_a&#125; &lt; 0$</span>, strong acids <span class="tex">$0 &lt; \mathrm&#123;p&#125;K\mathrm&#123;_a&#125; &lt; 3$</span>, medium-strong acids <span class="tex">$3 &lt; \mathrm&#123;p&#125;K\mathrm&#123;_a&#125; &lt; 7$</span>.</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Here are some monoprotonic acids and their <span class="tex">$\mathrm&#123;p&#125;K\mathrm&#123;_a&#125;$</span> values. Use them as a guide when setting the <span class="tex">$\mathrm&#123;p&#125;K_\mathrm&#123;a&#125;$</span> slider below.</p>
+<table><tr><th align="right">Acid</th><th align="center">pKa</th></tr><tr><td align="right"><span class="tex">$\mathrm&#123;HCl&#125;$</span></td><td align="center"><span class="tex">$-6$</span></td></tr><tr><td align="right"><span class="tex">$\mathrm&#123;HSO_4^-&#125;$</span></td><td align="center"><span class="tex">$1.92$</span></td></tr><tr><td align="right"><span class="tex">$\mathrm&#123;HNO_&#123;2&#125;&#125;$</span></td><td align="center"><span class="tex">$3.15$</span></td></tr><tr><td align="right"><span class="tex">$\mathrm&#123;HF&#125;$</span></td><td align="center"><span class="tex">$3.17$</span></td></tr><tr><td align="right"><span class="tex">$\mathrm&#123;HCOOH&#125;$</span></td><td align="center"><span class="tex">$3.75$</span></td></tr><tr><td align="right"><span class="tex">$\mathrm&#123;CH_&#123;3&#125;COOH&#125;$</span></td><td align="center"><span class="tex">$4.76$</span></td></tr></table>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Interactive-Titration-Curve">Interactive Titration Curve</h2>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Drag the sliders to set up your titration. Each slider is independent — change the acid strength &#40;<span class="tex">$\mathrm&#123;p&#125;K_\mathrm&#123;a&#125;$</span>&#41;, the concentration and volume of the acid you are analysing, and the concentration of the titrant &#40;NaOH&#41;. The curve, the current titration point and the equivalence point update live.</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid strength pKₐ &#61; <bond def="pKa" unique_id="jelqjmyqhlxp"><input type='range' min='1' max='49' value='44'><script>
+					const input_el = currentScript.previousElementSibling
+					const output_el = currentScript.nextElementSibling
+					const displays = ["-6.0", "-5.75", "-5.5", "-5.25", "-5.0", "-4.75", "-4.5", "-4.25", "-4.0", "-3.75", "-3.5", "-3.25", "-3.0", "-2.75", "-2.5", "-2.25", "-2.0", "-1.75", "-1.5", "-1.25", "-1.0", "-0.75", "-0.5", "-0.25", "0.0", "0.25", "0.5", "0.75", "1.0", "1.25", "1.5", "1.75", "2.0", "2.25", "2.5", "2.75", "3.0", "3.25", "3.5", "3.75", "4.0", "4.25", "4.5", "4.75", "5.0", "5.25", "5.5", "5.75", "6.0"]
+
+					let update_output = () => {
+						output_el.value = displays[input_el.valueAsNumber - 1]
+					}
+					
+					input_el.addEventListener("input", update_output)
+					// We also poll for changes because the `input_el.value` can change from the outside, e.g. https://github.com/JuliaPluto/PlutoUI.jl/issues/277
+					let id = setInterval(update_output, 200)
+					invalidation.then(() => {
+						clearInterval(id)
+						input_el.removeEventListener("input", update_output)
+					})
+					</script><output style='
+						font-family: system-ui;
+						font-variant-numeric: tabular-nums;
+    					font-size: 15px;
+    					margin-left: 3px;
+    					transform: translateY(-4px);
+    					display: inline-block;'>4.75</output></bond></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid concentration c₀&#40;HA&#41; / &#40;mol/L&#41; &#61; <bond def="c0_Acid" unique_id="vgqnpzxdfmtb"><input type='range' min='1' max='25' value='5'><script>
+					const input_el = currentScript.previousElementSibling
+					const output_el = currentScript.nextElementSibling
+					const displays = ["0.02", "0.04", "0.06", "0.08", "0.1", "0.12", "0.14", "0.16", "0.18", "0.2", "0.22", "0.24", "0.26", "0.28", "0.3", "0.32", "0.34", "0.36", "0.38", "0.4", "0.42", "0.44", "0.46", "0.48", "0.5"]
+
+					let update_output = () => {
+						output_el.value = displays[input_el.valueAsNumber - 1]
+					}
+					
+					input_el.addEventListener("input", update_output)
+					// We also poll for changes because the `input_el.value` can change from the outside, e.g. https://github.com/JuliaPluto/PlutoUI.jl/issues/277
+					let id = setInterval(update_output, 200)
+					invalidation.then(() => {
+						clearInterval(id)
+						input_el.removeEventListener("input", update_output)
+					})
+					</script><output style='
+						font-family: system-ui;
+						font-variant-numeric: tabular-nums;
+    					font-size: 15px;
+    					margin-left: 3px;
+    					transform: translateY(-4px);
+    					display: inline-block;'>0.1</output></bond></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid volume V₀&#40;HA&#41; / mL &#61; <bond def="v0_Acid" unique_id="wqhqznklispo"><input type='range' min='1' max='46' value='21'><script>
+					const input_el = currentScript.previousElementSibling
+					const output_el = currentScript.nextElementSibling
+					const displays = ["5.0", "6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.0", "19.0", "20.0", "21.0", "22.0", "23.0", "24.0", "25.0", "26.0", "27.0", "28.0", "29.0", "30.0", "31.0", "32.0", "33.0", "34.0", "35.0", "36.0", "37.0", "38.0", "39.0", "40.0", "41.0", "42.0", "43.0", "44.0", "45.0", "46.0", "47.0", "48.0", "49.0", "50.0"]
+
+					let update_output = () => {
+						output_el.value = displays[input_el.valueAsNumber - 1]
+					}
+					
+					input_el.addEventListener("input", update_output)
+					// We also poll for changes because the `input_el.value` can change from the outside, e.g. https://github.com/JuliaPluto/PlutoUI.jl/issues/277
+					let id = setInterval(update_output, 200)
+					invalidation.then(() => {
+						clearInterval(id)
+						input_el.removeEventListener("input", update_output)
+					})
+					</script><output style='
+						font-family: system-ui;
+						font-variant-numeric: tabular-nums;
+    					font-size: 15px;
+    					margin-left: 3px;
+    					transform: translateY(-4px);
+    					display: inline-block;'>25.0</output></bond></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>titrant concentration c₀&#40;NaOH&#41; / &#40;mol/L&#41; &#61; <bond def="c0_Base" unique_id="bdbvxqbttzch"><input type='range' min='1' max='25' value='5'><script>
+					const input_el = currentScript.previousElementSibling
+					const output_el = currentScript.nextElementSibling
+					const displays = ["0.02", "0.04", "0.06", "0.08", "0.1", "0.12", "0.14", "0.16", "0.18", "0.2", "0.22", "0.24", "0.26", "0.28", "0.3", "0.32", "0.34", "0.36", "0.38", "0.4", "0.42", "0.44", "0.46", "0.48", "0.5"]
+
+					let update_output = () => {
+						output_el.value = displays[input_el.valueAsNumber - 1]
+					}
+					
+					input_el.addEventListener("input", update_output)
+					// We also poll for changes because the `input_el.value` can change from the outside, e.g. https://github.com/JuliaPluto/PlutoUI.jl/issues/277
+					let id = setInterval(update_output, 200)
+					invalidation.then(() => {
+						clearInterval(id)
+						input_el.removeEventListener("input", update_output)
+					})
+					</script><output style='
+						font-family: system-ui;
+						font-variant-numeric: tabular-nums;
+    					font-size: 15px;
+    					margin-left: 3px;
+    					transform: translateY(-4px);
+    					display: inline-block;'>0.1</output></bond></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>added volume of titrant V&#40;NaOH&#41; / mL &#61; <bond def="pointX" unique_id="qdbaunrmfest"><input type='range' min='1' max='321' value='101'><script>
+					const input_el = currentScript.previousElementSibling
+					const output_el = currentScript.nextElementSibling
+					const displays = ["0.0", "0.25", "0.5", "0.75", "1.0", "1.25", "1.5", "1.75", "2.0", "2.25", "2.5", "2.75", "3.0", "3.25", "3.5", "3.75", "4.0", "4.25", "4.5", "4.75", "5.0", "5.25", "5.5", "5.75", "6.0", "6.25", "6.5", "6.75", "7.0", "7.25", "7.5", "7.75", "8.0", "8.25", "8.5", "8.75", "9.0", "9.25", "9.5", "9.75", "10.0", "10.25", "10.5", "10.75", "11.0", "11.25", "11.5", "11.75", "12.0", "12.25", "12.5", "12.75", "13.0", "13.25", "13.5", "13.75", "14.0", "14.25", "14.5", "14.75", "15.0", "15.25", "15.5", "15.75", "16.0", "16.25", "16.5", "16.75", "17.0", "17.25", "17.5", "17.75", "18.0", "18.25", "18.5", "18.75", "19.0", "19.25", "19.5", "19.75", "20.0", "20.25", "20.5", "20.75", "21.0", "21.25", "21.5", "21.75", "22.0", "22.25", "22.5", "22.75", "23.0", "23.25", "23.5", "23.75", "24.0", "24.25", "24.5", "24.75", "25.0", "25.25", "25.5", "25.75", "26.0", "26.25", "26.5", "26.75", "27.0", "27.25", "27.5", "27.75", "28.0", "28.25", "28.5", "28.75", "29.0", "29.25", "29.5", "29.75", "30.0", "30.25", "30.5", "30.75", "31.0", "31.25", "31.5", "31.75", "32.0", "32.25", "32.5", "32.75", "33.0", "33.25", "33.5", "33.75", "34.0", "34.25", "34.5", "34.75", "35.0", "35.25", "35.5", "35.75", "36.0", "36.25", "36.5", "36.75", "37.0", "37.25", "37.5", "37.75", "38.0", "38.25", "38.5", "38.75", "39.0", "39.25", "39.5", "39.75", "40.0", "40.25", "40.5", "40.75", "41.0", "41.25", "41.5", "41.75", "42.0", "42.25", "42.5", "42.75", "43.0", "43.25", "43.5", "43.75", "44.0", "44.25", "44.5", "44.75", "45.0", "45.25", "45.5", "45.75", "46.0", "46.25", "46.5", "46.75", "47.0", "47.25", "47.5", "47.75", "48.0", "48.25", "48.5", "48.75", "49.0", "49.25", "49.5", "49.75", "50.0", "50.25", "50.5", "50.75", "51.0", "51.25", "51.5", "51.75", "52.0", "52.25", "52.5", "52.75", "53.0", "53.25", "53.5", "53.75", "54.0", "54.25", "54.5", "54.75", "55.0", "55.25", "55.5", "55.75", "56.0", "56.25", "56.5", "56.75", "57.0", "57.25", "57.5", "57.75", "58.0", "58.25", "58.5", "58.75", "59.0", "59.25", "59.5", "59.75", "60.0", "60.25", "60.5", "60.75", "61.0", "61.25", "61.5", "61.75", "62.0", "62.25", "62.5", "62.75", "63.0", "63.25", "63.5", "63.75", "64.0", "64.25", "64.5", "64.75", "65.0", "65.25", "65.5", "65.75", "66.0", "66.25", "66.5", "66.75", "67.0", "67.25", "67.5", "67.75", "68.0", "68.25", "68.5", "68.75", "69.0", "69.25", "69.5", "69.75", "70.0", "70.25", "70.5", "70.75", "71.0", "71.25", "71.5", "71.75", "72.0", "72.25", "72.5", "72.75", "73.0", "73.25", "73.5", "73.75", "74.0", "74.25", "74.5", "74.75", "75.0", "75.25", "75.5", "75.75", "76.0", "76.25", "76.5", "76.75", "77.0", "77.25", "77.5", "77.75", "78.0", "78.25", "78.5", "78.75", "79.0", "79.25", "79.5", "79.75", "80.0"]
+
+					let update_output = () => {
+						output_el.value = displays[input_el.valueAsNumber - 1]
+					}
+					
+					input_el.addEventListener("input", update_output)
+					// We also poll for changes because the `input_el.value` can change from the outside, e.g. https://github.com/JuliaPluto/PlutoUI.jl/issues/277
+					let id = setInterval(update_output, 200)
+					invalidation.then(() => {
+						clearInterval(id)
+						input_el.removeEventListener("input", update_output)
+					})
+					</script><output style='
+						font-family: system-ui;
+						font-variant-numeric: tabular-nums;
+    					font-size: 15px;
+    					margin-left: 3px;
+    					transform: translateY(-4px);
+    					display: inline-block;'>25.0</output></bond></p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="The-chemistry,-as-compilable-numeric-code">The chemistry, as compilable numeric code</h3>
+<p><code>calc_pH</code> returns the pH of the solution after <code>v_Base_added</code> mL of titrant have been added. It handles three regimes with hand-written analytic formulas — strong acids dissociate completely, while weak acids follow the acid-constant equilibrium before the equivalence point and behave as a weak base after it. The autoprotolysis of water &#40;<span class="tex">$10^&#123;-7&#125;$</span>&#41; keeps the pH finite near neutrality.</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<span id="calc_pH">calc_pH</span>
+<div class="markdown"><p>pH after adding <code>v_Base_added</code> mL of NaOH to the acid described by the other args.</p>
+
+
+</div>
+</div>
+</pluto-output><pre class="pl-code"><code class="pl-jl">"pH after adding `v_Base_added` mL of NaOH to the acid described by the other args."
+function calc_pH(v_Base_added::Float64, pKa::Float64, c0_Acid::Float64,
+                 v0_Acid::Float64, c0_Base::Float64)
+    Ka = 10.0^(-pKa)
+    pKb = 14.0 - pKa
+    Kb = 10.0^(-pKb)
+
+    if pKa &lt;= 1.74   # very strong / strong acid: dissociates completely
+        c_H = 0.0
+        if v_Base_added * c0_Base &lt;= v0_Acid * c0_Acid   # up to the equivalence point
+            c_H = (c0_Acid * v0_Acid - c0_Base * v_Base_added) / (v0_Acid + v_Base_added) + 1.0e-7
+        else                                             # after the equivalence point
+            c_OH = (c0_Base * v_Base_added - c0_Acid * v0_Acid) / (v0_Acid + v_Base_added)
+            c_H = 1.0e-14 / c_OH
+        end
+        return -log(10.0, c_H)
+    else             # medium-strong / weak acid: acid-constant equilibrium
+        # starting concentrations of H3O+ (acid) and OH- (conjugate base at EP)
+        c0_H = -Ka / 2.0 + sqrt(Ka * Ka / 4.0 + Ka * c0_Acid)
+        c0_OH = -Kb / 2.0 + sqrt(Kb * Kb / 4.0 + Kb * c0_Acid)
+
+        n_acid = (c0_Acid - c0_H) * v0_Acid   # mol of acid still to be neutralised
+        n_base = c0_Base * v_Base_added       # mol of base added
+
+        if v_Base_added == 0.0                # at the starting point
+            return -log(10.0, c0_H)
+        elseif n_acid &gt; n_base                # buffer region, before the EP
+            c_H = Ka * (c0_Acid * v0_Acid / (c0_H * v0_Acid + c0_Base * v_Base_added) - 1.0)
+            return -log(10.0, c_H)
+        else                                  # at / after the EP: weak-base solution
+            c_OH = (c0_Base * v_Base_added - n_acid) / (v0_Acid + v_Base_added) + c0_OH
+            c_H = 1.0e-14 / c_OH
+            return -log(10.0, c_H)
+        end
+    end
+end</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<span id="equivalence_volume">equivalence_volume</span>
+<div class="markdown"><p>Volume of titrant &#40;mL&#41; at the equivalence point: n&#40;acid&#41; &#61; n&#40;base added&#41;.</p>
+
+
+</div>
+</div>
+</pluto-output><pre class="pl-code"><code class="pl-jl">"Volume of titrant (mL) at the equivalence point: n(acid) = n(base added)."
+function equivalence_volume(pKa::Float64, c0_Acid::Float64, v0_Acid::Float64, c0_Base::Float64)
+    if pKa &lt;= 1.74
+        return c0_Acid * v0_Acid / c0_Base
+    else
+        Ka = 10.0^(-pKa)
+        c0_H = -Ka / 2.0 + sqrt(Ka * Ka / 4.0 + Ka * c0_Acid)
+        return (c0_Acid - c0_H) * v0_Acid / c0_Base
+    end
+end</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-02c0320c-7c56-4fe5-8f8c-9ab0f733b28e"></pluto-output><pre class="pl-code"><code class="pl-jl">let
+    # end of the x-axis: twice the equivalence volume (or the slider reach)
+    v_end = max(2.0 * equivalence_volume(pKa, c0_Acid, v0_Acid, c0_Base), 1.0)
+
+    # sample the titration curve into flat Float64 vectors with an explicit loop
+    xs = Float64[]
+    ys = Float64[]
+    steps = 400
+    k = 0
+    while k &lt;= steps
+        v = v_end * k / steps
+        push!(xs, v)
+        push!(ys, calc_pH(v, pKa, c0_Acid, v0_Acid, c0_Base))
+        k += 1
+    end
+
+    ev = equivalence_volume(pKa, c0_Acid, v0_Acid, c0_Base)
+
+    fig = Figure(size = (560, 380))
+    ax = Axis(fig[1, 1];
+        title = "Titration curve against NaOH",
+        xlabel = "Added volume of titrant V(NaOH) / mL",
+        ylabel = "pH value")
+    ax.xmin = 0.0
+    ax.xmax = v_end
+    ax.ymin = 0.0
+    ax.ymax = 14.0
+
+    lines!(ax, xs, ys; linewidth = 2.0, label = "titration curve")
+    scatter!(ax, [pointX], [calc_pH(pointX, pKa, c0_Acid, v0_Acid, c0_Base)];
+        color = :green, markersize = 12.0, label = "current point")
+    scatter!(ax, [ev], [calc_pH(ev, pKa, c0_Acid, v0_Acid, c0_Base)];
+        color = :red, markersize = 12.0, label = "equivalence point")
+    axislegend(ax; position = :rb)
+    fig
+end</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Current-titration-point">Current titration point</h3>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e8"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e9"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h4 id="Exercises">Exercises</h4>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><ol>
+<li><p>Set <span class="tex">$\mathrm&#123;p&#125;K_\mathrm&#123;a&#125; &#61; -6$</span> &#40;a strong acid like HCl&#41; and add base step by step. Where is the equivalence point, and where does the pH jump?</p>
+</li>
+<li><p>Now set <span class="tex">$\mathrm&#123;p&#125;K_\mathrm&#123;a&#125; &#61; 4.75$</span> &#40;acetic acid&#41;. Notice the higher starting pH, the flat <strong>buffer region</strong>, and that the equivalence point now sits <em>above</em> pH 7.</p>
+</li>
+<li><p>Change the acid concentration. What changes in the curve and what stays the same? Keep an eye on the equivalence-point volume.</p>
+</li>
+<li><p>Before you change the acid volume or the titrant concentration, predict how the curve will move — then check.</p>
+</li>
+</ol>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Indicators">Indicators</h3>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Another way of finding the equivalence point is a <strong>pH indicator</strong> — a compound that changes colour over a characteristic pH range. The jump in pH around the equivalence point is usually large enough that the colour change pinpoints it. A few common indicators and their ranges:</p>
+<table><tr><th align="right">Indicator</th><th align="center">pH range</th></tr><tr><td align="right">Methyl orange</td><td align="center">3.1 – 4.4</td></tr><tr><td align="right">Litmus</td><td align="center">5.0 – 8.0</td></tr><tr><td align="right">Bromothymol blue</td><td align="center">6.0 – 7.6</td></tr><tr><td align="right">Phenolphthalein</td><td align="center">8.3 – 10.0</td></tr><tr><td align="right">Alizarin yellow</td><td align="center">10.1 – 12.0</td></tr></table>
+<p>Compare the current pH above with these ranges: which indicator would change colour right at <em>your</em> equivalence point?</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Appendix-—-Modelling-the-curve">Appendix — Modelling the curve</h2>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Strong-acids">Strong acids</h3>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>At the start &#40;no base added&#41; a strong acid dissociates completely, so <span class="tex">$c_0\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; c_0\mathrm&#123;&#40;HA&#41;&#125;$</span> and <span class="tex">$\mathrm&#123;pH&#125; &#61; -\log&#123;c_0\mathrm&#123;&#40;H_3O^&#43;&#41;&#125;&#125;$</span>. While base is added, hydronium ions are consumed one for one, giving &#40;before the equivalence point&#41;</p>
+<p class="tex">$$c\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; \frac&#123;c_0\mathrm&#123;&#40;HA&#41;&#125;\,V_0\mathrm&#123;&#40;HA&#41;&#125; - c_0\mathrm&#123;&#40;NaOH&#41;&#125;\,V_&#123;\text&#123;added&#125;&#125;&#125;&#123;V_0\mathrm&#123;&#40;HA&#41;&#125; &#43; V_&#123;\text&#123;added&#125;&#125;&#125; &#43; 10^&#123;-7&#125;.$$</p>
+<p>The <span class="tex">$10^&#123;-7&#125;$</span> term accounts for the autoprotolysis of water near neutral pH. After the equivalence point the solution is a diluted base, so we use</p>
+<p class="tex">$$c\mathrm&#123;&#40;OH^-&#41;&#125; &#61; \frac&#123;c_0\mathrm&#123;&#40;NaOH&#41;&#125;\,V_&#123;\text&#123;added&#125;&#125; - c_0\mathrm&#123;&#40;HA&#41;&#125;\,V_0\mathrm&#123;&#40;HA&#41;&#125;&#125;&#123;V_0\mathrm&#123;&#40;HA&#41;&#125; &#43; V_&#123;\text&#123;added&#125;&#125;&#125;,\qquad
+c\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; \frac&#123;10^&#123;-14&#125;&#125;&#123;c\mathrm&#123;&#40;OH^-&#41;&#125;&#125;.$$</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Medium-strong-and-weak-acids">Medium-strong and weak acids</h3>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>For weak acids the acid constant <span class="tex">$K_\mathrm&#123;a&#125;$</span> must be considered. At the starting point</p>
+<p class="tex">$$c_0\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; -\frac&#123;K_&#123;\mathrm&#123;a&#125;&#125;&#125;&#123;2&#125; &#43; \sqrt&#123;\frac&#123;K_&#123;\mathrm&#123;a&#125;&#125;^2&#125;&#123;4&#125; &#43; K_&#123;\mathrm&#123;a&#125;&#125;\,c_0\mathrm&#123;&#40;HA&#41;&#125;&#125;.$$</p>
+<p>Between the starting point and the equivalence point the solution is a <strong>buffer</strong>, with</p>
+<p class="tex">$$c\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; K_&#123;\mathrm&#123;a&#125;&#125;\left&#40;\frac&#123;c_0\mathrm&#123;&#40;H_3O^&#43;&#41;&#125;\,V_0\mathrm&#123;&#40;HA&#41;&#125;&#125;&#123;c_0\mathrm&#123;&#40;H_3O^&#43;&#41;&#125;\,V_0\mathrm&#123;&#40;HA&#41;&#125; &#43; c_0\mathrm&#123;&#40;NaOH&#41;&#125;\,V_&#123;\text&#123;added&#125;&#125;&#125; - 1\right&#41;.$$</p>
+<p>At and after the equivalence point the conjugate base <span class="tex">$\mathrm&#123;A^-&#125;$</span> acts as a weak base, with</p>
+<p class="tex">$$c_0\mathrm&#123;&#40;OH^-&#41;&#125; &#61; -\frac&#123;K_&#123;\mathrm&#123;b&#125;&#125;&#125;&#123;2&#125; &#43; \sqrt&#123;\frac&#123;K_&#123;\mathrm&#123;b&#125;&#125;^2&#125;&#123;4&#125; &#43; K_&#123;\mathrm&#123;b&#125;&#125;\,c_0\mathrm&#123;&#40;A^-&#41;&#125;&#125;,\qquad K_\mathrm&#123;b&#125; &#61; \frac&#123;10^&#123;-14&#125;&#125;&#123;K_\mathrm&#123;a&#125;&#125;,$$</p>
+<p>which is added to the excess hydroxide from the added base before converting to <span class="tex">$c\mathrm&#123;&#40;H_3O^&#43;&#41;&#125;$</span>. These are exactly the formulas implemented in <code>calc_pH</code> above.</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Interested-in-Contributing?">Interested in Contributing?</h2>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>There is still a lot that can be done — here are some ideas:</p>
+<ul>
+<li><p>Di- and triprotonic acids as options &#40;<em>Medium</em>&#41;</p>
+</li>
+<li><p>A hidden-concentration exercise: determine the concentration from the curve and check your answer &#40;<em>Medium</em>&#41;</p>
+</li>
+<li><p>Titrations against weak bases, or of bases against acids &#40;<em>Medium</em>&#41;</p>
+</li>
+<li><p>Animate an erlenmeyer flask whose colour changes with the indicator &#40;<em>Hard</em>&#41;</p>
+</li>
+</ul>
+</div></pluto-output></div>
+<div class="pl-cell"><pre class="pl-code"><code class="pl-jl">using WasmMakie, PlutoUI</code></pre></div>
+</div>
+<script src="__PI_ASSETS_BASE__/Titration.islands/shim.js"></script>
+<script>
+(function () {
+  function collectBonds() {
+    const vals = {};
+    document.querySelectorAll("bond[def]").forEach(function (b) {
+      const inp = b.querySelector("input,select,textarea");
+      if (!inp) return;
+      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
+            : (inp.type === "checkbox") ? inp.checked
+            : inp.value;
+      vals[b.getAttribute("def")] = v;
+    });
+    return vals;
+  }
+  async function rerender() {
+    if (window.__pi_renderAll) { try { await window.__pi_renderAll(collectBonds()); } catch (e) { console.warn(e); } }
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.closest && e.target.closest("bond[def]")) rerender();
+  });
+  (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
+})();
+</script>
+
+<script>
+(function () {
+  function render(root) { (root || document).querySelectorAll(".tex").forEach(function (s) {
+    if (s.dataset.r) return;
+    var t = s.textContent.trim();
+    var disp = t.indexOf("$$") === 0;
+    t = t.replace(/^\$\$?/, "").replace(/\$\$?$/, "");
+    try { katex.render(t, s, { displayMode: disp, throwOnError: false }); s.dataset.r = "1"; } catch (e) {}
+  }); }
+  (function wait() { window.katex ? render() : setTimeout(wait, 80); })();
+  new MutationObserver(function () { window.katex && render(); }).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
+<script type="module">
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function hl(code) {
+  const tree = parser.parse(code); let out = "", pos = 0;
+  highlightTree(tree, classHighlighter, (from, to, cls) => {
+    if (from > pos) out += esc(code.slice(pos, from));
+    out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
+  });
+  out += esc(code.slice(pos)); return out;
+}
+document.querySelectorAll("code.pl-jl").forEach(el => {
+  try { el.innerHTML = hl(el.textContent); } catch (e) { console.warn("pl-hl", e); }
+});
+</script>
+
+<script>
+document.addEventListener("click", function (e) {
+  if (!e.target.closest) return;
+  var pre = e.target.closest("pluto-tree > pluto-tree-prefix");
+  if (pre && pre.parentElement) pre.parentElement.classList.toggle("collapsed");
+});
+</script>
+
+</div>
