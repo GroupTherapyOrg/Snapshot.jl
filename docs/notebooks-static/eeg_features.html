@@ -1681,7 +1681,7 @@ a:visited {
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">using PlutoUI</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>Alpha &#40;8–13 Hz&#41; amplitude:</strong></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="alpha_amp" unique_id="luastljnkqxc"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="alpha_amp" unique_id="tgwnaeltwgsv"><input type='range' min='1' max='21' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1754,8 +1754,10 @@ function relative_alpha(a::Float64)
     b = eeg_band_powers(a)
     return b[3] / (b[1] + b[2] + b[3] + b[4] + b[5])
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-aaaa0007-0000-0000-0000-000000000007"></pluto-output><pre class="pl-code"><code class="pl-jl">rel = relative_alpha(alpha_amp)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-aaaa0008-0000-0000-0000-000000000008"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-aaaa0007-0000-0000-0000-000000000007">0.6493506493506496</pluto-output><pre class="pl-code"><code class="pl-jl">rel = relative_alpha(alpha_amp)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-aaaa0008-0000-0000-0000-000000000008"><div class="markdown"><p><strong>Relative alpha power:</strong> 0.6493506493506496</p>
+<p>&#40;alpha-band fraction of total spectral power — rises as you increase the alpha amplitude&#41;</p>
+</div></pluto-output></div>
 </main>
 <script src="eeg_features.islands/shim.js"></script>
 <script>

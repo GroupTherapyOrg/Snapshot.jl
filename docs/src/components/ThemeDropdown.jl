@@ -14,7 +14,7 @@ const _THEMES = [
 
 function ThemeDropdown()
     rows = join([
-        """<li><button type="button" class="justify-between" data-theme-name="$(t)"><span class="capitalize">$(titlecase(replace(t, "-" => " ")))</span><span class="flex gap-1" data-theme="$(t)"><span class="inline-block w-2.5 h-2.5 rounded-full bg-primary"></span><span class="inline-block w-2.5 h-2.5 rounded-full bg-secondary"></span><span class="inline-block w-2.5 h-2.5 rounded-full bg-accent"></span></span></button></li>"""
+        """<li><button type="button" class="justify-between" data-theme-name="$(t)"><span class="capitalize">$(titlecase(replace(t, "-" => " ")))</span><span class="flex w-16 h-5 rounded-md overflow-hidden ring-1 ring-base-content/20 shrink-0" data-theme="$(t)"><i class="flex-1" style="background:var(--color-base-100)"></i><i class="flex-1" style="background:var(--color-base-300)"></i><i class="flex-1" style="background:var(--color-primary)"></i><i class="flex-1" style="background:var(--color-secondary)"></i><i class="flex-1" style="background:var(--color-accent)"></i></span></button></li>"""
         for t in _THEMES
     ], "")
     Div(:class => "dropdown dropdown-end",

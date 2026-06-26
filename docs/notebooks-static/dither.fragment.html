@@ -1743,7 +1743,7 @@ function gray_figure(img::Vector{Float64}, nr::Int64, nc::Int64; px::Int64=320)
 	       Int64(nc), Int64(nr); interpolate = false)
 	return fig
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="ondgxmwmzgxp"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="kgxwzijtgjny"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1814,7 +1814,7 @@ function quantize(img::Vector{Float64}, levels::Int64)
 	end
 	return out
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="tplkyrkmzacq"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="ncuyidkjpoeh"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1929,18 +1929,21 @@ function mean_abs_error(a::Vector{Float64}, b::Vector{Float64})
 	end
 	return s / length(a)
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-7d1ced8c-8a33-4429-b8fb-f06eb4bc7b1b"></pluto-output><pre class="pl-code"><code class="pl-jl">err_quantize = let
+<div class="pl-cell"><pluto-output class="rich_output" id="out-7d1ced8c-8a33-4429-b8fb-f06eb4bc7b1b">0.2780832216763785</pluto-output><pre class="pl-code"><code class="pl-jl">err_quantize = let
 	n = imgsize
 	img = make_gradient(n, n)
 	mean_abs_error(quantize(img, levels), img)
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-c4799684-46b7-4783-99de-c8946e7067de"></pluto-output><pre class="pl-code"><code class="pl-jl">err_dither = let
+<div class="pl-cell"><pluto-output class="rich_output" id="out-c4799684-46b7-4783-99de-c8946e7067de">0.3623699989702734</pluto-output><pre class="pl-code"><code class="pl-jl">err_dither = let
 	n = imgsize
 	img = make_gradient(n, n)
 	mean_abs_error(floyd_steinberg(img, n, n, levels), img)
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-a52bdeb6-35c4-4a70-bfa4-469912b30b27"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-ce25faed-be1c-4b74-9c3c-968638eb7813"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a52bdeb6-35c4-4a70-bfa4-469912b30b27"><div class="markdown"><p><strong>Mean abs. error — plain rounding:</strong> 0.2780832216763785</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ce25faed-be1c-4b74-9c3c-968638eb7813"><div class="markdown"><p><strong>Mean abs. error — Floyd–Steinberg:</strong> 0.3623699989702734</p>
+<p>Per-pixel, dithering does <em>not</em> reduce the absolute error &#40;it still snaps to the same few levels&#41;. What it changes is <em>where</em> the error goes: it scatters it as high-frequency noise that the eye averages out, instead of leaving big visible bands. That&#39;s the whole trick. ✨</p>
+</div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Appendix">Appendix</h1>
 <p>The idea behind dithering goes back to an engraving technique from the 15th century called <a href="https://en.wikipedia.org/wiki/Stippling">stippling</a>, and a related concept, <a href="https://en.wikipedia.org/wiki/Halftone">halftoning</a>, is what lets newspapers print shades of gray with only black ink. You may also recognise the look from retro video games with limited palettes — it&#39;s what gives the <a href="https://en.wikipedia.org/wiki/Game_Boy_Camera">Game Boy Camera</a> its distinctive style&#33;</p>
 <p>For the real thing on actual images, take a look at <a href="https://github.com/JuliaImages/DitherPunk.jl">DitherPunk.jl</a>.</p>

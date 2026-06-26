@@ -1715,7 +1715,7 @@ a:visited {
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h4 id="Calculating-numbers">Calculating numbers</h4>
 <p>Step 1: choose an initial value <span class="tex">$z_0$</span> :</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>z0&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="z0" unique_id="hxvecegvrlei"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>z0&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="z0" unique_id="blxdzrxacuqa"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1742,17 +1742,17 @@ a:visited {
     					display: inline-block;'>1</output></bond></label></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Now, we can calculate <span class="tex">$z_1$</span>, and <span class="tex">$z_2$</span>, and so on:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-2e7f10f3-eb4d-40e0-ae48-c0b4563b99c4"></pluto-output><pre class="pl-code"><code class="pl-jl">z1 = z0^2 + 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-cf1f1d8a-c462-47b1-9e17-ea88357570aa"></pluto-output><pre class="pl-code"><code class="pl-jl">z2 = z1^2 + 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-b2a95d75-a254-4918-96d2-7ec5c2a60d8a"></pluto-output><pre class="pl-code"><code class="pl-jl">z3 = z2^2 + 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-d81173b4-8847-4c17-9a30-5e20c6f313dd"></pluto-output><pre class="pl-code"><code class="pl-jl">z4 = z3^2 + 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2e7f10f3-eb4d-40e0-ae48-c0b4563b99c4">2</pluto-output><pre class="pl-code"><code class="pl-jl">z1 = z0^2 + 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-cf1f1d8a-c462-47b1-9e17-ea88357570aa">5</pluto-output><pre class="pl-code"><code class="pl-jl">z2 = z1^2 + 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-b2a95d75-a254-4918-96d2-7ec5c2a60d8a">26</pluto-output><pre class="pl-code"><code class="pl-jl">z3 = z2^2 + 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d81173b4-8847-4c17-9a30-5e20c6f313dd">677</pluto-output><pre class="pl-code"><code class="pl-jl">z4 = z3^2 + 1</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>And so on ..</p>
 <p>Basically we calculate the next value by using the <strong>same function</strong> applied to the last value.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Fun Julia Alert!</p><p>Now check out this piece of cool Julia code. Can you guess what it does?</p>
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>n&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="n" unique_id="vebmidbuvvju"><input type='range' min='1' max='10' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>n&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="n" unique_id="naxbllzzqazt"><input type='range' min='1' max='10' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1785,9 +1785,13 @@ a:visited {
 	end
 	return z
 end;</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-4135244d-fb5a-4e8d-ad4b-c4046781b70c"></pluto-output><pre class="pl-code"><code class="pl-jl">zₙ = Fⁿ(z0, n)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-57819281-a466-4f6c-af96-ffe512594270"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><bond def="show_answer" unique_id="ybrlfxwaflig"><input type="checkbox"></bond> Show answer</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-4135244d-fb5a-4e8d-ad4b-c4046781b70c">458330</pluto-output><pre class="pl-code"><code class="pl-jl">zₙ = Fⁿ(z0, n)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-57819281-a466-4f6c-af96-ffe512594270"><div class="markdown"><blockquote>
+<p><strong>💡 Did you guess what the code does?</strong></p>
+<p><strong>Tip:</strong> Move both the <span class="tex">$n$</span> <strong>and</strong> the <span class="tex">$z_0$</span> sliders around if you need help&#33;</p>
+</blockquote>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><bond def="show_answer" unique_id="wsdogyhcjzna"><input type="checkbox"></bond> Show answer</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="The-Sequence">The Sequence</h3>
 <p>Now let&#39;s put it together&#33; </p>
@@ -1806,7 +1810,7 @@ end;</code></pre></div>
 end;</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Change the initial value and n and observe how the series changes&#33;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$z_0 &#61;$</span> <bond def="initial_value" unique_id="avsgosrtqzom"><input type='range' min='1' max='21' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$z_0 &#61;$</span> <bond def="initial_value" unique_id="jgmfcjexzwqx"><input type='range' min='1' max='21' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1831,7 +1835,7 @@ end;</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-10</output></bond></p>
-<p><span class="tex">$n &#61;$</span> <bond def="max_n" unique_id="zmyveveulxhu"><input type='range' min='1' max='20' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p><span class="tex">$n &#61;$</span> <bond def="max_n" unique_id="yneoatfdiqtw"><input type='range' min='1' max='20' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1857,7 +1861,7 @@ end;</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-ee4df211-020e-43d4-a41d-513fbd6f31b7"></pluto-output><pre class="pl-code"><code class="pl-jl">sequence = create_sequence(initial_value, max_n)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ee4df211-020e-43d4-a41d-513fbd6f31b7"><pluto-tree class="collapsed Array"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class="Array"><p-r><p-k>1</p-k><p-v>-10</p-v></p-r></pluto-tree-items></pluto-tree></pluto-output><pre class="pl-code"><code class="pl-jl">sequence = create_sequence(initial_value, max_n)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>👆 Click on the sequence to see all entries.</em></p>
 <div class="admonition info"><p class="admonition-title">Divergence!</p><p>What happens when we keep doing this for a long time?</p>
 <p>For most initial values, our numbers are always increasing and getting bigger and bigger, so they&#39;re going to infinity. We say the series <strong>diverges</strong>.</p>
@@ -1905,7 +1909,7 @@ end;</code></pre></div>
 	end
 	return series
 end;</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>initial_value_with_c&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="initial_value_with_c" unique_id="ewyadjyqjpmg"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><label style='display: flex; flex-wrap: wrap; align-items: baseline;'><code style='color: var(--cm-color-variable) !important; font-weight: 700;'>initial_value_with_c&nbsp<span style="opacity: .6">=</span>&nbsp</code><bond def="initial_value_with_c" unique_id="imxbqljarzeo"><input type='range' min='1' max='21' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1932,11 +1936,16 @@ end;</code></pre></div>
     					display: inline-block;'>1</output></bond></label></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Try setting <strong>C &#61; -1</strong>. What happens to our <code>C_sequence</code> &#40;if you chance nothing else&#41;?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-ae6b02ce-180e-487b-9a25-2be9c6092293"></pluto-output><pre class="pl-code"><code class="pl-jl">C_sequence = create_sequence_with_c(C, initial_value_with_c, max_n)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ae6b02ce-180e-487b-9a25-2be9c6092293"><pluto-tree class="collapsed Array"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class="Array"><p-r><p-k>1</p-k><p-v>1</p-v></p-r></pluto-tree-items></pluto-tree></pluto-output><pre class="pl-code"><code class="pl-jl">C_sequence = create_sequence_with_c(C, initial_value_with_c, max_n)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>If you noticed that we get a completely new sequence, that&#39;s correct&#33;</p>
 <p>But, how about if we set <strong>initial_value_with_c &#61; 1</strong>. What happens? Do you notice anything special about this sequence?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-221742a5-146e-4d7d-8d50-0f7bd5a30cb5"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-221742a5-146e-4d7d-8d50-0f7bd5a30cb5"><div class="markdown"><blockquote>
+<p><strong>✅ Answer</strong></p>
+<p>In this case, the series <strong>doesn&#39;t</strong> go to infinity but moves back and forth between 0 and -1, and so it doesn&#39;t <em>diverge</em>. It oscillates.</p>
+<p>PS: The same thing happens if initial_value_with_c &#61; 0</p>
+</blockquote>
+</div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Now, to make things more fun, let&#39;s try more values of C and see if the same thing happens again. </p>
 <p>To make it even more fun, let&#39;s make C a complex number&#33;</p>
 <p>If you don&#39;t know about complex numbers, that&#39;s okay. For now, we can think of C as a <strong>2D point</strong>.</p>
@@ -1963,7 +1972,7 @@ end;</code></pre></div>
  </pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>👇 Click anywhere to chose a point&#33;</strong></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="c" unique_id="jvaklmvmlghv"><script id="hello">
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="c" unique_id="opootxqpaaxx"><script id="hello">
 
 		const wrapper = this ?? html`
 			<div class="PlutoImageCoordinatePicker">
@@ -1979,7 +1988,7 @@ end;</code></pre></div>
 		img.style.cssText = ""
 
 		const img_url = undefined
-		const img_data = /* See the documentation for AbstractPlutoDingetjes.Display.published_to_js */ getPublishedObject("259542de-71a6-11f1-9d76-e1f2ccd2e996/232445e42107a663")
+		const img_data = /* See the documentation for AbstractPlutoDingetjes.Display.published_to_js */ getPublishedObject("2a55d19a-71aa-11f1-a605-31143ef71d6e/f8a7345ed9a598d1")
 		const mime = "image/svg+xml"
 
 		const pointer_url = "data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMjAiCmhlaWdodD0iMjAiCiAgdmlld0JveD0iMCAwIDIwIDIwIgogIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPGNpcmNsZSBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJibGFjayIgY3g9IjEwIiBjeT0iMTAiIHI9IjgiIHN0cm9rZS13aWR0aD0iNCIgLz4KCjwvc3ZnPgoK"
@@ -2220,11 +2229,11 @@ end;</code></pre></div>
 			}
 		}
 		</style></bond></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-9155d298-7758-4715-913f-9624c22450bb"></pluto-output><pre class="pl-code"><code class="pl-jl">c</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-9155d298-7758-4715-913f-9624c22450bb">0.9 + 0.4im</pluto-output><pre class="pl-code"><code class="pl-jl">c</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Again, starting from a fixed initial value, let&#39;s watch the <strong>size</strong> of each term in the sequence. See how it changes completely for even very similar <code>c</code> values? Pretty cool right&#33;</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">1.0 + 0.0im</pluto-output><pre class="pl-code"><code class="pl-jl">new_initial_value = 1.0 + 0.0im</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-78da1442-19df-464f-8099-407b50d99303"></pluto-output><pre class="pl-code"><code class="pl-jl">new_sequence = let
+<div class="pl-cell"><pluto-output class="rich_output" id="out-78da1442-19df-464f-8099-407b50d99303"><pluto-tree class="collapsed Array"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class="Array"><p-r><p-k>1</p-k><p-v>1</p-v></p-r><p-r><p-k>2</p-k><p-v>2</p-v></p-r><p-r><p-k>3</p-k><p-v>5</p-v></p-r><p-r><p-k>4</p-k><p-v>24</p-v></p-r><p-r><p-k>5</p-k><p-v>553</p-v></p-r><p-r><p-k>6</p-k><p-v>306105</p-v></p-r><p-r><p-k>7</p-k><p-v>1000000</p-v></p-r></pluto-tree-items></pluto-tree></pluto-output><pre class="pl-code"><code class="pl-jl">new_sequence = let
 	# Track the SIZE (magnitude) of each term — that's exactly what tells us
 	# whether the sequence stays small (converges) or blows up (diverges).
 	# We cap huge values so the list stays readable: a value of 1000000 means
@@ -2243,7 +2252,7 @@ end</code></pre></div>
 <h4 id="Convergence?">Convergence?</h4>
 <p>Let&#39;s look at the size of the <strong>last term</strong>. Is it a small number &#40;convergence&#41;, or something very large or <code>NaN</code> &#40;divergence&#41;?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-4693d328-0907-4d62-b8e4-dcccff803b59"></pluto-output><pre class="pl-code"><code class="pl-jl">last(new_sequence)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-4693d328-0907-4d62-b8e4-dcccff803b59">1000000</pluto-output><pre class="pl-code"><code class="pl-jl">last(new_sequence)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><style>
  @media (min-width: calc(700px + 30px + 300px)) {
     aside.plutoui-aside-wrapper {
@@ -2269,13 +2278,31 @@ end</code></pre></div>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Choose 2 of your favorite colors &#40;ideally they should match each other 😉&#41;:</p>
 </div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output">Dict{Symbol, Any}(:attributes =&gt; Dict{String, Any}("class" =&gt; nothing, "style" =&gt; "display: flex; flex-direction: row;"), :tag =&gt; "div", :children =&gt; Any[(Dict{Symbol, Any}(:attributes =&gt; Dict{String, Any}("class" =&gt; nothing, "style" =&gt; "flex: 0 1 49.0%;"), :tag =&gt; "div", :children =&gt; Any[("&lt;div class=\"markdown\"&gt;&lt;p&gt;First color:&lt;/p&gt;\n&lt;bond def=\"color1\" unique_id=\"hjldyrnpskrc\"&gt;&lt;select&gt;&lt;option value='puiselect-1'&gt;gold&lt;/option&gt;&lt;option value='puiselect-2'&gt;teal&lt;/option&gt;&lt;option value='puiselect-3'&gt;crimson&lt;/option&gt;&lt;option value='puiselect-4'&gt;navy&lt;/option&gt;&lt;option value='puiselect-5'&gt;magenta&lt;/option&gt;&lt;/select&gt;&lt;/bond&gt;\n&lt;/div&gt;", MIME type text/html)]), MIME type application/vnd.pluto.reactdomelement+object), (Dict{Symbol, Any}(:attributes =&gt; Dict{String, Any}("class" =&gt; nothing, "style" =&gt; "flex: 0 0 2%;"), :tag =&gt; "div", :children =&gt; Any[]), MIME type application/vnd.pluto.reactdomelement+object), (Dict{Symbol, Any}(:attributes =&gt; Dict{String, Any}("class" =&gt; nothing, "style" =&gt; "flex: 0 1 49.0%;"), :tag =&gt; "div", :children =&gt; Any[("&lt;div class=\"markdown\"&gt;&lt;p&gt;Second color:&lt;/p&gt;\n&lt;bond def=\"color2\" unique_id=\"mguzeahiwzjz\"&gt;&lt;select&gt;&lt;option value='puiselect-1'&gt;green&lt;/option&gt;&lt;option value='puiselect-2'&gt;purple&lt;/option&gt;&lt;option value='puiselect-3'&gt;orange&lt;/option&gt;&lt;option value='puiselect-4'&gt;black&lt;/option&gt;&lt;option value='puiselect-5'&gt;blue&lt;/option&gt;&lt;/select&gt;&lt;/bond&gt;\n&lt;/div&gt;", MIME type text/html)]), MIME type application/vnd.pluto.reactdomelement+object)])</pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Construct-Fractals">Construct Fractals</h2>
 <p>Now we have everything we need to construct a fractal from the Julia set. </p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-3dc2f13d-0238-444d-b440-5e7e2df0618f"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3dc2f13d-0238-444d-b440-5e7e2df0618f"><div class="markdown"><p><strong>Recipe: Julia Set picture</strong></p>
+<ol>
+<li><p>Choose a complex number <span class="tex">$c$</span> <strong>&#40;on the left&#41;</strong>.</p>
+</li>
+<li><p>We define our favorite sequence <span class="tex">$z_&#123;n&#43;1&#125; &#61; z_n^2 &#43; c$</span></p>
+</li>
+<li><p>Now, we&#39;re going over <strong>all</strong> the imaginary numbers in a square around <span class="tex">$0$</span>, and for each:</p>
+<ul>
+<li><p>Use the number as the initial value to compute a sequence.</p>
+</li>
+<li><p>If the sequence <strong>converges</strong>, we color the point <strong>gold</strong>.</p>
+</li>
+<li><p>If the sequence <strong>diverges</strong>, we color the point <strong>green</strong>.</p>
+</li>
+</ul>
+</li>
+</ol>
+</div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><strong>👇 Drag the sliders to choose the constant <span class="tex">$c &#61; c_x &#43; i\,c_y$</span>, zoom, and detail&#33;</strong></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$c_x &#61;$</span> <bond def="julia_cx" unique_id="hsfzeauewuzz"><input type='range' min='1' max='101' value='49'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span class="tex">$c_x &#61;$</span> <bond def="julia_cx" unique_id="xnfmvgnqdqva"><input type='range' min='1' max='101' value='49'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2300,7 +2327,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-0.04</output></bond></p>
-<p><span class="tex">$c_y &#61;$</span> <bond def="julia_cy" unique_id="pduxsfbeicdi"><input type='range' min='1' max='101' value='87'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p><span class="tex">$c_y &#61;$</span> <bond def="julia_cy" unique_id="lanslkqyjqpl"><input type='range' min='1' max='101' value='87'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2325,7 +2352,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>0.72</output></bond></p>
-<p>zoom <bond def="julia_zoom" unique_id="ivlnepilubbh"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>zoom <bond def="julia_zoom" unique_id="kyrkcepoxocw"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2349,7 +2376,7 @@ end</code></pre></div>
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
-    					display: inline-block;'>1</output></bond> · detail <bond def="julia_iter" unique_id="qjmrudproono"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+    					display: inline-block;'>1</output></bond> · detail <bond def="julia_iter" unique_id="zbzupnzxerro"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2380,7 +2407,7 @@ end</code></pre></div>
 <p>The <strong>Julia set</strong> above fixes one constant <span class="tex">$c$</span> and sweeps the <em>starting</em> point <span class="tex">$z_0$</span> across the plane. The <strong>Mandelbrot set</strong> does the opposite: it starts every pixel at <span class="tex">$z_0 &#61; 0$</span> and uses the pixel&#39;s own coordinate as <span class="tex">$c$</span>. The result is the single most famous fractal in mathematics — and the same simple loop <span class="tex">$z \\leftarrow z^2 &#43; c$</span> draws it.</p>
 <p>Pan with the centre sliders and zoom in to find miniature copies of the whole shape hiding along its edge.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>centre <span class="tex">$x$</span> <bond def="mb_cx" unique_id="ljnegefhzuft"><input type='range' min='1' max='151' value='76'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>centre <span class="tex">$x$</span> <bond def="mb_cx" unique_id="jlcuxjlqttez"><input type='range' min='1' max='151' value='76'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2405,7 +2432,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-0.5</output></bond></p>
-<p>centre <span class="tex">$y$</span> <bond def="mb_cy" unique_id="dpisafutwbqy"><input type='range' min='1' max='126' value='63'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>centre <span class="tex">$y$</span> <bond def="mb_cy" unique_id="wojmznewxsoa"><input type='range' min='1' max='126' value='63'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2430,7 +2457,7 @@ end</code></pre></div>
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>-0.01</output></bond></p>
-<p>zoom <bond def="mb_zoom" unique_id="zhbfetdzbcch"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>zoom <bond def="mb_zoom" unique_id="noapeaezarth"><input type='range' min='1' max='8' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2454,7 +2481,7 @@ end</code></pre></div>
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
-    					display: inline-block;'>1</output></bond> · detail <bond def="mb_iter" unique_id="kknvrtoikvcu"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+    					display: inline-block;'>1</output></bond> · detail <bond def="mb_iter" unique_id="mjecfaurezws"><input type='range' min='1' max='23' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2489,6 +2516,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output">escape_color (generic function with 1 method)</pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">ComplexNumberPicker (generic function with 1 method)</pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output">SVG</pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output">UInt8[0x3c, 0x73, 0x76, 0x67, 0x20, 0x78, 0x6d, 0x6c, 0x6e, 0x73, 0x3d, 0x22, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x77, 0x77, 0x77, 0x2e, 0x77, 0x33, 0x2e, 0x6f, 0x72, 0x67, 0x2f, 0x32, 0x30, 0x30, 0x30, 0x2f, 0x73, 0x76, 0x67, 0x22, 0x20, 0x77, 0x69, 0x64, 0x74, 0x68, 0x3d, 0x22, 0x33, 0x30, 0x30, 0x22, 0x20, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x3d, 0x22, 0x33, 0x30, 0x30, 0x22, 0x20, 0x76, 0x69, 0x65, 0x77, 0x42, 0x6f, 0x78, 0x3d, 0x22, 0x30, 0x20, 0x30, 0x20, 0x33, 0x30, 0x30, 0x20, 0x33, 0x30, 0x30, 0x22, 0x20, 0x73, 0x74, 0x79, 0x6c, 0x65, 0x3d, 0x22, 0x6d, 0x61, 0x78, 0x2d, 0x77, 0x69, 0x64, 0x74, 0x68, 0x3a, 0x31, 0x30, 0x30, 0x25, 0x3b, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x3a, 0x61, 0x75, 0x74, 0x6f, 0x3b, 0x63, 0x6f, 0x6c, 0x6f, 0x72, 0x3a, 0x62, 0x6c, 0x61, 0x63, 0x6b, 0x22, 0x3e, 0x0a, 0x0a, 0x3c, 0x64, 0x65, 0x66, 0x73, 0x3e, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x3c, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x20, 0x69, 0x64, 0x3d, 0x22, 0x74, 0x72, 0x69, 0x61, 0x6e, 0x67, 0x6c, 0x65, 0x22, 0x20, 0x76, 0x69, 0x65, 0x77, 0x42, 0x6f, 0x78, 0x3d, 0x22, 0x30, 0x20, 0x30, 0x20, 0x31, 0x30, 0x20, 0x31, 0x30, 0x22, 0x20, 0x72, 0x65, 0x66, 0x58, 0x3d, 0x22, 0x31, 0x22, 0x20, 0x72, 0x65, 0x66, 0x59, 0x3d, 0x22, 0x35, 0x22, 0x20, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x55, 0x6e, 0x69, 0x74, 0x73, 0x3d, 0x22, 0x73, 0x74, 0x72, 0x6f, 0x6b, 0x65, 0x57, 0x69, 0x64, 0x74, 0x68, 0x22, 0x20, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x57, 0x69, 0x64, 0x74, 0x68, 0x3d, 0x22, 0x31, 0x30, 0x22, 0x20, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x3d, 0x22, 0x31, 0x30, 0x22, 0x20, 0x6f, 0x72, 0x69, 0x65, 0x6e, 0x74, 0x3d, 0x22, 0x61, 0x75, 0x74, 0x6f, 0x2d, 0x73, 0x74, 0x61, 0x72, 0x74, 0x2d, 0x72, 0x65, 0x76, 0x65, 0x72, 0x73, 0x65, 0x22, 0x3e, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x3c, 0x70, 0x61, 0x74, 0x68, 0x20, 0x64, 0x3d, 0x22, 0x4d, 0x20, 0x30, 0x20, 0x30, 0x20, 0x4c, 0x20, 0x31, 0x30, 0x20, 0x35, 0x20, 0x4c, 0x20, 0x30, 0x20, 0x31, 0x30, 0x20, 0x7a, 0x22, 0x20, 0x66, 0x69, 0x6c, 0x6c, 0x3d, 0x22, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6c, 0x6f, 0x72, 0x22, 0x3e, 0x3c, 0x2f, 0x70, 0x61, 0x74, 0x68, 0x3e, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x3c, 0x2f, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x3e, 0x0a, 0x20, 0x20, 0x3c, 0x2f, 0x64, 0x65, 0x66, 0x73, 0x3e, 0x0a, 0x0a, 0x3c, 0x72, 0x65, 0x63, 0x74, 0x20, 0x77, 0x69, 0x64, 0x74, 0x68, 0x3d, 0x22, 0x33, 0x30, 0x30, 0x22, 0x20, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x3d, 0x22, 0x33, 0x30, 0x30, 0x22, 0x20, 0x66, 0x69, 0x6c, 0x6c, 0x3d, 0x22, 0x77, 0x68, 0x69, 0x74, 0x65, 0x22, 0x20, 0x72, 0x78, 0x3d, 0x22, 0x31, 0x65, 0x6d, 0x22, 0x2f, 0x3e, 0x0a, 0x0a, 0x3c, 0x6c, 0x69, 0x6e, 0x65, 0x20, 0x78, 0x31, 0x3d, 0x22, 0x31, 0x30, 0x22, 0x20, 0x78, 0x32, 0x3d, 0x22, 0x32, 0x39, 0x30, 0x22, 0x20, 0x79, 0x31, 0x3d, 0x22, 0x31, 0x35, 0x30, 0x22, 0x20, 0x79, 0x32, 0x3d, 0x22, 0x31, 0x35, 0x30, 0x22, 0x20, 0x73, 0x74, 0x72, 0x6f, 0x6b, 0x65, 0x3d, 0x22, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6c, 0x6f, 0x72, 0x22, 0x20, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x2d, 0x73, 0x74, 0x61, 0x72, 0x74, 0x3d, 0x22, 0x75, 0x72, 0x6c, 0x28, 0x23, 0x74, 0x72, 0x69, 0x61, 0x6e, 0x67, 0x6c, 0x65, 0x29, 0x22, 0x20, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x2d, 0x65, 0x6e, 0x64, 0x3d, 0x22, 0x75, 0x72, 0x6c, 0x28, 0x23, 0x74, 0x72, 0x69, 0x61, 0x6e, 0x67, 0x6c, 0x65, 0x29, 0x22, 0x3e, 0x3c, 0x2f, 0x6c, 0x69, 0x6e, 0x65, 0x3e, 0x0a, 0x0a, 0x3c, 0x6c, 0x69, 0x6e, 0x65, 0x20, 0x79, 0x31, 0x3d, 0x22, 0x31, 0x30, 0x22, 0x20, 0x79, 0x32, 0x3d, 0x22, 0x32, 0x39, 0x30, 0x22, 0x20, 0x78, 0x31, 0x3d, 0x22, 0x31, 0x35, 0x30, 0x22, 0x20, 0x78, 0x32, 0x3d, 0x22, 0x31, 0x35, 0x30, 0x22, 0x20, 0x73, 0x74, 0x72, 0x6f, 0x6b, 0x65, 0x3d, 0x22, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6c, 0x6f, 0x72, 0x22, 0x20, 0x6d, 0x61, 0x72, 0x6b, 0x65, 0x72, 0x2d, 0x73, 0x74, 0x61, 0x72, 0x74, 0x3d, 0x22, 0x75, 0x72, 0x6c, 0x28, 0x23, 0x74, 0x72, 0x69, 0x61, 0x6e, 0x67, 0x6c, 0x65, 0x29, 0x22</pluto-output></div>
 </main>
 <script src="fractals.islands/shim.js"></script>
 <script>

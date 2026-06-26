@@ -1692,7 +1692,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Pick-an-example-function">Pick an example function</h2>
 <table><tr><th align="center">choice</th><th align="center"><span class="tex">$f&#40;x&#41;$</span></th><th align="center"><span class="tex">$f&#39;&#40;x&#41;$</span></th><th align="center">a root</th></tr><tr><td align="center">1</td><td align="center"><span class="tex">$x^2 - 2$</span></td><td align="center"><span class="tex">$2x$</span></td><td align="center"><span class="tex">$\sqrt 2 \approx 1.41421$</span></td></tr><tr><td align="center">2</td><td align="center"><span class="tex">$x^3 - x$</span></td><td align="center"><span class="tex">$3x^2 - 1$</span></td><td align="center"><span class="tex">$0,\ \pm 1$</span></td></tr><tr><td align="center">3</td><td align="center"><span class="tex">$\cos x - x$</span></td><td align="center"><span class="tex">$-\sin x - 1$</span></td><td align="center"><span class="tex">$\approx 0.73909$</span></td></tr></table>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="svrtaohgtahy"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="wyyxtnvmprcl"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1718,7 +1718,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="aazityalcmcc"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="wkpnimfmenhu"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1744,7 +1744,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>2.0</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="xfxyjyzbgrzg"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="lklaevzzohcz"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1831,7 +1831,7 @@ function newton_sequence(which::Int64, x0::Float64, n::Int64)
     end
     return xs
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-2fb40dc6-7c2f-11eb-2469-8deb4db59b5c"></pluto-output><pre class="pl-code"><code class="pl-jl"># shown as strings so the Float64 list renders identically in-browser
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2fb40dc6-7c2f-11eb-2469-8deb4db59b5c"><pluto-tree class="collapsed Array"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class="Array"><p-r><p-k>1</p-k><p-v>"2.0"</p-v></p-r><p-r><p-k>2</p-k><p-v>"1.5"</p-v></p-r><p-r><p-k>3</p-k><p-v>"1.4166666666666667"</p-v></p-r><p-r><p-k>4</p-k><p-v>"1.4142156862745099"</p-v></p-r><p-r><p-k>5</p-k><p-v>"1.4142135623746899"</p-v></p-r><p-r><p-k>6</p-k><p-v>"1.4142135623730951"</p-v></p-r></pluto-tree-items></pluto-tree></pluto-output><pre class="pl-code"><code class="pl-jl"># shown as strings so the Float64 list renders identically in-browser
 # (whole-number iterates like 2.0 print as "2.0", matching Julia)
 iterates = string.(newton_sequence(which, x0, n))</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
@@ -1846,7 +1846,7 @@ function newton_root(which::Int64, x0::Float64, n::Int64)
     xs = newton_sequence(which, x0, n)
     return xs[end]
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-2e2e5f0e-7c31-11eb-0da7-770b07ee6202"></pluto-output><pre class="pl-code"><code class="pl-jl">root_estimate = newton_root(which, x0, n)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2e2e5f0e-7c31-11eb-0da7-770b07ee6202">1.4142135623730951</pluto-output><pre class="pl-code"><code class="pl-jl">root_estimate = newton_root(which, x0, n)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="How-well-did-it-converge?">How well did it converge?</h2>
 <p><code>residual</code> is <span class="tex">$|f&#40;x_n&#41;|$</span> at the final iterate — it should shrink toward <code>0</code> as you increase the number of iterations <code>n</code> &#40;try the slider&#33;&#41;.</p>
 </div></pluto-output></div>
@@ -1862,9 +1862,12 @@ function residual(which::Int64, x0::Float64, n::Int64)
     x = newton_root(which, x0, n)
     return abs(f(x, which))
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-9bfafcc0-7ba2-11eb-1b67-e3a3803ead08"></pluto-output><pre class="pl-code"><code class="pl-jl">res = residual(which, x0, n)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e8"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e9"></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-9bfafcc0-7ba2-11eb-1b67-e3a3803ead08">4.440892098500626e-16</pluto-output><pre class="pl-code"><code class="pl-jl">res = residual(which, x0, n)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e8"><div class="markdown"><p><strong>Final estimate of the root:</strong> 1.4142135623730951</p>
+</div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e9"><div class="markdown"><p><strong>Residual |f&#40;x&#41;| at that estimate:</strong> 4.440892098500626e-16</p>
+<p>&#40;this shrinks toward 0 as you raise the iteration count <code>n</code>&#41;</p>
+</div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Visualising-the-steps">Visualising the steps</h2>
 <p>The curve is <span class="tex">$f$</span>. The horizontal line is the <span class="tex">$x$</span>-axis &#40;where the root lives&#41;. The vertical ticks mark each iterate <span class="tex">$x_0, x_1, \dots$</span> as Newton&#39;s method homes in on the root.</p>
 </div></pluto-output></div>
