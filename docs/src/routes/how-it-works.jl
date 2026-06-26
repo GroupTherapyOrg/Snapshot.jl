@@ -112,10 +112,10 @@
             ),
             para(
                 "So the notebook renders exactly as Pluto does, but one attribute — ",
-                code("<html data-theme=\"…\">"),
-                " — restyles the whole thing. The picker above each notebook in this site does just that: ",
-                "it sets the theme on the (same-origin) notebook and remembers your choice, so every ",
-                "notebook reskins together, seamlessly, as if it were part of the page."
+                code("data-theme=\"…\""),
+                " — restyles the whole thing. The ", code("🎨"), " picker in the nav above does just that: ",
+                "because each notebook is now real DOM on the page (no iframe), one dropdown sets the theme on ",
+                "every notebook at once and remembers your choice — they reskin together, seamlessly, as part of the site."
             )
         ),
 
