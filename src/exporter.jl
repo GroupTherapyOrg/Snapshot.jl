@@ -435,12 +435,24 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         println(cells_io, "</div>")
     end
     cells_html = String(take!(cells_io))
-    # Lean Table of Contents — replicates PlutoUI.TableOfContents(aside=true) mechanics:
-    # a floating panel on the right; click the toggle to collapse it to a narrow strip on
-    # the far-right edge; hover the strip to preview/expand; click to pin open/closed.
-    # Auto-built from the page headings. DaisyUI-themed (pl-toc* classes).
-    toc_html = has_toc ? raw"""
-<nav class="plutoui-toc aside indent">
+    # ─── Table of Contents — a ~1-1 port of PlutoUI.TableOfContents(aside=true) ───
+    # Same DOM (`nav.plutoui-toc.aside.indent` > header[toggle×2 + title] + section),
+    # same CSS (auto-derived into pluto-base.css → PLUTO_OUTPUT_CSS, re-themed to
+    # DaisyUI tokens), and a faithful-but-vanilla port of PlutoUI's toc_js: depth-3
+    # heading scan with after-H* nesting, click-toggle collapse, smooth-scroll on row
+    # click, scroll-spy via two IntersectionObservers (the "on top half of viewport"
+    # highlight rule from PlutoUI), and the small-screen auto-hide. `data-embedded`
+    # tells the CSS/JS this instance lives inside the docs column (vs a standalone
+    # page) so it positions sensibly and starts collapsed instead of floating over
+    # the docs chrome. Renders only when the notebook used PlutoUI.TableOfContents.
+    #
+    # NOTE: kept dependency-free (native scrollIntoView, no smooth-scroll-into-view
+    # lib) and resilient to our reactive island re-renders (a MutationObserver +
+    # delayed rebuilds repopulate the rows once cell output mounts).
+    toc_html = has_toc ? (embedded -> string(
+        "<nav class=\"plutoui-toc aside indent",
+        embedded ? " toc-embedded\" data-embedded=\"1\">" : "\">",
+        raw"""
   <header>
     <span class="toc-toggle open-toc"></span>
     <span class="toc-toggle closed-toc"></span>
@@ -449,37 +461,132 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
   <section></section>
 </nav>
 <script>
-window.addEventListener("load", function () {
-  var nav = document.querySelector(".plutoui-toc");
-  if (!nav) return;
-  var section = nav.querySelector("section");
-  var heads = document.querySelectorAll("main pluto-output h1, main pluto-output h2, main pluto-output h3, main pluto-output h4");
-  var last = "H1";
-  heads.forEach(function (h, i) {
-    if (!h.id) h.id = "toc-h-" + i;
-    var lvl = h.tagName;
-    var row = document.createElement("div");
-    row.className = "toc-row " + lvl + " after-" + last;
-    var a = document.createElement("a");
-    a.className = lvl; a.href = "#" + h.id; a.textContent = h.textContent;
-    row.appendChild(a); section.appendChild(row); last = lvl;
-  });
-  nav.querySelectorAll(".toc-toggle").forEach(function (t) {
-    t.addEventListener("click", function () { nav.classList.toggle("hide"); });
-  });
-  if ("IntersectionObserver" in window) {
-    var byId = {};
-    section.querySelectorAll(".toc-row").forEach(function (r) {
-      var a = r.querySelector("a"); if (a) byId[a.getAttribute("href").slice(1)] = r;
+(function () {
+  function init() {
+    var navs = document.querySelectorAll(".plutoui-toc");
+    if (!navs.length) return;
+    navs.forEach(function (nav) {
+      if (nav.__pl_toc_init) return; nav.__pl_toc_init = true;
+      var section = nav.querySelector("section");
+      var embedded = nav.hasAttribute("data-embedded");
+      // the notebook root this ToC belongs to (its nearest .pi-notebook, else <main>,
+      // else the document) — keeps the heading scan scoped in BOTH contexts.
+      var root = (nav.closest && nav.closest(".pi-notebook")) || document.querySelector("main") || document;
+      var DEPTH = 3; // PlutoUI default
+      var headById = {};
+
+      function headerSelector() {
+        var sel = [];
+        for (var i = 1; i <= DEPTH; i++) { sel.push("pluto-output h" + i); }
+        return sel.join(",");
+      }
+      function getHeaders() {
+        return Array.prototype.filter.call(root.querySelectorAll(headerSelector()),
+          function (el) { return !el.classList.contains("no-toc"); });
+      }
+
+      // ── scroll-spy: PlutoUI's two-observer "topmost header in upper half" rule ──
+      var highlighted = new Set();
+      var lastClickTime = { current: 0 };
+      function intersectionCallback(ixs) {
+        var onTop = ixs.filter(function (ix) {
+          return ix.intersectionRatio > 0 && ix.intersectionRect.y < ix.rootBounds.height / 2;
+        });
+        if (onTop.length > 0) {
+          highlighted.forEach(function (a) { a.classList.remove("in-view"); });
+          highlighted.clear();
+          onTop.slice(0, 1).forEach(function (i) {
+            var div = headById[i.target.id]; if (!div) return;
+            div.classList.add("in-view"); highlighted.add(div);
+          });
+        }
+      }
+      var io1 = "IntersectionObserver" in window
+        ? new IntersectionObserver(intersectionCallback, { root: null, threshold: 1, rootMargin: "-15px" }) : null;
+      var io2 = "IntersectionObserver" in window
+        ? new IntersectionObserver(intersectionCallback, { root: null, threshold: 1, rootMargin: "15px" }) : null;
+
+      // skip rebuilds when the heading set hasn't changed (the heading texts as a
+      // fingerprint) — without this the MutationObserver + island re-renders would
+      // thrash `render()` in a loop (replaceChildren mutates the DOM → observer → …).
+      var lastSig = null;
+      function render() {
+        var heads = getHeaders();
+        var sig = heads.map(function (h) { return h.tagName + ":" + h.innerText; }).join("|");
+        if (sig === lastSig) return; // nothing changed → don't touch the DOM
+        lastSig = sig;
+        headById = {}; highlighted.clear();
+        io1 && io1.disconnect(); io2 && io2.disconnect();
+        var frag = document.createDocumentFragment();
+        var last = "H1";
+        heads.forEach(function (h, i) {
+          if (!h.id) h.id = "toc-h-" + i;
+          var lvl = h.tagName; // H1..H6
+          var a = document.createElement("a");
+          a.className = lvl; a.href = "#" + h.id; a.title = h.innerText;
+          a.textContent = h.innerText;
+          a.addEventListener("click", function (e) {
+            e.preventDefault();
+            try { history.replaceState(null, "", a.getAttribute("href")); } catch (_) {}
+            lastClickTime.current = Date.now();
+            h.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+          var row = document.createElement("div");
+          row.className = "toc-row " + lvl + " after-" + last;
+          row.appendChild(a);
+          frag.appendChild(row);
+          headById[h.id] = row;
+          io1 && io1.observe(h); io2 && io2.observe(h);
+          last = lvl;
+        });
+        section.replaceChildren(frag);
+      }
+
+      // toggle collapse on the header icons (PlutoUI: any click within a .toc-toggle)
+      nav.addEventListener("click", function (e) {
+        var t = e.target.closest && e.target.closest(".toc-toggle");
+        if (t) { e.stopImmediatePropagation(); nav.classList.toggle("hide"); }
+      });
+
+      // small-screen auto-hide (PlutoUI thresholds). Embedded ToCs ALSO start hidden
+      // so they never float over docs content at rest — hover/click the edge strip.
+      function matchListener() {
+        var w = (embedded && root.getBoundingClientRect ? root.getBoundingClientRect().width
+                 : (document.documentElement.scrollWidth || window.innerWidth));
+        var small = w < 1000;
+        nav.classList.toggle("smallscreen", small);
+        if (!nav.__pl_user_toggled) nav.classList.toggle("hide", small || embedded);
+      }
+      nav.querySelectorAll(".toc-toggle").forEach(function (t) {
+        t.addEventListener("click", function () { nav.__pl_user_toggled = true; });
+      });
+      ["resize"].forEach(function (ev) { window.addEventListener(ev, matchListener); });
+
+      render();
+      // reactive islands mount their output after first paint — rebuild a few times
+      [100, 1000, 3000].forEach(function (ms) { setTimeout(render, ms); });
+      // and watch the CELLS container for structural changes (island re-renders add
+      // output). We observe the cells area, NOT the nav — observing the whole `root`
+      // (which CONTAINS this nav) would let our own section.replaceChildren() retrigger
+      // the observer in a tight loop. A debounce + the heading fingerprint above are a
+      // second safety net. The IntersectionObserver-only scroll-spy doesn't need this.
+      var cellsArea = (root.querySelector && root.querySelector(".pi-cells")) ||
+                      (root.querySelector && root.querySelector("main")) ||
+                      (root === document ? null : root);
+      if ("MutationObserver" in window && cellsArea && !cellsArea.contains(nav)) {
+        var deb = null;
+        new MutationObserver(function () {
+          clearTimeout(deb); deb = setTimeout(render, 200);
+        }).observe(cellsArea, { childList: true, subtree: true });
+      }
+      matchListener();
     });
-    var io = new IntersectionObserver(function (ents) {
-      ents.forEach(function (e) { var r = byId[e.target.id]; if (r) r.classList.toggle("in-view", e.isIntersecting); });
-    }, { rootMargin: "0px 0px -75% 0px" });
-    heads.forEach(function (h) { io.observe(h); });
   }
-});
+  document.readyState === "loading"
+    ? document.addEventListener("DOMContentLoaded", init) : init();
+})();
 </script>
-""" : ""
+""")) : (_ -> "")
     shim_tag = islands_dirname === nothing ? "" :
         string("<script src=\"", islands_dirname, "/shim.js\"></script>")
     wiring = raw"""
@@ -575,8 +682,36 @@ a{color:var(--color-primary)}
 /* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
    (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
 .pl-cell{margin:1.25rem 0}
-.pl-code{background:var(--color-base-200);border-radius:.4rem;padding:.5rem .75rem;overflow-x:auto;font-size:.8em;line-height:1.5;margin:.4rem 0 0}
+.pl-code{background:var(--color-base-200);border-radius:.4rem;padding:.5rem .75rem;overflow-x:auto;max-width:100%;font-size:.8em;line-height:1.5;margin:.4rem 0 0}
 .pl-code code{background:none;padding:0;font-size:1em;white-space:pre;font-family:var(--julia-mono-font-stack,ui-monospace,Menlo,monospace)}
+/* keep wide cell content inside the notebook column (don't blow out the page):
+   long code lines scroll within their block; PlutoUI multi-slider rows wrap;
+   widgets/markdown never exceed the column; anything still wide scrolls in-cell.
+   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .pi-notebook
+   wrapper (it uses <main>), and in the docs fragment the whole sheet is wrapped in
+   `@scope (.pi-notebook)` — so a `.pi-notebook X` selector matched NOTHING in either
+   context (the earlier 272px residual). Bare class/element selectors auto-scope under
+   @scope for the fragment and stay notebook-specific (these are Pluto/PlutoUI classes)
+   for the standalone page. */
+pre,table,bond,.markdown,img{max-width:100%}
+.slider_group_inner,.slider_group,.on_small_show,.on_big_show{flex-wrap:wrap !important;max-width:100% !important}
+/* PlutoUI/combine `sidebar-left|right` parks slider columns in the PAGE MARGIN via
+   `position:absolute; left:100%` (Pluto's full-width editor has room); in our narrow
+   embedded column that flings them past the right edge by their own ~17rem width (the
+   272px page overflow + sliders in the gutter). Flow them inline instead — `position:
+   static` also neutralises the left/right/top:100% offsets (they only apply to
+   positioned boxes). `.aside` is PlutoUI.combine's own margin-aside variant. */
+.sidebar-left,.sidebar-right,.sidebar-bottom,.slider_group.aside{position:static !important;left:auto !important;right:auto !important;top:auto !important;width:auto !important}
+/* PlutoUI.aside() (margin notes / admonitions in the gutter) does the SAME trick via
+   an inline cell <style>: `aside.plutoui-aside-wrapper{position:absolute;right:-11px;
+   width:0}` + `> div{width:300px}` — a zero-width anchor whose 300px child spills past
+   the right edge (the fractals / PlutoUI.jl 312px overflow). Flow the note inline in
+   our narrow column instead: static anchor, and the child caps at the column width. */
+.plutoui-aside-wrapper{position:static !important;right:auto !important;left:auto !important;width:auto !important}
+.plutoui-aside-wrapper>div{width:auto !important;max-width:100% !important}
+/* safety net: anything STILL wider than the column scrolls within the notebook column
+   rather than pushing the page layout out (e.g. a stray fixed-width figure). */
+.pi-cells,main{overflow-x:auto}
 /* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
 .tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
@@ -586,6 +721,15 @@ a{color:var(--color-primary)}
 .tok-macroName{color:#db2777}
 .tok-function,.tok-definition{color:#2563eb}
 .tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
+/* ── EMBEDDED ToC (docs): keep Pluto's floating aside, but make it respect the docs
+   chrome. It stays a fixed top-right panel (like Pluto) so it never disturbs the
+   notebook column's flow — but sits BELOW the docs sticky header (lower z-index +
+   a little lower) and, crucially, the collapsed `.hide` state slides flush to the
+   right viewport edge (translateX to right:0) instead of PAST it, so it can never
+   add a horizontal scrollbar. It starts collapsed (the JS adds .hide) so it reads
+   as a tidy tab the reader opens, never floating over docs text at rest. */
+.plutoui-toc.toc-embedded.aside{z-index:30;top:4.5rem;right:0;max-height:calc(100vh - 6rem);box-shadow:0 2px 14px rgba(0,0,0,.10)}
+.plutoui-toc.toc-embedded.aside.hide{transform:translateX(calc(100% - 28px))}
 """
     # Pluto's OWN output CSS (editor.css pluto-output rules + treeview.css) and
     # PlutoUI's TableOfContents CSS, copied VERBATIM and re-themed only by the
@@ -672,6 +816,8 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         theme_apply = string("<script>(function(){try{var t=localStorage.getItem('pi-theme');",
             "if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.pi-notebook'):null;",
             "if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>")
+        # the EMBEDDED ToC lives INSIDE .pi-notebook so the @scope'd Pluto ToC CSS
+        # styles it; data-embedded makes it position sensibly + start collapsed.
         return string(
             "<div class=\"pi-notebook\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",
@@ -679,6 +825,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
             "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
             "<style>\n", frag_css, "\n</style>\n",
             theme_apply, "\n",
+            toc_html(true), "\n",
             "<div class=\"pi-cells\">\n", cells_html, "</div>\n",
             frag_shim, "\n", wiring, "\n", katex_js, "\n", hl_js, "\n", tree_js, "\n",
             "</div>\n",
@@ -692,7 +839,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
         "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
         "<title>", name, "</title>\n<style>\n", dui_css, "\n", pluto_css,
-        "</style>\n</head>\n<body>\n", picker_block, "\n", toc_html, "<main>\n", cells_html, "</main>\n",
+        "</style>\n</head>\n<body>\n", picker_block, "\n", toc_html(false), "<main>\n", cells_html, "</main>\n",
         shim_tag, "\n", wiring, "\n", katex_js, "\n", hl_js, "\n", tree_js, "\n</body>\n</html>\n",
     )
 end
