@@ -421,7 +421,18 @@
         for (const group of m.groups) {
             let cells
             try { cells = await render_group_cells(group, (name) => bondValues[name]) }
-            catch (e) { console.warn("🏝️ island render failed:", e); continue }
+            catch (e) {
+                console.warn("🏝️ island render failed:", e)
+                // LOUD, never silent: a render that THROWS at runtime gets the SAME
+                // Pluto !!! warning admonition as a compile-time fallback, on each of
+                // the group's cells — a broken island is always visible, not a blank.
+                for (const cell of group.cells ?? []) {
+                    const mount = document.getElementById("out-" + cell.id)
+                    if (mount && !mount.querySelector("." + WARN_CLASS))
+                        mount.prepend(warning_node(["This cell's interactive output couldn't run in your browser (" + ((e && e.message) || String(e)) + ")."]))
+                }
+                continue
+            }
             for (const c of cells) {
                 const mount = document.getElementById("out-" + c.id)
                 if (mount) mount.innerHTML = c.html ?? c.body
