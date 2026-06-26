@@ -1676,7 +1676,7 @@ a:visited {
 
 <main>
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">import AbstractPlutoDingetjes.Bonds</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="acsmctkiwdeq"><input type=range value=1 min=1 max=100></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x CoolSlider(100)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output"><bond def="x" unique_id="tqbzxtahjgan"><input type=range value=1 min=1 max=100></bond></pluto-output><pre class="pl-code"><code class="pl-jl">@bind x CoolSlider(100)</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-aa000004-0000-4000-8000-000000000004"></pluto-output><pre class="pl-code"><code class="pl-jl">y = x^2</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-aa000005-0000-4000-8000-000000000005"></pluto-output></div>
 </main>
@@ -1688,9 +1688,18 @@ a:visited {
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inp = b.querySelector("input,select,textarea");
       if (!inp) return;
-      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
-            : (inp.type === "checkbox") ? inp.checked
-            : inp.value;
+      const t = inp.type;
+      // Match the shim's value_tree contract per input type: numbers as Number,
+      // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
+      // marker the shim decodes into a Julia DateTime (the staterequest path sends
+      // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
+      // here would make value_tree treat the DateTime struct's value as undefined.
+      let v;
+      if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "checkbox") v = inp.checked;
+      else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
+        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else v = inp.value;
       vals[b.getAttribute("def")] = v;
     });
     return vals;

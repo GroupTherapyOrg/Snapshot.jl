@@ -1743,7 +1743,7 @@ function gray_figure(img::Vector{Float64}, nr::Int64, nc::Int64; px::Int64=320)
 	       Int64(nc), Int64(nr); interpolate = false)
 	return fig
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="qikkszqsoiik"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="ondgxmwmzgxp"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1814,7 +1814,7 @@ function quantize(img::Vector{Float64}, levels::Int64)
 	end
 	return out
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="sbqlyznjjqgu"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="tplkyrkmzacq"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1954,9 +1954,18 @@ end</code></pre></div>
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inp = b.querySelector("input,select,textarea");
       if (!inp) return;
-      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
-            : (inp.type === "checkbox") ? inp.checked
-            : inp.value;
+      const t = inp.type;
+      // Match the shim's value_tree contract per input type: numbers as Number,
+      // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
+      // marker the shim decodes into a Julia DateTime (the staterequest path sends
+      // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
+      // here would make value_tree treat the DateTime struct's value as undefined.
+      let v;
+      if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "checkbox") v = inp.checked;
+      else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
+        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else v = inp.value;
       vals[b.getAttribute("def")] = v;
     });
     return vals;

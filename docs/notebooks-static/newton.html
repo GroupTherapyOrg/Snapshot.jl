@@ -1692,7 +1692,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Pick-an-example-function">Pick an example function</h2>
 <table><tr><th align="center">choice</th><th align="center"><span class="tex">$f&#40;x&#41;$</span></th><th align="center"><span class="tex">$f&#39;&#40;x&#41;$</span></th><th align="center">a root</th></tr><tr><td align="center">1</td><td align="center"><span class="tex">$x^2 - 2$</span></td><td align="center"><span class="tex">$2x$</span></td><td align="center"><span class="tex">$\sqrt 2 \approx 1.41421$</span></td></tr><tr><td align="center">2</td><td align="center"><span class="tex">$x^3 - x$</span></td><td align="center"><span class="tex">$3x^2 - 1$</span></td><td align="center"><span class="tex">$0,\ \pm 1$</span></td></tr><tr><td align="center">3</td><td align="center"><span class="tex">$\cos x - x$</span></td><td align="center"><span class="tex">$-\sin x - 1$</span></td><td align="center"><span class="tex">$\approx 0.73909$</span></td></tr></table>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="nmlbtjamciyg"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="svrtaohgtahy"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1718,7 +1718,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="witfgwiocwnh"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="aazityalcmcc"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1744,7 +1744,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>2.0</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="tifzprudgsmc"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="xfxyjyzbgrzg"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1909,9 +1909,18 @@ end</code></pre></div>
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inp = b.querySelector("input,select,textarea");
       if (!inp) return;
-      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
-            : (inp.type === "checkbox") ? inp.checked
-            : inp.value;
+      const t = inp.type;
+      // Match the shim's value_tree contract per input type: numbers as Number,
+      // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
+      // marker the shim decodes into a Julia DateTime (the staterequest path sends
+      // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
+      // here would make value_tree treat the DateTime struct's value as undefined.
+      let v;
+      if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "checkbox") v = inp.checked;
+      else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
+        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else v = inp.value;
       vals[b.getAttribute("def")] = v;
     });
     return vals;

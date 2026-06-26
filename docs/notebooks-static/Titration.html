@@ -1710,7 +1710,7 @@ a:visited {
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Drag the sliders to set up your titration. Each slider is independent — change the acid strength &#40;<span class="tex">$\mathrm&#123;p&#125;K_\mathrm&#123;a&#125;$</span>&#41;, the concentration and volume of the acid you are analysing, and the concentration of the titrant &#40;NaOH&#41;. The curve, the current titration point and the equivalence point update live.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid strength pKₐ &#61; <bond def="pKa" unique_id="cbktxmeoljlb"><input type='range' min='1' max='49' value='44'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid strength pKₐ &#61; <bond def="pKa" unique_id="myqouepxhcqw"><input type='range' min='1' max='49' value='44'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1736,7 +1736,7 @@ a:visited {
     					transform: translateY(-4px);
     					display: inline-block;'>4.75</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid concentration c₀&#40;HA&#41; / &#40;mol/L&#41; &#61; <bond def="c0_Acid" unique_id="nheajyswnxlp"><input type='range' min='1' max='25' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid concentration c₀&#40;HA&#41; / &#40;mol/L&#41; &#61; <bond def="c0_Acid" unique_id="evuxmhugxuwi"><input type='range' min='1' max='25' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1762,7 +1762,7 @@ a:visited {
     					transform: translateY(-4px);
     					display: inline-block;'>0.1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid volume V₀&#40;HA&#41; / mL &#61; <bond def="v0_Acid" unique_id="dqvpkuuacqhq"><input type='range' min='1' max='46' value='21'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>acid volume V₀&#40;HA&#41; / mL &#61; <bond def="v0_Acid" unique_id="hfembqtufjdv"><input type='range' min='1' max='46' value='21'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1788,7 +1788,7 @@ a:visited {
     					transform: translateY(-4px);
     					display: inline-block;'>25.0</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>titrant concentration c₀&#40;NaOH&#41; / &#40;mol/L&#41; &#61; <bond def="c0_Base" unique_id="fpchujtryqmv"><input type='range' min='1' max='25' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>titrant concentration c₀&#40;NaOH&#41; / &#40;mol/L&#41; &#61; <bond def="c0_Base" unique_id="cevwoeklwzyj"><input type='range' min='1' max='25' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1814,7 +1814,7 @@ a:visited {
     					transform: translateY(-4px);
     					display: inline-block;'>0.1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>added volume of titrant V&#40;NaOH&#41; / mL &#61; <bond def="pointX" unique_id="vkgqxuptocmj"><input type='range' min='1' max='321' value='101'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>added volume of titrant V&#40;NaOH&#41; / mL &#61; <bond def="pointX" unique_id="rpkdyaffbenw"><input type='range' min='1' max='321' value='101'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2006,9 +2006,18 @@ c\mathrm&#123;&#40;H_3O^&#43;&#41;&#125; &#61; \frac&#123;10^&#123;-14&#125;&#12
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inp = b.querySelector("input,select,textarea");
       if (!inp) return;
-      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
-            : (inp.type === "checkbox") ? inp.checked
-            : inp.value;
+      const t = inp.type;
+      // Match the shim's value_tree contract per input type: numbers as Number,
+      // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
+      // marker the shim decodes into a Julia DateTime (the staterequest path sends
+      // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
+      // here would make value_tree treat the DateTime struct's value as undefined.
+      let v;
+      if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "checkbox") v = inp.checked;
+      else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
+        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else v = inp.value;
       vals[b.getAttribute("def")] = v;
     });
     return vals;

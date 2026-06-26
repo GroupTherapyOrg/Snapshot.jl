@@ -1807,7 +1807,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h5 id="Let&#39;s-test-your-formula&#33;">Let&#39;s test your formula&#33;</h5>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Move the slider to change the number of cuts: </p>
-<bond def="n" unique_id="xfodwuqldzle"><input type=range max=50></bond>
+<bond def="n" unique_id="jflqlfhnjvkz"><input type=range max=50></bond>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-e80986c6-d509-11ea-12e3-f79a54b5ab31"></pluto-output></div>
 </div>
@@ -1819,9 +1819,18 @@ end</code></pre></div>
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inp = b.querySelector("input,select,textarea");
       if (!inp) return;
-      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
-            : (inp.type === "checkbox") ? inp.checked
-            : inp.value;
+      const t = inp.type;
+      // Match the shim's value_tree contract per input type: numbers as Number,
+      // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
+      // marker the shim decodes into a Julia DateTime (the staterequest path sends
+      // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
+      // here would make value_tree treat the DateTime struct's value as undefined.
+      let v;
+      if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "checkbox") v = inp.checked;
+      else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
+        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else v = inp.value;
       vals[b.getAttribute("def")] = v;
     });
     return vals;
