@@ -555,8 +555,6 @@ document.querySelectorAll("code.pl-jl").forEach(el => {
     # Pluto's standard pieces map to NAMED, token-themed components (admonition→pl-alert,
     # code→pl-code, table→pl-table) — pretty by default + instantly theme-swappable.
     dui_css = raw"""
-[data-theme=snapshot]{color-scheme:light;--color-base-100:#fffdf8;--color-base-200:#fbf7ec;--color-base-300:#f0e9d8;--color-base-content:#3f3a33;--color-primary:#5e7ad3;--color-primary-content:#fff}
-[data-theme=snapshot-dark]{color-scheme:dark;--color-base-100:#2a2620;--color-base-200:#1c1814;--color-base-300:#39322a;--color-base-content:#e8e1d4;--color-primary:#7b91cf;--color-primary-content:#fff}
 :root{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
 body{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
 /* Pluto's tree/table/code use white-space:pre (no wrap); the output box must
@@ -593,7 +591,7 @@ a{color:var(--color-primary)}
     # PlutoUI's TableOfContents CSS, copied VERBATIM and re-themed only by the
     # variable map at the top of the file → output.body renders exactly as Pluto
     # does, but in our snapshot / snapshot-dark DaisyUI theme (Worker can swap it).
-    pluto_css = read(joinpath(@__DIR__, "..", "assets", "pluto-output.css"), String)
+    pluto_css = PLUTO_OUTPUT_CSS
     # Pluto trees are click-to-expand/collapse — wire the same toggle on the caret.
     tree_js = raw"""
 <script>
@@ -614,10 +612,6 @@ document.addEventListener("click", function (e) {
 <div class="pi-theme-picker">
   <span aria-hidden="true">🎨</span>
   <select id="pi-theme-select" aria-label="Theme" onchange="__piSetTheme(this.value)">
-    <optgroup label="Snapshot">
-      <option value="snapshot">Snapshot — light</option>
-      <option value="snapshot-dark">Snapshot — dark</option>
-    </optgroup>
     <optgroup label="DaisyUI">
       <option value="light">light</option>
       <option value="dark">dark</option>
@@ -656,7 +650,7 @@ document.addEventListener("click", function (e) {
 </div>
 <script>
 function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('pi-theme',t);}catch(e){}}
-(function(){var sel=document.getElementById('pi-theme-select');if(sel)sel.value=document.documentElement.getAttribute('data-theme')||'snapshot';})();
+(function(){var sel=document.getElementById('pi-theme-select');if(sel)sel.value=document.documentElement.getAttribute('data-theme')||'light';})();
 </script>
 """ : ""
     if fragment
@@ -691,7 +685,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         )
     end
     return string(
-        "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"snapshot\">\n<head>\n<meta charset=\"utf-8\">\n",
+        "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"light\">\n<head>\n<meta charset=\"utf-8\">\n",
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n",
         "<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>\n",
         "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",

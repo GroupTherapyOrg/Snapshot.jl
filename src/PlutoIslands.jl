@@ -35,6 +35,7 @@ include("extract.jl")
 include("imagecells.jl")
 include("compile.jl")
 include("oracle.jl")
+include("pluto_css.jl")
 include("exporter.jl")
 
 export export_notebook, generate_wasm_islands, inject_islands_script
