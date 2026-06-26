@@ -4,7 +4,7 @@ const REPO_URL = "https://github.com/GroupTherapyOrg/PlutoIslands.jl"
 """PlutoIslands.jl wordmark — serif, with the tri-color .jl suffix."""
 function PIWordmark()
     A(:href => "$(PIDOCS_BASE)/", :class => "flex items-center gap-2 group no-underline",
-        RawHtml("""<svg width="24" height="24" viewBox="0 0 100 100" aria-hidden="true" class="transition-transform duration-200 group-hover:-translate-y-0.5"><path d="M17 57 C17 38 31 27 50 27 C69 27 83 40 83 57 Z" fill="var(--color-primary)" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><path d="M11 70 q9.75 8 19.5 0 t19.5 0 t19.5 0 t19.5 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M19 84 q9 6.5 18 0 t18 0 t18 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>"""),
+        RawHtml("""<svg width="24" height="24" viewBox="0 0 100 100" aria-hidden="true" class="transition-transform duration-200 group-hover:-translate-y-0.5"><rect x="38" y="15" width="47" height="47" rx="12" fill="var(--color-primary)" stroke="currentColor" stroke-width="5"/><rect x="11" y="43" width="35" height="35" rx="9" fill="var(--color-base-100)" stroke="currentColor" stroke-width="5"/><rect x="53" y="63" width="26" height="26" rx="8" fill="var(--color-base-100)" stroke="currentColor" stroke-width="5"/></svg>"""),
         RawHtml("""<span class="sn-display text-xl font-semibold text-base-content">PlutoIslands<span class="text-primary">.</span><span class="text-secondary">j</span><span class="text-accent">l</span></span>"""),
     )
 end
