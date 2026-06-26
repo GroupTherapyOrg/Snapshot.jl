@@ -392,6 +392,25 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     #   • output SUPPRESSED (trailing `;`)             → empty body → no output div.
     _esc(s) = replace(replace(replace(s, "&" => "&amp;"), "<" => "&lt;"), ">" => "&gt;")
     _is_md(c) = (cc = lstrip(c); startswith(cc, "md\"") || startswith(cc, "@md") || startswith(cc, "Markdown."))
+    # Pluto tree+object body (a Dict) → the same <pluto-tree>/<p-r>/<p-k>/<p-v> DOM
+    # the shim emits, so the ported treeview.css styles it 1-1. Mirrors shim.js
+    # tree_to_html: containers collapse to `[v1, v2, …]`, scalars are their text repr.
+    function _tree_html(b)
+        b isa AbstractString && return _esc(b)
+        if b isa AbstractDict && haskey(b, :elements)
+            kind = _esc(string(get(b, :type, "Array")))
+            io2 = IOBuffer()
+            for el in b[:elements]
+                tup = el isa Tuple || el isa AbstractVector
+                k = tup && length(el) >= 1 ? el[1] : ""
+                inner = tup && length(el) >= 2 ? el[2] : el
+                cbody = (inner isa Tuple || inner isa AbstractVector) && length(inner) >= 1 ? inner[1] : inner
+                print(io2, "<p-r><p-k>", _esc(string(k)), "</p-k><p-v>", _tree_html(cbody), "</p-v></p-r>")
+            end
+            return string("<pluto-tree class=\"collapsed ", kind, "\"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class=\"", kind, "\">", String(take!(io2)), "</pluto-tree-items></pluto-tree>")
+        end
+        return _esc(string(b))
+    end
     has_toc = false
     cells_io = IOBuffer()
     for id in notebook.cell_order
@@ -430,18 +449,21 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         end
         is_island = cid in island_cell_ids
         show_code = !folded && !_is_md(code) && !isempty(strip(code))
-        # Pluto already decided output-vs-not: render output.body 1-1 when non-empty
-        # (empty = Pluto suppressed it, e.g. trailing `;`). No reinvention.
-        has_out = is_island || !isempty(strip(bodystr))
+        # Pluto's captured output, baked 1-1 at BASE level: a string body as-is; a
+        # tree+object body (Vector/Tuple/struct) → Pluto's own <pluto-tree> DOM. An
+        # island REPLACES this on a successful wasm render; if that render throws, the
+        # shim drops a loud !!! warning here — the captured value is ALWAYS shown, never
+        # a blank. Empty body = Pluto suppressed it (trailing `;`) → no output div.
+        baked = body isa AbstractString ? bodystr : _tree_html(body)
+        has_out = is_island || !isempty(strip(baked))
         (show_code || has_out) || continue
         print(cells_io, "<div class=\"pl-cell\">")
-        # Pluto order: OUTPUT on top, code BELOW it. The body is wrapped in Pluto's
-        # own <pluto-output> element so the ported Pluto output CSS (editor.css +
-        # treeview.css) applies to output.body 1-1, no reinvention.
+        # Pluto order: OUTPUT on top, code BELOW it, wrapped in <pluto-output> so the
+        # ported Pluto output CSS (editor.css + treeview.css) applies 1-1.
         if is_island
-            print(cells_io, "<pluto-output class=\"rich_output\" id=\"out-", cid, "\"></pluto-output>")
-        elseif !isempty(strip(bodystr))
-            print(cells_io, "<pluto-output class=\"rich_output\">", bodystr, "</pluto-output>")
+            print(cells_io, "<pluto-output class=\"rich_output\" id=\"out-", cid, "\">", baked, "</pluto-output>")
+        elseif !isempty(strip(baked))
+            print(cells_io, "<pluto-output class=\"rich_output\">", baked, "</pluto-output>")
         end
         show_code && print(cells_io,
             "<pre class=\"pl-code\"><code class=\"pl-jl\">", _esc(code), "</code></pre>")
