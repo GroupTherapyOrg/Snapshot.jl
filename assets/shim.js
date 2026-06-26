@@ -274,6 +274,36 @@
         }
     }
 
+    // walk_ex tagged tree → a readable HTML STRING (for the lean __pi_renderAll path,
+    // which sets innerHTML; the legacy Pluto path keeps the object tree via mime).
+    const _esc_tree = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const _decode_str = (bytes) => {
+        try { return new TextDecoder().decode(new Uint8Array(bytes)) }
+        catch (e) { return String.fromCharCode.apply(null, bytes) }
+    }
+    // Emit Pluto's OWN tree DOM (pluto-tree / pluto-tree-items.<kind> / p-r / p-k /
+    // p-v) so frontend/treeview.css (ported verbatim into pluto-output.css) styles
+    // it 1-1. Containers render collapsed → `[v1, v2, …]` with the clickable caret;
+    // scalars render as plain text (Pluto's text/plain). Brackets, commas and the
+    // caret all come from treeview.css — we only supply the structure + values.
+    const _tree_pluto = (kind, items) => {
+        let rows = ""
+        items.forEach((el, i) => {
+            rows += "<p-r><p-k>" + (i + 1) + "</p-k><p-v>" + tree_to_html(el) + "</p-v></p-r>"
+        })
+        return '<pluto-tree class="collapsed ' + kind + '">' +
+               "<pluto-tree-prefix></pluto-tree-prefix>" +
+               '<pluto-tree-items class="' + kind + '">' + rows + "</pluto-tree-items></pluto-tree>"
+    }
+    const tree_to_html = (t) => {
+        if (t == null) return ""
+        if ("x" in t) return _esc_tree(t.x)                                   // scalar (number/char repr)
+        if ("s" in t) return '"' + _esc_tree(_decode_str(t.s)) + '"'          // string — Julia repr is quoted
+        if ("a" in t) return _tree_pluto("Array", t.a)                        // vector / array → Pluto tree
+        if ("f" in t) return _tree_pluto("Tuple", t.f)                        // struct / tuple → Pluto tree
+        return _esc_tree(String(t))
+    }
+
     // tagged tree → Julia value INSIDE wasm (via compiled constructor exports)
     const build = (ex, d, t) => {
         switch (d.k) {
@@ -341,15 +371,18 @@
             try { ex[cell.fn](...args) } finally { group._ctx = null }
             return `<img class="wasmmakie-island" width="${w}" height="${h}" src="${cv.toDataURL()}">`
         }
-        return group.cells.map((cell) => ({
-            id: cell.id,
-            kind: cell.kind,
-            body: cell.kind === "tree"
-                ? pluto_tree_body(cell.desc, walk_ex(ex, cell.desc, ex[cell.fn](...args)))
-                : cell.kind === "canvas"
-                ? render_canvas(cell)
-                : read_str(ex[cell.fn](...args)),
-        }))
+        return group.cells.map((cell) => {
+            if (cell.kind === "tree") {
+                const walked = walk_ex(ex, cell.desc, ex[cell.fn](...args))
+                // body = Pluto tree object (legacy staterequest path renders via mime);
+                // html = a real HTML string (lean __pi_renderAll path sets innerHTML).
+                return { id: cell.id, kind: cell.kind,
+                         body: pluto_tree_body(cell.desc, walked),
+                         html: tree_to_html(walked) }
+            }
+            const s = cell.kind === "canvas" ? render_canvas(cell) : read_str(ex[cell.fn](...args))
+            return { id: cell.id, kind: cell.kind, body: s, html: s }
+        })
     }
 
     const handle_staterequest = async (bonds_u8, passthrough) => {
@@ -391,7 +424,7 @@
             catch (e) { console.warn("🏝️ island render failed:", e); continue }
             for (const c of cells) {
                 const mount = document.getElementById("out-" + c.id)
-                if (mount) mount.innerHTML = c.body
+                if (mount) mount.innerHTML = c.html ?? c.body
             }
         }
     }
