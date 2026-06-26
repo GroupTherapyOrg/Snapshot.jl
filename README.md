@@ -4,7 +4,7 @@
 
 ### Interactive Pluto Exports. No Julia Server.
 
-`@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) and ship as **interactive islands** inside the classic static HTML export — sliders work on any static host, with no slider server and no precomputed request files.
+`@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
 
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://grouptherapyorg.github.io/PlutoIslands.jl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
@@ -16,11 +16,24 @@
 ```julia
 using PlutoIslands
 
+# recommended: a lean, self-contained Therapy component — SSR'd cells + wasm
+# islands, no Pluto frontend / baked statefile. Drops into any static host or
+# Therapy.jl app, themeable, with or without reactivity.
+export_notebook("notebook.jl"; therapy=true)
+
+# classic: the full Pluto static export with interactive islands
 export_notebook("notebook.jl")
 # → notebook.html + notebook.islands/   (serve anywhere static)
 ```
 
 ## How it works
+
+`therapy=true` (recommended) emits a lean **Therapy component** — server-rendered
+cells plus the same wasm islands, no Pluto frontend or baked statefile — themeable
+and droppable into any [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl)
+app; it's what the [docs gallery](https://grouptherapyorg.github.io/PlutoIslands.jl/)
+serves. The default `export_notebook(...)` produces the classic full-Pluto static
+export, which works the same way under the hood:
 
 1. **Export time** — the notebook runs once in Pluto. Each group of co-dependent
    `@bind` variables is extracted into pure Julia functions (one per dependent
