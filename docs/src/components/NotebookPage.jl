@@ -30,7 +30,7 @@ function NotebookPage(slug::AbstractString, title::AbstractString, html_name::Ab
             "Notebook export not found — run docs/export_notebooks.jl.") :
         RawHtml(frag)
 
-    Div(:class => "max-w-4xl mx-auto space-y-5",
+    Div(:class => "max-w-3xl mx-auto space-y-5",
         Div(:class => "flex items-center justify-between gap-3 flex-wrap",
             Div(:class => "flex items-center gap-2.5 text-sm flex-wrap",
                 # target=_self → full reload (served router build ignores data-no-router)
@@ -46,7 +46,10 @@ function NotebookPage(slug::AbstractString, title::AbstractString, html_name::Ab
                 Span(".jl source"),
             ),
         ),
-        # the notebook itself — native DOM, @scope-isolated, reactive, inherits theme
-        notebook,
+        # the notebook itself — native DOM, @scope-isolated, reactive, inherits the
+        # site theme. A soft .sn-bubble panel (same language as the gallery cards)
+        # delineates where the notebook starts/ends — distinctive, but built-in (it
+        # reskins with the theme), NOT a hard iframe box.
+        Div(:class => "bg-base-100 rounded-box sn-bubble px-5 sm:px-8 py-7 overflow-hidden", notebook),
     )
 end
