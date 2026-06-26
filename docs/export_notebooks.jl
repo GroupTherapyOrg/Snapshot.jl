@@ -71,11 +71,11 @@ function apply_counts!(entry::AbstractDict, c)
     entry
 end
 
-# featured corpus + our own demo notebooks (guaranteed-interactive showcases)
-jobs = [(joinpath(CORPUS, f), splitext(f)[1])
-        for f in sort(filter(f -> endswith(f, ".jl") && !occursin("backup", f), readdir(CORPUS)))]
-pushfirst!(jobs, (joinpath(@__DIR__, "..", "test", "notebooks", "two_groups.jl"), "two_groups"))
-pushfirst!(jobs, (joinpath(@__DIR__, "..", "test", "notebooks", "demo.jl"), "wasm islands demo"))
+# featured corpus + demos — the canonical list (slugs underscored, source filenames
+# may have spaces) lives in notebook_jobs.jl, SHARED with the CI discover step so the
+# parallel matrix and this export can never disagree on a slug.
+include(joinpath(@__DIR__, "notebook_jobs.jl"))
+jobs = notebook_jobs()
 all_slugs = [j[2] for j in jobs]
 filter!(j -> occursin(pattern, j[2] * ".jl"), jobs)
 
