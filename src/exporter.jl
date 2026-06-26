@@ -610,9 +610,18 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inp = b.querySelector("input,select,textarea");
       if (!inp) return;
-      let v = (inp.type === "range" || inp.type === "number") ? Number(inp.value)
-            : (inp.type === "checkbox") ? inp.checked
-            : inp.value;
+      const t = inp.type;
+      // Match the shim's value_tree contract per input type: numbers as Number,
+      // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
+      // marker the shim decodes into a Julia DateTime (the staterequest path sends
+      // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
+      // here would make value_tree treat the DateTime struct's value as undefined.
+      let v;
+      if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "checkbox") v = inp.checked;
+      else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
+        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else v = inp.value;
       vals[b.getAttribute("def")] = v;
     });
     return vals;
