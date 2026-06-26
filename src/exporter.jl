@@ -648,6 +648,9 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         # & base-aware (a placeholder the host rewrites per base_path).
         scoped = replace(string(dui_css, "\n", pluto_css), "\nbody{" => "\n:scope{")
         scoped = replace(scoped, ":root{" => ":scope{")
+        # the notebook inherits the host's DaisyUI theme; flow transparently into the
+        # page (no card/box bg) so it reads as native content, not an embed.
+        scoped = string(scoped, "\n:scope{background:transparent;max-width:none;padding:0;margin:0}")
         frag_css = string("@scope (.pi-notebook) {\n", scoped, "\n}")
         frag_shim = islands_dirname === nothing ? "" :
             string("<script src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
@@ -656,7 +659,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
             "if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.pi-notebook'):null;",
             "if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>")
         return string(
-            "<div class=\"pi-notebook\" data-theme=\"snapshot\">\n",
+            "<div class=\"pi-notebook\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
             "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",

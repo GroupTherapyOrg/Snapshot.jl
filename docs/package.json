@@ -1,0 +1,13 @@
+{
+  "name": "plutoislands-docs-css",
+  "private": true,
+  "description": "Tailwind v4 + DaisyUI build for the PlutoIslands.jl docs styles.css",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1",
+    "daisyui": "^5.0.0"
+  },
+  "scripts": {
+    "css": "tailwindcss -i input.css -o assets/styles.css --minify",
+    "css:watch": "tailwindcss -i input.css -o assets/styles.css --watch"
+  }
+}

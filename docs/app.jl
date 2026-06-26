@@ -31,6 +31,9 @@ app = App(
     output_dir = "dist",
     base_path = ENV["PIDOCS_BASE"],
     layout = :Layout,
+    # CSS is built by npm Tailwind v4 + DaisyUI (see build.sh + input.css); Therapy's
+    # standalone CLI can't load @plugin "daisyui". Layout injects the <link> itself.
+    tailwind = false,
 )
 
 # Load file-based routes + components first so the per-notebook route
