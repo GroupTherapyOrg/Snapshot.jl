@@ -126,8 +126,11 @@ for (i, (path, slug)) in enumerate(jobs)
     try
         # therapy=true → LEAN Therapy-component export (SSR cells + wasm islands,
         # no Pluto frontend / 2.6 MB statefile). theme_picker=false: the docs
-        # NotebookPage supplies one shared DaisyUI picker that drives every iframe.
-        PlutoIslands.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false)
+        # NotebookPage supplies one shared DaisyUI picker that drives every notebook.
+        # fragment=true → also write <slug>.fragment.html (native-inline component);
+        # assets_base placeholder is rewritten to "<base>/notebooks-static" at serve.
+        PlutoIslands.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false,
+            fragment=true, assets_base="__PI_ASSETS_BASE__")
         isfile(joinpath(OUT, html_name)) || error("export produced no HTML (notebook failed to run?)")
         # island (group) + accurate cell-level counts from the export's report/coverage
         apply_counts!(entry, read_counts(slug))

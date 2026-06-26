@@ -262,6 +262,11 @@ function export_notebook(
     # therapy-only: render the floating theme picker (true for standalone pages;
     # pass false when embedding in a host app that supplies its own picker).
     theme_picker::Bool=true,
+    # therapy-only: ALSO write `<name>.fragment.html` — a native-inline component
+    # (no <html>/<body>, @scope-isolated CSS, asset URLs left as the `assets_base`
+    # placeholder) for embedding directly into a host app / collection shell.
+    fragment::Bool=false,
+    assets_base::AbstractString="",
 )
     mkpath(output_dir)
     jl_contents = read(notebook_path, String)
@@ -305,6 +310,14 @@ function export_notebook(
         # lean Therapy-style export: SSR the cells + drive the wasm islands from
         # plain HTML inputs (no Pluto frontend, no 2.6 MB baked statefile).
         write(export_html_path, generate_therapy_html(notebook, output_dir, name, islands_dirname; theme_picker))
+        # native-inline component fragment (no iframe): same SSR cells + islands, but
+        # CSS @scope-isolated and asset URLs = the `assets_base` placeholder the host
+        # rewrites. One notebook run → both the standalone page and the embeddable.
+        if fragment
+            frag_path = joinpath(output_dir, name * ".fragment.html")
+            write(frag_path, generate_therapy_html(notebook, output_dir, name, islands_dirname;
+                theme_picker=false, fragment=true, assets_base))
+        end
         return export_html_path
     end
     statefile_js = if baked_state
