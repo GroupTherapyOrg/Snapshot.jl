@@ -1,15 +1,22 @@
 name: Build and Deploy Docs
 
-# The notebook exports under docs/notebooks-static/ are pre-rendered locally
-# (julia --project=. docs/export_notebooks.jl) and COMMITTED — hash-cached, so
-# they only change when a notebook's source changes. CI never runs notebooks:
-# it builds the Therapy.jl site (+ the npm Tailwind/DaisyUI stylesheet) around
-# the committed exports and deploys.
+# ONE unified pipeline (same shape as Snapshot's snapshot.yml):
+#   discover → export matrix (one hash-cached job per notebook) → build → deploy.
+# A docs-only push (CSS, routes, copy) hits the cache on every notebook → the
+# matrix is near-instant and we just rebuild + redeploy the site. An engine change
+# (src/**, assets/shim.js) or a notebook change misses the cache → only the
+# affected notebooks recompile in parallel, then the site builds from the fresh
+# exports. No separate rebuild workflow, no manual re-emit, no stale docs.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Ignore the cache and force-rebuild every notebook"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,64 +27,163 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  SNAPSHOT_WT_REF: main
+
 jobs:
+  # ── 1. discover the featured notebooks → matrix ────────────────────────────
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import glob, os, json
+          slugs = [os.path.basename(f)[:-3]
+                   for f in sorted(glob.glob("test/notebooks/featured/*.jl"))
+                   if "backup" not in os.path.basename(f)]
+          slugs += ["two_groups", "wasm islands demo"]
+          arr = [{"slug": s, "name": s.replace(" ", "_")} for s in slugs]
+          print("matrix=" + json.dumps(arr))
+          PY
+
+  # ── 2. export (parallel, one notebook per job, hash-cached) ────────────────
+  export:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        notebook: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - name: Checkout PlutoIslands.jl
+        uses: actions/checkout@v4
+        with: { path: PlutoIslands.jl }
+      - name: Checkout WasmTarget.jl (path-dep sibling)
+        uses: actions/checkout@v4
+        with: { repository: GroupTherapyOrg/WasmTarget.jl, ref: "${{ env.SNAPSHOT_WT_REF }}", path: WasmTarget.jl }
+      - id: keys
+        name: Cache key parts (engine SHAs)
+        run: |
+          echo "wt=$(git -C WasmTarget.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "pi=$(git -C PlutoIslands.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: PlutoIslands.jl/_nbout
+          key: pi-nbexport-v2-${{ matrix.notebook.name }}-${{ hashFiles(format('PlutoIslands.jl/test/notebooks/featured/{0}.jl', matrix.notebook.slug)) }}-wt${{ steps.keys.outputs.wt }}-pi${{ steps.keys.outputs.pi }}-${{ inputs.force && github.run_id || 'cache' }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: julia-actions/setup-julia@v2
+        with: { version: '1.12' }
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: julia-actions/cache@v2
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Instantiate PI project
+        working-directory: PlutoIslands.jl
+        run: julia --project=. -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Export this notebook → WASM islands (cache miss → force-rebuild it)
+        working-directory: PlutoIslands.jl
+        env:
+          FORCE_NB_REBUILD: '1'
+        run: julia --project=. --optimize=3 docs/export_notebooks.jl "${{ matrix.notebook.slug }}"
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Stage just this notebook's outputs
+        working-directory: PlutoIslands.jl
+        run: |
+          mkdir -p _nbout
+          slug='${{ matrix.notebook.slug }}'
+          cp -v "docs/notebooks-static/${slug}.html"          "_nbout/" 2>/dev/null || true
+          cp -v "docs/notebooks-static/${slug}.fragment.html" "_nbout/" 2>/dev/null || true
+          cp -rv "docs/notebooks-static/${slug}.islands"      "_nbout/" 2>/dev/null || true
+          python3 - "$slug" '${{ matrix.notebook.name }}' <<'PY'
+          import sys, json
+          slug, name = sys.argv[1], sys.argv[2]
+          idx = json.load(open("docs/notebooks-static/index.json"))
+          e = next((x for x in idx if x.get("slug") == slug), None)
+          json.dump(e, open(f"_nbout/_entry_{name}.json", "w"))
+          PY
+      - name: Cache status
+        run: echo "${{ matrix.notebook.name }} cache-hit=${{ steps.cache.outputs.cache-hit || 'false' }}"
+      - name: Upload notebook export
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-${{ matrix.notebook.name }}
+          path: PlutoIslands.jl/_nbout
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ── 3. build the Therapy docs site from the fresh exports ──────────────────
   build:
+    needs: export
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Julia
-        uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v4
+      - name: Gather the per-notebook exports over the committed seed
+        uses: actions/download-artifact@v4
         with:
-          version: '1.12'
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - uses: julia-actions/cache@v2
-
-      # The two independent prep steps run CONCURRENTLY (GitHub Actions parallel-
-      # steps syntax, 2026): the slow Julia precompile alongside the npm Tailwind v4
-      # + DaisyUI build (app.jl is tailwind=false, so we own the stylesheet). The
-      # group implicitly waits for both before the next step. Both write the docs
-      # site needs: the instantiated Julia env + docs/assets/styles.css.
-      - parallel:
-          - name: Install Julia docs dependencies
-            run: |
-              julia --project=docs -e '
-                using Pkg
-                Pkg.Registry.add("General")
-                Pkg.resolve()
-                Pkg.instantiate()
-              '
-
-          - name: Build DaisyUI stylesheet (Tailwind v4)
-            working-directory: docs
-            run: |
-              npm install
-              npm run css   # tailwindcss -i input.css -o assets/styles.css --minify
-
-      - name: Build docs site
+          pattern: nb-*
+          path: _artifacts
+          merge-multiple: true
+      - name: Merge into docs/notebooks-static + rebuild index.json
         run: |
-          julia --project=docs --optimize=3 docs/app.jl build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+          mkdir -p docs/notebooks-static
+          shopt -s dotglob nullglob
+          for item in _artifacts/*; do
+            base=$(basename "$item")
+            case "$base" in
+              _entry_*.json) : ;;
+              *) cp -rv "$item" "docs/notebooks-static/" ;;
+            esac
+          done
+          if ls _artifacts/_entry_*.json >/dev/null 2>&1; then
+            python3 - <<'PY'
+          import glob, json
+          entries = []
+          for f in sorted(glob.glob("_artifacts/_entry_*.json")):
+              try: d = json.load(open(f))
+              except Exception: d = None
+              if d: entries.append(d)
+          entries.sort(key=lambda e: e.get("slug", ""))
+          json.dump(entries, open("docs/notebooks-static/index.json", "w"), indent=2)
+          print(f"combined index.json: {len(entries)} notebooks")
+          PY
+          else
+            echo "no fresh entries — keeping committed index.json"
+          fi
+      - uses: julia-actions/setup-julia@v2
+        with: { version: '1.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: julia-actions/cache@v2
+      - name: Install Julia docs deps
+        run: julia --project=docs -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
+      - name: Build DaisyUI stylesheet (Tailwind v4)
+        working-directory: docs
+        run: |
+          npm install
+          npm run css
+      - name: Build docs site
+        run: julia --project=docs --optimize=3 docs/app.jl build
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/dist
 
   deploy:
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
