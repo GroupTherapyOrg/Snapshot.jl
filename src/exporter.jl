@@ -474,10 +474,13 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         print(cells_io, "<div class=\"pl-cell\">")
         # Pluto order: OUTPUT on top, code BELOW it, wrapped in <pluto-output> so the
         # ported Pluto output CSS (editor.css + treeview.css) applies 1-1.
+        # every mount gets id="out-<cid>" so the shim can find it — islands to
+        # re-render, and FALLBACK cells (bond group that couldn't compile) to receive
+        # the loud !!! warning. (Was island-only, so fallback cells got no warning.)
         if is_island
             print(cells_io, "<pluto-output class=\"rich_output\" id=\"out-", cid, "\">", baked, "</pluto-output>")
         elseif !isempty(strip(baked))
-            print(cells_io, "<pluto-output class=\"rich_output\">", baked, "</pluto-output>")
+            print(cells_io, "<pluto-output class=\"rich_output\" id=\"out-", cid, "\">", baked, "</pluto-output>")
         end
         show_code && print(cells_io,
             "<pre class=\"pl-code\"><code class=\"pl-jl\">", _esc(code), "</code></pre>")

@@ -498,7 +498,11 @@
         for (const group of report) {
             for (const cell of group.cells ?? []) {
                 if (cell.ok) continue
-                const host = document.querySelector(`pluto-cell[id="${cell.id}"] pluto-output > div`)
+                // lean export mount (#out-<id>) first, classic Pluto DOM as fallback —
+                // without this the compile-time fallback warning never showed in the
+                // lean therapy export (the duo / combine()-widget cell looked plain).
+                const host = document.getElementById("out-" + cell.id)
+                          || document.querySelector(`pluto-cell[id="${cell.id}"] pluto-output > div`)
                 if (!host || host.querySelector(`.${WARN_CLASS}`)) continue
                 host.prepend(warning_node(cell.reasons))
             }
