@@ -258,11 +258,16 @@
         switch (d.k) {
             case "int": return { x: String(v) }
             case "bits": {
-                // A Float64 comes back from the bridge as its raw i64 BIT PATTERN.
-                // Reinterpret it to a float for display — otherwise a shown Float
-                // value/tuple/vector renders as e.g. 4624746457346762342 instead of 15.2.
-                _dv.setBigInt64(0, BigInt.asIntN(64, BigInt(ex[d.b](v))))
-                return { x: String(_dv.getFloat64(0)) }
+                // The Float64 bridge accessor is inconsistent: some compiled exports
+                // return the float directly (a JS Number), others return the raw i64
+                // BIT PATTERN (a JS BigInt). Reinterpret the bits back to a float so a
+                // shown Float value/tuple/vector never renders as e.g. 4624746457346762342.
+                const r = ex[d.b](v)
+                if (typeof r === "bigint") {
+                    _dv.setBigInt64(0, BigInt.asIntN(64, r))
+                    return { x: String(_dv.getFloat64(0)) }
+                }
+                return { x: String(r) }
             }
             case "char": return { x: String(ex[d.b](v)) }
             case "str": {
