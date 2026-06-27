@@ -71,7 +71,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: PlutoIslands.jl/_nbout
-          key: pi-nbexport-v3-${{ matrix.notebook.slug }}-${{ hashFiles(format('PlutoIslands.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-pi${{ steps.keys.outputs.pi }}-${{ inputs.force && github.run_id || 'cache' }}
+          # v4: busts the v3 cache, which was poisoned with node-20 static-fallback
+          # exports (oracle couldn't run WasmGC). node-version isn't in the key, so the
+          # node 20→22 fix needs this bump to force a clean re-export of every notebook.
+          key: pi-nbexport-v4-${{ matrix.notebook.slug }}-${{ hashFiles(format('PlutoIslands.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-pi${{ steps.keys.outputs.pi }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
@@ -79,7 +82,22 @@ jobs:
         uses: julia-actions/cache@v2
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        # node 22+: WebAssembly GC is on by DEFAULT. The export oracle runs `node
+        # <js> <wasm>` to differentially verify each island; WasmTarget emits WasmGC
+        # (type code 0x50), which node 20 rejects ("enable with --experimental-wasm-
+        # gc") — and that flag is itself removed on modern node. node 20 here silently
+        # failed EVERY oracle → every cell judged fallback → all notebooks went static
+        # (the "0/104 live across 0 notebooks" bug). Must match snapshot.yml (node 22).
+        with: { node-version: '22' }
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Preflight — node MUST run WasmGC (else the oracle degrades every cell to static)
+        run: |
+          node -e '
+            const m = new Uint8Array([0,97,115,109,1,0,0,0,1,3,1,0x5f,0]); // (module (type (struct))) — minimal WasmGC
+            WebAssembly.compile(m).then(
+              () => { console.log("WasmGC OK on " + process.version); },
+              (e) => { console.error("FATAL: node " + process.version + " cannot compile WasmGC — exports would all fall back to static. " + e); process.exit(1); }
+            );'
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Instantiate PI project
         working-directory: PlutoIslands.jl
@@ -158,7 +176,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with: { node-version: '22' }   # match the export job + snapshot.yml (WasmGC default)
       - uses: julia-actions/cache@v2
       - name: Install Julia docs deps
         run: julia --project=docs -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
