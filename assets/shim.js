@@ -257,18 +257,7 @@
     const walk_ex = (ex, d, v) => {
         switch (d.k) {
             case "int": return { x: String(v) }
-            case "bits": {
-                // The Float64 bridge accessor is inconsistent: some compiled exports
-                // return the float directly (a JS Number), others return the raw i64
-                // BIT PATTERN (a JS BigInt). Reinterpret the bits back to a float so a
-                // shown Float value/tuple/vector never renders as e.g. 4624746457346762342.
-                const r = ex[d.b](v)
-                if (typeof r === "bigint") {
-                    _dv.setBigInt64(0, BigInt.asIntN(64, r))
-                    return { x: String(_dv.getFloat64(0)) }
-                }
-                return { x: String(r) }
-            }
+            case "bits": return { x: String(ex[d.b](v)) }
             case "char": return { x: String(ex[d.b](v)) }
             case "str": {
                 const n = Number(ex[d.len](v)); const a = []
