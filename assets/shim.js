@@ -257,7 +257,13 @@
     const walk_ex = (ex, d, v) => {
         switch (d.k) {
             case "int": return { x: String(v) }
-            case "bits": return { x: String(ex[d.b](v)) }
+            case "bits": {
+                // A Float64 comes back from the bridge as its raw i64 BIT PATTERN.
+                // Reinterpret it to a float for display — otherwise a shown Float
+                // value/tuple/vector renders as e.g. 4624746457346762342 instead of 15.2.
+                _dv.setBigInt64(0, BigInt.asIntN(64, BigInt(ex[d.b](v))))
+                return { x: String(_dv.getFloat64(0)) }
+            }
             case "char": return { x: String(ex[d.b](v)) }
             case "str": {
                 const n = Number(ex[d.len](v)); const a = []
