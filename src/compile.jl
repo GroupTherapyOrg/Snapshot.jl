@@ -27,8 +27,8 @@ Base.@kwdef struct CompiledIsland
     reasons::Vector{String} = String[]
     # per-cell failures (PARTIAL islands): these dependent cells won't update
     # in the export — the shim decorates exactly these with warnings
-    cell_failures::Vector{NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}} =
-        NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}[]
+    cell_failures::Vector{NamedTuple{(:cell_id, :reasons, :diag),Tuple{String,Vector{String},Any}}} =
+        NamedTuple{(:cell_id, :reasons, :diag),Tuple{String,Vector{String},Any}}[]
     # WasmTarget.Bridge arg descriptors, one per bond (manifest + verify/oracle)
     arg_descs::Vector{Any} = Any[]
     # per-bond raw⇒transformed tables (see ExtractedGroup.transforms)
@@ -47,6 +47,41 @@ import Dates
 # ─────────────────────────────────────────────────────────────────────────────
 # Group → wasm bytes
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ── structured wasm-failure diagnostics (the WasmTarget ≥0.4.2 ledger) ──────
+# Pluto embeds cell UUIDs in source paths ("…/notebook.jl#==#<uuid>"), so a
+# WasmDiagnostic's julia_loc can name the EXACT offending cell — even when the
+# failure sits in a helper defined cells away from the bound output.
+_loc_cell_uuid(loc) = begin
+    m = loc isa AbstractString ? match(r"#==#([0-9a-fA-F-]{36})", loc) : nothing
+    m === nothing ? nothing : lowercase(m.captures[1])
+end
+
+_diag_entry(d) = Dict{String,Any}(
+    "kind" => String(d.kind), "func" => d.func_name,
+    "construct" => d.construct, "loc" => d.julia_loc,
+    "cell" => _loc_cell_uuid(d.julia_loc))
+
+"""
+    _wasm_failure_diag(e) -> Union{Dict,Nothing}
+
+Serialize a WasmTarget failure into the structured record the export report and
+the shim's diagnostic card consume. Feature-detects the `err.all` ledger
+(WasmTarget ≥0.4.2) so older WasmTargets degrade to the single diagnostic.
+"""
+function _wasm_failure_diag(e)
+    if e isa WasmTarget.WasmCompileError
+        out = _diag_entry(e.diag)
+        if hasproperty(e, :all)
+            out["ledger"] = [_diag_entry(d) for d in e.all]
+        end
+        return out
+    elseif e isa WasmTarget.WasmValidationError
+        return Dict{String,Any}("kind" => "validation", "func" => nothing,
+                                "construct" => e.msg, "loc" => nothing, "cell" => nothing)
+    end
+    return nothing
+end
 
 """
     compile_group(g; initial_bodies=nothing, verify_node=true, optimize=false)
@@ -68,9 +103,10 @@ function compile_group(
     # notebook imports (e.g. `using Collatz`) resolve in the sandbox
     env_dir::Union{Nothing,String}=nothing,
 )::CompiledIsland
-    CF = NamedTuple{(:cell_id, :reasons),Tuple{String,Vector{String}}}
+    CF = NamedTuple{(:cell_id, :reasons, :diag),Tuple{String,Vector{String},Any}}
     failures = CF[]
-    cellfail!(id, rs...) = push!(failures, (cell_id=string(id), reasons=collect(String, rs)))
+    cellfail!(id, rs...; diag=nothing) =
+        push!(failures, (cell_id=string(id), reasons=collect(String, rs), diag=diag))
 
     fail(reasons...) = CompiledIsland(;
         bond_names=g.bond_names, arg_types=g.arg_types, initial_values=g.initial_values,
@@ -154,7 +190,8 @@ function compile_group(
         catch e
             cellfail!(p.cell_id,
                 # validation errors carry a disassembly context — keep enough of it
-                "$(canvas_desc === nothing ? "WasmTarget" : "canvas render") compile failed: $(sprint(showerror, e)[1:min(end, 1200)])")
+                "$(canvas_desc === nothing ? "WasmTarget" : "canvas render") compile failed: $(sprint(showerror, e)[1:min(end, 1200)])";
+                diag=_wasm_failure_diag(e))
             continue
         end
         tree_desc = nothing

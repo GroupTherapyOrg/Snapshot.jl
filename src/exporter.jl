@@ -125,8 +125,25 @@ function generate_wasm_islands(
         for c in island.cells
             explicit[c.cell_id] = Dict("id" => c.cell_id, "ok" => true)
         end
+        _cell_code(id) = begin
+            c = get(notebook.cells_dict, Base.UUID(id), nothing)
+            c === nothing ? nothing : c.code
+        end
         for cf in island.cell_failures
-            explicit[cf.cell_id] = Dict("id" => cf.cell_id, "ok" => false, "reasons" => cf.reasons)
+            rec = Dict{String,Any}("id" => cf.cell_id, "ok" => false, "reasons" => cf.reasons)
+            # the structured WasmTarget diagnostic (kind/func/construct/loc + the exact
+            # offending CELL parsed from the #==# source path) — drives the shim's card
+            if cf.diag !== nothing
+                rec["diag"] = cf.diag
+                code = _cell_code(cf.cell_id)
+                code !== nothing && (rec["code"] = code)
+                oc = get(cf.diag, "cell", nothing)
+                if oc !== nothing && oc != cf.cell_id
+                    occode = _cell_code(oc)
+                    occode !== nothing && (rec["offending_code"] = occode)
+                end
+            end
+            explicit[cf.cell_id] = rec
         end
         cell_records = [
             get(explicit, id) do
@@ -137,6 +154,7 @@ function generate_wasm_islands(
 
         push!(report, Dict(
             "bonds" => string.(g.bond_names),
+            "arg_types" => string.(island.arg_types),
             "judgement" => !ship ? "fallback" :
                            any(r -> !r["ok"], cell_records) ? "partial" : "island",
             "reasons" => island.reasons,
