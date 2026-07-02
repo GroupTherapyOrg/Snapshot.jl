@@ -2,7 +2,7 @@
 
 # Snapshot.jl
 
-### Interactive Pluto Exports. No Julia Server.
+### Pluto notebooks, live as Therapy components. No Julia server.
 
 A **snapshot** of a running notebook: a static export whose interactive cells still run. `@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
 
@@ -69,12 +69,12 @@ groups are interactive after all.
 
 ## Status
 
-Young and moving fast. The featured-notebook gallery in the
-[docs](https://grouptherapyorg.github.io/Snapshot.jl/) doubles as the
-public scoreboard: which real notebooks ship how many islands, and exactly
-why the rest don't yet. Coverage grows with
-[WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) — every
-fallback reason is a ranked work item (`WASM_FINDINGS.md`).
+Alpha. The featured-notebook gallery in the
+[docs](https://grouptherapyorg.github.io/Snapshot.jl/) shows which notebooks
+ship how many islands, and lists the reason for every cell that falls back to
+static. Coverage grows with
+[WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl); fallback
+reasons are tracked as work items in `WASM_FINDINGS.md`.
 
 ## Related
 
