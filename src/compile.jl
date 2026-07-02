@@ -311,7 +311,7 @@ function exclude_cells(island::CompiledIsland, failed::Dict{String,String})::Com
         cells=[c for c in island.cells if !haskey(failed, c.cell_id)],
         ok=island.ok, reasons=island.reasons,
         cell_failures=vcat(island.cell_failures,
-            [(cell_id=id, reasons=[r]) for (id, r) in failed]),
+            [(cell_id=id, reasons=[r], diag=nothing) for (id, r) in failed]),
         arg_descs=island.arg_descs, transforms=island.transforms)
 end
 
