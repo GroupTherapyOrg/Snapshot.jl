@@ -223,5 +223,20 @@
     "slug": "turtles-art",
     "status": "interactive",
     "title": "Turtles – showcase"
+  },
+  {
+    "cells_total": 2,
+    "status": "interactive",
+    "slug": "wasm_diagnostics",
+    "cells_interactive": 1,
+    "description": "One slider compiles to a live WebAssembly island; one deliberately fails — showing the compiler-diagnostic card that explains exactly why.",
+    "image": "island-demo.svg",
+    "hash": "fb5aecab367e107dd6940a31b9414ba5a54bbf29a30e440f15d5e99c474aed96",
+    "seconds": 34.0,
+    "islands": 1,
+    "cells_fallback": 1,
+    "degraded": 1,
+    "html": "wasm_diagnostics.html",
+    "title": "Wasm Islands: Success & Failure"
   }
 ]
