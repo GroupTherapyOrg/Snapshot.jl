@@ -2,7 +2,7 @@
 # ok-ness + reason + the generated body string at the initial bond value.
 # Run: julia +1.12 --project=. tools/repro/feedback_extract.jl
 import Pluto
-using PlutoIslands
+using Snapshot
 
 const NB = joinpath(@__DIR__, "..", "..", "test", "notebooks", "feedback_pared.jl")
 

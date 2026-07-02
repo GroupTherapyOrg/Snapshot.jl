@@ -1,7 +1,7 @@
 {
-  "name": "plutoislands-docs-css",
+  "name": "snapshot-docs-css",
   "private": true,
-  "description": "Tailwind v4 + DaisyUI build for the PlutoIslands.jl docs styles.css",
+  "description": "Tailwind v4 + DaisyUI build for the Snapshot.jl docs styles.css",
   "devDependencies": {
     "@tailwindcss/cli": "^4.1",
     "daisyui": "^5.0.0"

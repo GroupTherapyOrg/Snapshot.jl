@@ -1,8 +1,8 @@
 # imagecells.jl — C-P1: image/png cells (AbstractMatrix-of-color values) ship as
-# canvas-rendered islands through a PlutoIslands-OWNED import surface, mirroring
+# canvas-rendered islands through a Snapshot-OWNED import surface, mirroring
 # the WasmMakie E-004 contract shapes (import_specs rows + js glue) so
-# compile.jl's wiring generalizes. PlutoIslands stays WasmMakie-free; the
-# imports reuse wasm module name "canvas2d" (with PlutoIslands-distinct op
+# compile.jl's wiring generalizes. Snapshot stays WasmMakie-free; the
+# imports reuse wasm module name "canvas2d" (with Snapshot-distinct op
 # names) so the shim's and oracle's existing canvas plumbing applies untouched.
 
 # Value-returning import stubs: `Base.inferencebarrier(0)::Int64` keeps

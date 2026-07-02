@@ -2,7 +2,7 @@
 # extraction → wasm islands → SSR cells → signals/hydration → DaisyUI theming.
 
 () -> begin
-    base = get(ENV, "PIDOCS_BASE", "")
+    base = get(ENV, "SNAPDOCS_BASE", "")
 
     section(title, children...) = Div(:class => "space-y-4",
         H2(:class => "sn-display text-2xl font-semibold text-base-content", title), children...)
@@ -34,7 +34,7 @@
             Span(:class => "badge badge-primary badge-sm sn-mono uppercase", "How it works"),
             H1(:class => "sn-display text-4xl md:text-5xl font-semibold text-base-content",
                 "A Pluto notebook becomes a Therapy component"),
-            para("PlutoIslands takes a ",
+            para("Snapshot takes a ",
                 A(:href => "https://plutojl.org", :target => "_blank", :class => "link link-primary", "Pluto.jl"),
                 " notebook and emits a ", Strong("lean, self-contained Therapy component"),
                 " — interactive sliders and plots that run entirely in the browser as WebAssembly, ",
@@ -52,7 +52,7 @@
             Div(:class => "space-y-5 pt-2",
                 step(1, "Extract the reactive graph",
                     "Pluto already knows the dependency graph + which cells depend on a ", code("@bind"),
-                    " widget. PlutoIslands groups co-dependent bond cells and lifts each dependent cell into a pure function."),
+                    " widget. Snapshot groups co-dependent bond cells and lifts each dependent cell into a pure function."),
                 step(2, "Compile to WebAssembly islands",
                     "Each bond group compiles to a small WasmGC module via ", code("WasmTarget.jl"),
                     " — verified at export time against real notebook re-runs before it ships."),

@@ -1,6 +1,6 @@
 name: Build and Deploy Docs
 
-# ONE unified pipeline (same shape as Snapshot's snapshot.yml):
+# ONE unified pipeline (same shape as the snapshot.show SaaS snapshot.yml):
 #   discover → export matrix (one hash-cached job per notebook) → build → deploy.
 # The notebook list (slugs + source paths) comes from docs/notebook_jobs.jl — the
 # SAME source export_notebooks.jl reads — so the matrix and the export can never
@@ -56,9 +56,9 @@ jobs:
       max-parallel: 10
       matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
     steps:
-      - name: Checkout PlutoIslands.jl
+      - name: Checkout Snapshot.jl
         uses: actions/checkout@v4
-        with: { path: PlutoIslands.jl }
+        with: { path: Snapshot.jl }
       - name: Checkout WasmTarget.jl (path-dep sibling)
         uses: actions/checkout@v4
         with: { repository: GroupTherapyOrg/WasmTarget.jl, ref: "${{ env.SNAPSHOT_WT_REF }}", path: WasmTarget.jl }
@@ -66,15 +66,15 @@ jobs:
         name: Cache key parts (engine SHAs)
         run: |
           echo "wt=$(git -C WasmTarget.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "pi=$(git -C PlutoIslands.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "snap=$(git -C Snapshot.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v4
         with:
-          path: PlutoIslands.jl/_nbout
-          # v4: busts the v3 cache, which was poisoned with node-20 static-fallback
-          # exports (oracle couldn't run WasmGC). node-version isn't in the key, so the
-          # node 20→22 fix needs this bump to force a clean re-export of every notebook.
-          key: pi-nbexport-v4-${{ matrix.notebook.slug }}-${{ hashFiles(format('PlutoIslands.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-pi${{ steps.keys.outputs.pi }}-${{ inputs.force && github.run_id || 'cache' }}
+          path: Snapshot.jl/_nbout
+          # v5: the Snapshot.jl rename (was pi-nbexport-v4) — fresh key namespace so
+          # every notebook re-exports once under the new name. (v4 bust was the
+          # node 20→22 WasmGC-oracle fix; node-version still isn't in the key.)
+          key: snap-nbexport-v5-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-snap${{ steps.keys.outputs.snap }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
@@ -100,17 +100,17 @@ jobs:
             );'
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Instantiate PI project
-        working-directory: PlutoIslands.jl
+        working-directory: Snapshot.jl
         run: julia --project=. -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Export this notebook → WASM islands (cache miss → force-rebuild it)
-        working-directory: PlutoIslands.jl
+        working-directory: Snapshot.jl
         env:
           FORCE_NB_REBUILD: '1'
         run: julia --project=. --optimize=3 docs/export_notebooks.jl "${{ matrix.notebook.slug }}"
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Stage just this notebook's outputs (slugs are underscored)
-        working-directory: PlutoIslands.jl
+        working-directory: Snapshot.jl
         run: |
           mkdir -p _nbout
           slug='${{ matrix.notebook.slug }}'
@@ -130,7 +130,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nb-${{ matrix.notebook.slug }}
-          path: PlutoIslands.jl/_nbout
+          path: Snapshot.jl/_nbout
           retention-days: 7
           if-no-files-found: warn
 

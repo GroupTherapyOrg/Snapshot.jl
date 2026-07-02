@@ -1,13 +1,13 @@
 # NotebookPage — renders an exported notebook as a NATIVE INLINE Therapy component
 # (no iframe). It reads the committed <slug>.fragment.html — a self-contained
-# <div class="pi-notebook"> with @scope-isolated CSS + the wasm-island shim/wiring —
+# <div class="snap-notebook"> with @scope-isolated CSS + the wasm-island shim/wiring —
 # rewrites the asset-base placeholder for the docs base_path, and injects it as REAL
 # DOM in the page. The notebook inherits the site's DaisyUI theme and flows into the
 # page (no card/box). Reached via a FULL page load (cards use target=_self), so the
 # island scripts run fresh on each visit → reactive sliders + live figures.
 
 const _NOTEBOOK_GITHUB_BASE =
-    "https://github.com/GroupTherapyOrg/PlutoIslands.jl/blob/main/test/notebooks/featured"
+    "https://github.com/GroupTherapyOrg/Snapshot.jl/blob/main/test/notebooks/featured"
 
 "Read the committed inline fragment and point its asset URLs at the served path."
 function _notebook_fragment(slug::AbstractString, base::AbstractString)
@@ -17,7 +17,7 @@ function _notebook_fragment(slug::AbstractString, base::AbstractString)
 end
 
 function NotebookPage(slug::AbstractString, title::AbstractString, html_name::AbstractString, status::AbstractString, islands::Int, cells_interactive::Int=0, cells_total::Int=0)
-    base = get(ENV, "PIDOCS_BASE", "")
+    base = get(ENV, "SNAPDOCS_BASE", "")
     badge = status == "interactive" ?
         Span(:class => "badge badge-success badge-sm gap-1 normal-case",
             cells_total > 0 ? "🏝️ $(cells_interactive)/$(cells_total) cells interactive" :

@@ -1,7 +1,7 @@
 # Site-wide theme picker — a DaisyUI dropdown of every built-in DaisyUI theme,
 # each row showing 3 swatch dots (primary/secondary/accent in that theme). Clicking
-# sets data-theme on <html> (the whole site + every inline .pi-notebook reskins) and
-# persists to localStorage 'pi-theme'. The click handler lives in Layout.jl (delegated).
+# sets data-theme on <html> (the whole site + every inline .snap-notebook reskins) and
+# persists to localStorage 'snap-theme'. The click handler lives in Layout.jl (delegated).
 # PURE DaisyUI themes only — no custom themes (Dale's call).
 
 const _THEMES = [

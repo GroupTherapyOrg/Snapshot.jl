@@ -15,7 +15,7 @@
 # This is the canonical "count fallbacks for real" regen; the CI gate compares a
 # fresh run against the committed file so the corpus can't silently regress.
 
-using PlutoIslands, JSON
+using Snapshot, JSON
 
 const CORPUS = joinpath(@__DIR__, "..", "test", "notebooks", "featured")
 const OUT    = joinpath(@__DIR__, "..", "test", "featured_coverage.json")

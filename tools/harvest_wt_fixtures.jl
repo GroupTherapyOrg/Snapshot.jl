@@ -1,4 +1,4 @@
-# Harvest PlutoIslands featured-corpus island pieces into a STATIC fixtures file
+# Harvest Snapshot featured-corpus island pieces into a STATIC fixtures file
 # vendored into WasmTarget.jl, so WT can test real PI cells directly (no Pluto).
 #
 # For every featured notebook → every @bind group → every extracted cell, capture
@@ -12,7 +12,7 @@
 # Flushes after EACH notebook, so a heavy/hanging notebook never loses prior work.
 
 import Pluto, JSON
-using PlutoIslands
+using Snapshot
 
 const CORPUS = joinpath(@__DIR__, "..", "test", "notebooks", "featured")
 const OUT = joinpath(@__DIR__, "..", "..", "WasmTarget.jl", "test", "integration", "pi_island_fixtures.json")
@@ -74,7 +74,7 @@ function _bind_audit(session, nb, state, groups, nbname)
     cellres = get(state, "cell_results", Dict())
     errored = String[]
     for cell in nb.cells
-        PlutoIslands.is_bind_cell(cell) || continue   # occursin("@bind"): code OR md-interp OR prose
+        Snapshot.is_bind_cell(cell) || continue   # occursin("@bind"): code OR md-interp OR prose
         cr = get(cellres, string(cell.cell_id), nothing)
         (cr !== nothing && get(cr, "errored", false)) || continue
         push!(errored, replace(strip(first(cell.code, 90)), r"\s+" => " "))

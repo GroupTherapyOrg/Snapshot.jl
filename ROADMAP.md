@@ -1,6 +1,6 @@
 > **Note (2026-06-10):** this document is the historical roadmap of the
 > PlutoSliderServer.jl fork the islands engine was born in (M0–M5). The fork
-> has since been retired; the engine lives here as PlutoIslands.jl. Kept for
+> has since been retired; the engine lives here as Snapshot.jl. Kept for
 > the M6 work-list and the architecture record. Repo paths referencing the
 > fork are historical.
 
@@ -296,5 +296,5 @@ New `[WasmIslands]` section in `PlutoDeployment.toml` mirroring `[Precompute]`:
 - **Module init cost in browser**: WT modules are 1–5 KB for Therapy islands but
   group_fns with string/Dict machinery pull in more of the runtime. Budget per island
   (`max_island_size`), measure in M0.
-- **Naming**: this fork may deserve a new name (PlutoWasmServer? PlutoIslands.jl) once
+- **Naming**: this fork may deserve a new name (PlutoWasmServer? Snapshot.jl) once
   it diverges — defer until after M3; staying a fork keeps upstream merges cheap.

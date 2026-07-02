@@ -3,7 +3,7 @@
 # stacktrace-mime skeleton gate, it should extract via the skeleton, compile, and
 # pass the oracle over sampled n (both branches).
 import Pluto
-using PlutoIslands
+using Snapshot
 
 NB = joinpath(@__DIR__, "..", "..", "test", "notebooks", "pieces_pared.jl")
 session = Pluto.ServerSession()

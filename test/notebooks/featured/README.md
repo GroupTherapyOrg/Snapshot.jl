@@ -13,7 +13,7 @@ This is the **standing test corpus for the wasm-islands work** (see
    precompute/live/static;
 2. drive the **WasmTarget feedback loop** — every group that fails to compile or
    fails the differential oracle is a concrete WT Phase-2 work item;
-3. eventually run **interactively as wasm islands in the PlutoIslands.jl docs site**
+3. eventually run **interactively as wasm islands in the Snapshot.jl docs site**
    (M5).
 
 Selection spans difficulty tiers: plain-arithmetic binds (`Basic mathematics`,

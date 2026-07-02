@@ -1,4 +1,4 @@
-// PlutoIslands shim — the wasm-island slider "server", running in this tab.
+// Snapshot shim — the wasm-island slider "server", running in this tab.
 //
 // Pluto's exported HTML has slider_server_url set, so its stock frontend
 // (SliderServerClient.js) does:
@@ -558,23 +558,23 @@ const pluto_tree_body = (d, t, depth = 0) => {
     // Token-themed card styles: DaisyUI --color-* variables (shipped by the export
     // head) with plain fallbacks so the classic Pluto export renders fine too.
     const CARD_CSS = `
-    .${WARN_CLASS} .pi-card{border:1px solid color-mix(in srgb, var(--color-warning,#f59e0b) 45%, transparent);
+    .${WARN_CLASS} .snap-card{border:1px solid color-mix(in srgb, var(--color-warning,#f59e0b) 45%, transparent);
       border-left:4px solid var(--color-warning,#f59e0b);border-radius:.5rem;
       background:color-mix(in srgb, var(--color-warning,#f59e0b) 7%, var(--color-base-100,#fff));
       color:var(--color-base-content,#1f2937);padding:.7rem .9rem;margin:.4rem 0;font-size:.86em;line-height:1.45}
-    .${WARN_CLASS} .pi-card-title{font-weight:700;display:flex;align-items:center;gap:.45rem;margin:0 0 .35rem}
-    .${WARN_CLASS} .pi-chip{display:inline-block;border-radius:.35rem;padding:.05rem .45rem;margin:0 .2rem .2rem 0;
+    .${WARN_CLASS} .snap-card-title{font-weight:700;display:flex;align-items:center;gap:.45rem;margin:0 0 .35rem}
+    .${WARN_CLASS} .snap-chip{display:inline-block;border-radius:.35rem;padding:.05rem .45rem;margin:0 .2rem .2rem 0;
       font-family:ui-monospace,monospace;font-size:.85em;
       background:color-mix(in srgb, var(--color-primary,#3b82f6) 12%, var(--color-base-100,#fff));
       border:1px solid color-mix(in srgb, var(--color-primary,#3b82f6) 30%, transparent)}
-    .${WARN_CLASS} .pi-why{margin:.4rem 0;padding:.45rem .6rem;border-radius:.4rem;
+    .${WARN_CLASS} .snap-why{margin:.4rem 0;padding:.45rem .6rem;border-radius:.4rem;
       background:var(--color-base-200,#f4f4f5);font-family:ui-monospace,monospace;font-size:.92em;white-space:pre-wrap}
-    .${WARN_CLASS} .pi-loc-link{cursor:pointer;text-decoration:underline dotted;color:var(--color-primary,#2563eb)}
-    .${WARN_CLASS} .pi-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.45rem}
-    .${WARN_CLASS} .pi-btn{cursor:pointer;border-radius:.4rem;padding:.25rem .7rem;font-size:.9em;font-weight:600;
+    .${WARN_CLASS} .snap-loc-link{cursor:pointer;text-decoration:underline dotted;color:var(--color-primary,#2563eb)}
+    .${WARN_CLASS} .snap-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.45rem}
+    .${WARN_CLASS} .snap-btn{cursor:pointer;border-radius:.4rem;padding:.25rem .7rem;font-size:.9em;font-weight:600;
       border:1px solid color-mix(in srgb, var(--color-base-content,#1f2937) 25%, transparent);
       background:var(--color-base-100,#fff);color:var(--color-base-content,#1f2937)}
-    .${WARN_CLASS} .pi-btn:hover{background:var(--color-base-200,#f4f4f5)}
+    .${WARN_CLASS} .snap-btn:hover{background:var(--color-base-200,#f4f4f5)}
     .${WARN_CLASS} details{margin-top:.4rem}
     .${WARN_CLASS} summary{cursor:pointer;font-size:.9em;opacity:.8}
     .${WARN_CLASS} pre{font-size:.78em;white-space:pre-wrap;overflow-x:auto;opacity:.9;margin:.3rem 0 0}`
@@ -618,8 +618,8 @@ const pluto_tree_body = (d, t, depth = 0) => {
         const bonds = (group.bonds ?? []).map((b, i) =>
             `@bind ${b}${group.arg_types?.[i] ? "::" + group.arg_types[i] : ""}`).join(" · ")
         const lines = [
-            "<plutoislands-wasm-failure-context>",
-            "This is from a Pluto.jl notebook exported with PlutoIslands.jl. A cell that",
+            "<snapshot-wasm-failure-context>",
+            "This is from a Pluto.jl notebook exported with Snapshot.jl. A cell that",
             "depends on @bind inputs failed to compile to WebAssembly via WasmTarget.jl,",
             "so it falls back to non-interactive in the export.",
             "",
@@ -646,7 +646,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
             "When suggesting fixes: keep each cell as its own code block, keep global",
             "variable names as they are, and prefer making the flagged code type-stable",
             "(concrete types for @bind inputs, typeasserts, avoiding Any containers).",
-            "</plutoislands-wasm-failure-context>")
+            "</snapshot-wasm-failure-context>")
         return lines.join("\n")
     }
 
@@ -655,10 +655,10 @@ const pluto_tree_body = (d, t, depth = 0) => {
         const wrap = document.createElement("div")
         wrap.className = "markdown " + WARN_CLASS
         const card = document.createElement("div")
-        card.className = "pi-card"
+        card.className = "snap-card"
 
         const title = document.createElement("p")
-        title.className = "pi-card-title"
+        title.className = "snap-card-title"
         title.textContent = "⚡ Not interactive in this export"
         card.append(title)
 
@@ -668,7 +668,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
             p.append("Bound inputs: ")
             group.bonds.forEach((b, i) => {
                 const chip = document.createElement("span")
-                chip.className = "pi-chip"
+                chip.className = "snap-chip"
                 chip.textContent = "@bind " + b + (group.arg_types?.[i] ? "::" + group.arg_types[i] : "")
                 p.append(chip)
             })
@@ -678,7 +678,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
         const d = cell?.diag
         if (d && d.construct) {
             const why = document.createElement("div")
-            why.className = "pi-why"
+            why.className = "snap-why"
             const kind = KIND_PHRASE[d.kind] ?? d.kind
             why.append(`This cell hit ${kind}:\n${clean_diag_text(d.construct)}`)
             if (d.func) why.append(`\n— while compiling \`${d.func}\`` + (d.loc ? ` (${d.loc})` : ""))
@@ -687,7 +687,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
             if (d.cell && d.cell !== cell.id) {
                 const p = document.createElement("p")
                 const a = document.createElement("span")
-                a.className = "pi-loc-link"
+                a.className = "snap-loc-link"
                 a.textContent = "→ the failure originates in another cell — click to jump there"
                 a.onclick = () => jump_to_cell(d.cell)
                 p.append(a)
@@ -703,9 +703,9 @@ const pluto_tree_body = (d, t, depth = 0) => {
 
         // actions: copy AI context + details ledger
         const row = document.createElement("div")
-        row.className = "pi-row"
+        row.className = "snap-row"
         const copy = document.createElement("button")
-        copy.className = "pi-btn"
+        copy.className = "snap-btn"
         copy.textContent = "Copy AI context"
         copy.onclick = async () => {
             try {

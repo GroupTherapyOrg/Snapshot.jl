@@ -15,7 +15,7 @@
 # Run from repo root (the package env itself):
 #   julia --project=. docs/export_notebooks.jl [pattern]
 
-using PlutoIslands
+using Snapshot
 import Pluto
 import JSON
 using SHA: sha256, bytes2hex
@@ -129,7 +129,7 @@ for (i, (path, slug)) in enumerate(jobs)
         # NotebookPage supplies one shared DaisyUI picker that drives every notebook.
         # fragment=true → also write <slug>.fragment.html (native-inline component);
         # assets_base placeholder is rewritten to "<base>/notebooks-static" at serve.
-        PlutoIslands.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false,
+        Snapshot.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false,
             fragment=true, assets_base="__PI_ASSETS_BASE__")
         isfile(joinpath(OUT, html_name)) || error("export produced no HTML (notebook failed to run?)")
         # island (group) + accurate cell-level counts from the export's report/coverage

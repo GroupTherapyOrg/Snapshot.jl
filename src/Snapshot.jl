@@ -1,5 +1,5 @@
 """
-    PlutoIslands
+    Snapshot
 
 Interactive Pluto notebook exports with **no Julia server**: `@bind`-dependent
 cells compile to WebAssembly (via WasmTarget.jl) and ship as *islands* inside
@@ -22,7 +22,7 @@ with a Pluto-native warning explaining exactly why.
     # run/export pipeline call the hook on a RUNNING notebook instead:
     generate_wasm_islands(session, notebook, original_state; output_dir, url_path)
 """
-module PlutoIslands
+module Snapshot
 
 import Pluto
 import PlutoDependencyExplorer
