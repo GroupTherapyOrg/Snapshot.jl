@@ -63,18 +63,19 @@ jobs:
         uses: actions/checkout@v4
         with: { repository: GroupTherapyOrg/WasmTarget.jl, ref: "${{ env.SNAPSHOT_WT_REF }}", path: WasmTarget.jl }
       - id: keys
-        name: Cache key parts (engine SHAs)
+        name: Cache key parts (WasmTarget SHA)
         run: |
           echo "wt=$(git -C WasmTarget.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "snap=$(git -C Snapshot.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v4
         with:
           path: Snapshot.jl/_nbout
-          # v5: the Snapshot.jl rename (was pi-nbexport-v4) — fresh key namespace so
-          # every notebook re-exports once under the new name. (v4 bust was the
-          # node 20→22 WasmGC-oracle fix; node-version still isn't in the key.)
-          key: snap-nbexport-v5-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-snap${{ steps.keys.outputs.snap }}-${{ inputs.force && github.run_id || 'cache' }}
+          # v6: engine-CONTENT hash instead of the commit SHA — only changes to
+          # src/, assets/, the export driver, or Project.toml bust a notebook's
+          # cache. A docs-site or README push now genuinely cache-hits every
+          # notebook. (v5 was the Snapshot.jl rename; v4 the node 20→22
+          # WasmGC-oracle fix; node-version still isn't in the key.)
+          key: snap-nbexport-v6-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
