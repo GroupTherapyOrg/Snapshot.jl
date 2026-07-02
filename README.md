@@ -1,12 +1,12 @@
 <div align="center">
 
-# PlutoIslands.jl
+# Snapshot.jl
 
 ### Interactive Pluto Exports. No Julia Server.
 
-`@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
+A **snapshot** of a running notebook: a static export whose interactive cells still run. `@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
 
-[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://grouptherapyorg.github.io/PlutoIslands.jl/)
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://grouptherapyorg.github.io/Snapshot.jl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 </div>
@@ -14,7 +14,7 @@
 ## Quick start
 
 ```julia
-using PlutoIslands
+using Snapshot
 
 # recommended: a lean, self-contained Therapy component — SSR'd cells + wasm
 # islands, no Pluto frontend / baked statefile. Drops into any static host or
@@ -31,7 +31,7 @@ export_notebook("notebook.jl")
 `therapy=true` (recommended) emits a lean **Therapy component** — server-rendered
 cells plus the same wasm islands, no Pluto frontend or baked statefile — themeable
 and droppable into any [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl)
-app; it's what the [docs gallery](https://grouptherapyorg.github.io/PlutoIslands.jl/)
+app; it's what the [docs gallery](https://grouptherapyorg.github.io/Snapshot.jl/)
 serves. The default `export_notebook(...)` produces the classic full-Pluto static
 export, which works the same way under the hood:
 
@@ -70,7 +70,7 @@ groups are interactive after all.
 ## Status
 
 Young and moving fast. The featured-notebook gallery in the
-[docs](https://grouptherapyorg.github.io/PlutoIslands.jl/) doubles as the
+[docs](https://grouptherapyorg.github.io/Snapshot.jl/) doubles as the
 public scoreboard: which real notebooks ship how many islands, and exactly
 why the rest don't yet. Coverage grows with
 [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) — every
@@ -80,7 +80,8 @@ fallback reason is a ranked work item (`WASM_FINDINGS.md`).
 
 - [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) — the Julia-to-WasmGC compiler doing the heavy lifting
 - [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) — signals-based Julia web framework (powers the docs site)
-- [Pluto.jl](https://github.com/fonsp/Pluto.jl) / [PlutoSliderServer.jl](https://github.com/JuliaPluto/PlutoSliderServer.jl) — the beautiful foundations
+- [Pluto.jl](https://github.com/fonsp/Pluto.jl) — the reactive notebook environment the exports come from
+- [PlutoSliderServer.jl](https://github.com/JuliaPluto/PlutoSliderServer.jl) — the inspiration: Snapshot answers the same slider-server protocol, locally from wasm instead of from a server
 
 ## License
 

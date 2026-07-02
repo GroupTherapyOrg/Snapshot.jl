@@ -93,7 +93,7 @@
 /* Pluto output rules (editor.css pluto-output sections + treeview.css +
    PlutoUI TableOfContents), copied from Pluto frontend. The DaisyUI var-map
    + ansi/highlightjs/error are added by src/pluto_css.jl at load. Regenerate on
-   a Pluto/PlutoUI bump via PlutoIslands.write_pluto_css(). */
+   a Pluto/PlutoUI bump via Snapshot.write_pluto_css(). */
 /* ─── VERBATIM: Pluto editor.css 122-528 (pluto-output output rules) ─── */
 pluto-output {
     font-family: "Alegreya Sans", "Trebuchet MS", sans-serif;

@@ -6,8 +6,8 @@
 
 import Pluto
 import WasmTarget
-using PlutoIslands
-const M = PlutoIslands
+using Snapshot
+const M = Snapshot
 
 const NB = joinpath(@__DIR__, "..", "test", "notebooks", "featured", "PlutoUI.jl.jl")
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
@@ -17,15 +17,15 @@ body{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-syste
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.pi-reactive canvas{max-width:100%;height:auto}
+img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
 a{color:var(--color-primary)}
 /* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
    ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
-.pi-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
-.pi-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
+.snap-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
+.snap-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
 /* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
    (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
 .pl-cell{margin:1.25rem 0}
@@ -34,9 +34,9 @@ a{color:var(--color-primary)}
 /* keep wide cell content inside the notebook column (don't blow out the page):
    long code lines scroll within their block; PlutoUI multi-slider rows wrap;
    widgets/markdown never exceed the column; anything still wide scrolls in-cell.
-   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .pi-notebook
+   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .snap-notebook
    wrapper (it uses <main>), and in the docs fragment the whole sheet is wrapped in
-   `@scope (.pi-notebook)` — so a `.pi-notebook X` selector matched NOTHING in either
+   `@scope (.snap-notebook)` — so a `.snap-notebook X` selector matched NOTHING in either
    context (the earlier 272px residual). Bare class/element selectors auto-scope under
    @scope for the fragment and stay notebook-specific (these are Pluto/PlutoUI classes)
    for the standalone page. */
@@ -58,7 +58,7 @@ pre,table,bond,.markdown,img{max-width:100%}
 .plutoui-aside-wrapper>div{width:auto !important;max-width:100% !important}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
-.pi-cells,main{overflow-x:auto}
+.snap-cells,main{overflow-x:auto}
 /* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
 .tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
@@ -173,7 +173,7 @@ pre,table,bond,.markdown,img{max-width:100%}
 /* Pluto output rules (editor.css pluto-output sections + treeview.css +
    PlutoUI TableOfContents), copied from Pluto frontend. The DaisyUI var-map
    + ansi/highlightjs/error are added by src/pluto_css.jl at load. Regenerate on
-   a Pluto/PlutoUI bump via PlutoIslands.write_pluto_css(). */
+   a Pluto/PlutoUI bump via Snapshot.write_pluto_css(). */
 /* ─── VERBATIM: Pluto editor.css 122-528 (pluto-output output rules) ─── */
 pluto-output {
     font-family: "Alegreya Sans", "Trebuchet MS", sans-serif;
@@ -1690,9 +1690,9 @@ a:visited {
       if (nav.__pl_toc_init) return; nav.__pl_toc_init = true;
       var section = nav.querySelector("section");
       var embedded = nav.hasAttribute("data-embedded");
-      // the notebook root this ToC belongs to (its nearest .pi-notebook, else <main>,
+      // the notebook root this ToC belongs to (its nearest .snap-notebook, else <main>,
       // else the document) — keeps the heading scan scoped in BOTH contexts.
-      var root = (nav.closest && nav.closest(".pi-notebook")) || document.querySelector("main") || document;
+      var root = (nav.closest && nav.closest(".snap-notebook")) || document.querySelector("main") || document;
       var DEPTH = 3; // PlutoUI default
       var headById = {};
 
@@ -1791,7 +1791,7 @@ a:visited {
       // (which CONTAINS this nav) would let our own section.replaceChildren() retrigger
       // the observer in a tight loop. A debounce + the heading fingerprint above are a
       // second safety net. The IntersectionObserver-only scroll-spy doesn't need this.
-      var cellsArea = (root.querySelector && root.querySelector(".pi-cells")) ||
+      var cellsArea = (root.querySelector && root.querySelector(".snap-cells")) ||
                       (root.querySelector && root.querySelector("main")) ||
                       (root === document ? null : root);
       if ("MutationObserver" in window && cellsArea && !cellsArea.contains(nav)) {
@@ -4706,7 +4706,7 @@ pluto-output div.summary-title-outer > div.summary-title-inner {
 <p>The examples above use <code>Resource</code> to make media from a URL available inside Markdown. To use local files, simply <strong>replace <code>Resource</code> with <code>LocalResource</code></strong>, and use a <em>file path</em> instead of a URL.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><span style='font-family: cursive; color: purple; font-size: 2em;'>I really hope that this works</span></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">Dict{Symbol, Any}(:msg =&gt; "SystemError: opening file \"C:\\\\Users\\\\fons\\\\Pictures\\\\hannes.jpg\": No such file or directory", :stacktrace =&gt; Dict{Symbol, Any}[Dict(:call_short =&gt; "systemerror(p::String, errno::Int32; extrainfo::Nothing)", :inlined =&gt; false, :url =&gt; "https://github.com/JuliaLang/julia/tree/15346901f0039751c5488744f1f62de7d87510a8/base/error.jl#L186", :path =&gt; "./error.jl", :source_package =&gt; "Main", :call =&gt; "systemerror(p::String, errno::Int32; extrainfo::Nothing)", :linfo_type =&gt; "Core.MethodInstance", :line =&gt; 186, :file =&gt; "error.jl", :func =&gt; "#systemerror#36", :parent_module =&gt; "Base", :from_c =&gt; false), Dict(:call_short =&gt; "open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)", :inlined =&gt; false, :url =&gt; "https://github.com/JuliaLang/julia/tree/15346901f0039751c5488744f1f62de7d87510a8/base/iostream.jl#L296", :path =&gt; "./iostream.jl", :source_package =&gt; "Main", :call =&gt; "open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)", :linfo_type =&gt; "Core.MethodInstance", :line =&gt; 317, :file =&gt; "iostream.jl", :func =&gt; "#open#637", :parent_module =&gt; "Base", :from_c =&gt; false), Dict(:call_short =&gt; "open", :inlined =&gt; true, :url =&gt; nothing, :path =&gt; "./iostream.jl", :source_package =&gt; nothing, :call =&gt; "open", :linfo_type =&gt; "Nothing", :line =&gt; 296, :file =&gt; "iostream.jl", :func =&gt; "open", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "open(f::Base.var\"#read##0#read##1\"{…}, args::String; kwargs::@Kwargs{})", :inlined =&gt; false, :url =&gt; "https://github.com/JuliaLang/julia/tree/15346901f0039751c5488744f1f62de7d87510a8/base/io.jl#L409", :path =&gt; "./io.jl", :source_package =&gt; "Main", :call =&gt; "open(f::Base.var\"#read##0#read##1\"{Tuple{}}, args::String; kwargs::@Kwargs{})", :linfo_type =&gt; "Core.MethodInstance", :line =&gt; 410, :file =&gt; "io.jl", :func =&gt; "#open#330", :parent_module =&gt; "Base", :from_c =&gt; false), Dict(:call_short =&gt; "open", :inlined =&gt; true, :url =&gt; nothing, :path =&gt; "./io.jl", :source_package =&gt; nothing, :call =&gt; "open", :linfo_type =&gt; "Nothing", :line =&gt; 409, :file =&gt; "io.jl", :func =&gt; "open", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "read", :inlined =&gt; true, :url =&gt; nothing, :path =&gt; "./io.jl", :source_package =&gt; nothing, :call =&gt; "read", :linfo_type =&gt; "Nothing", :line =&gt; 507, :file =&gt; "io.jl", :func =&gt; "read", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "LocalResource(::String)", :inlined =&gt; false, :url =&gt; nothing, :path =&gt; "/Users/daleblack/.julia/packages/PlutoUI/Xw3w7/src/Resource.jl", :source_package =&gt; nothing, :call =&gt; "LocalResource(::String)", :linfo_type =&gt; "Core.CodeInstance", :line =&gt; 95, :file =&gt; "Resource.jl", :func =&gt; "LocalResource", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "top-level scope", :inlined =&gt; false, :url =&gt; nothing, :path =&gt; "/Users/daleblack/Documents/dev/GroupTherapyOrg/PlutoIslands.jl/test/notebooks/featured/PlutoUI.jl.jl#==#f809110c-cc55-11ea-1551-e138c28d5d82", :source_package =&gt; nothing, :call =&gt; "top-level scope", :linfo_type =&gt; "Core.CodeInfo", :line =&gt; 1, :file =&gt; "PlutoUI.jl.jl#==#f809110c-cc55-11ea-1551-e138c28d5d82", :func =&gt; "top-level scope", :parent_module =&gt; nothing, :from_c =&gt; false)], :plain_error =&gt; "SystemError: opening file \"C:\\\\Users\\\\fons\\\\Pictures\\\\hannes.jpg\": No such file or directory\nStacktrace:\n [1] systemerror(p::String, errno::Int32; extrainfo::Nothing)\n   @ Base ./error.jl:186\n [2] open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)\n   @ Base ./iostream.jl:317\n [3] open\n   @ ./iostream.jl:296 [inlined]\n [4] open(f::Base.var\"#read##0#read##1\"{Tuple{}}, args::String; kwargs::@Kwargs{})\n   @ Base ./io.jl:410\n [5] open\n   @ ./io.jl:409 [inlined]\n [6] read\n   @ ./io.jl:507 [inlined]\n [7] LocalResource(::String)\n   @ PlutoUI ~/.julia/packages/Pl</pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output">Dict{Symbol, Any}(:msg =&gt; "SystemError: opening file \"C:\\\\Users\\\\fons\\\\Pictures\\\\hannes.jpg\": No such file or directory", :stacktrace =&gt; Dict{Symbol, Any}[Dict(:call_short =&gt; "systemerror(p::String, errno::Int32; extrainfo::Nothing)", :inlined =&gt; false, :url =&gt; "https://github.com/JuliaLang/julia/tree/15346901f0039751c5488744f1f62de7d87510a8/base/error.jl#L186", :path =&gt; "./error.jl", :source_package =&gt; "Main", :call =&gt; "systemerror(p::String, errno::Int32; extrainfo::Nothing)", :linfo_type =&gt; "Core.MethodInstance", :line =&gt; 186, :file =&gt; "error.jl", :func =&gt; "#systemerror#36", :parent_module =&gt; "Base", :from_c =&gt; false), Dict(:call_short =&gt; "open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)", :inlined =&gt; false, :url =&gt; "https://github.com/JuliaLang/julia/tree/15346901f0039751c5488744f1f62de7d87510a8/base/iostream.jl#L296", :path =&gt; "./iostream.jl", :source_package =&gt; "Main", :call =&gt; "open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)", :linfo_type =&gt; "Core.MethodInstance", :line =&gt; 317, :file =&gt; "iostream.jl", :func =&gt; "#open#637", :parent_module =&gt; "Base", :from_c =&gt; false), Dict(:call_short =&gt; "open", :inlined =&gt; true, :url =&gt; nothing, :path =&gt; "./iostream.jl", :source_package =&gt; nothing, :call =&gt; "open", :linfo_type =&gt; "Nothing", :line =&gt; 296, :file =&gt; "iostream.jl", :func =&gt; "open", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "open(f::Base.var\"#read##0#read##1\"{…}, args::String; kwargs::@Kwargs{})", :inlined =&gt; false, :url =&gt; "https://github.com/JuliaLang/julia/tree/15346901f0039751c5488744f1f62de7d87510a8/base/io.jl#L409", :path =&gt; "./io.jl", :source_package =&gt; "Main", :call =&gt; "open(f::Base.var\"#read##0#read##1\"{Tuple{}}, args::String; kwargs::@Kwargs{})", :linfo_type =&gt; "Core.MethodInstance", :line =&gt; 410, :file =&gt; "io.jl", :func =&gt; "#open#330", :parent_module =&gt; "Base", :from_c =&gt; false), Dict(:call_short =&gt; "open", :inlined =&gt; true, :url =&gt; nothing, :path =&gt; "./io.jl", :source_package =&gt; nothing, :call =&gt; "open", :linfo_type =&gt; "Nothing", :line =&gt; 409, :file =&gt; "io.jl", :func =&gt; "open", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "read", :inlined =&gt; true, :url =&gt; nothing, :path =&gt; "./io.jl", :source_package =&gt; nothing, :call =&gt; "read", :linfo_type =&gt; "Nothing", :line =&gt; 507, :file =&gt; "io.jl", :func =&gt; "read", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "LocalResource(::String)", :inlined =&gt; false, :url =&gt; nothing, :path =&gt; "/Users/daleblack/.julia/packages/PlutoUI/Xw3w7/src/Resource.jl", :source_package =&gt; nothing, :call =&gt; "LocalResource(::String)", :linfo_type =&gt; "Core.CodeInstance", :line =&gt; 95, :file =&gt; "Resource.jl", :func =&gt; "LocalResource", :parent_module =&gt; nothing, :from_c =&gt; false), Dict(:call_short =&gt; "top-level scope", :inlined =&gt; false, :url =&gt; nothing, :path =&gt; "/Users/daleblack/Documents/dev/GroupTherapyOrg/Snapshot.jl/test/notebooks/featured/PlutoUI.jl.jl#==#f809110c-cc55-11ea-1551-e138c28d5d82", :source_package =&gt; nothing, :call =&gt; "top-level scope", :linfo_type =&gt; "Core.CodeInfo", :line =&gt; 1, :file =&gt; "PlutoUI.jl.jl#==#f809110c-cc55-11ea-1551-e138c28d5d82", :func =&gt; "top-level scope", :parent_module =&gt; nothing, :from_c =&gt; false)], :plain_error =&gt; "SystemError: opening file \"C:\\\\Users\\\\fons\\\\Pictures\\\\hannes.jpg\": No such file or directory\nStacktrace:\n [1] systemerror(p::String, errno::Int32; extrainfo::Nothing)\n   @ Base ./error.jl:186\n [2] open(fname::String; lock::Bool, read::Nothing, write::Nothing, create::Nothing, truncate::Nothing, append::Nothing)\n   @ Base ./iostream.jl:317\n [3] open\n   @ ./iostream.jl:296 [inlined]\n [4] open(f::Base.var\"#read##0#read##1\"{Tuple{}}, args::String; kwargs::@Kwargs{})\n   @ Base ./io.jl:410\n [5] open\n   @ ./io.jl:409 [inlined]\n [6] read\n   @ ./io.jl:507 [inlined]\n [7] LocalResource(::String)\n   @ PlutoUI ~/.julia/packages/Pl</pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><span style='font-family: cursive; color: purple;'>OOPS</span>, it didn&#39;t&#33;</p>
 <br>
 <p>Here are <strong>two tips</strong> for getting local images to work correctly:</p>

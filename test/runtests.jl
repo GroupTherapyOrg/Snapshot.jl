@@ -1,11 +1,11 @@
-# PlutoIslands test suite — extraction, compilation, oracle, judgement, and
+# Snapshot test suite — extraction, compilation, oracle, judgement, and
 # (when node is available) the full export. One process, one warmup.
 
 using Test
 import Pluto
 import JSON
 import Pkg
-using PlutoIslands
+using Snapshot
 
 const HAS_NODE = Sys.which("node") !== nothing
 
@@ -188,7 +188,7 @@ if HAS_NODE
 
         # off-by-one wasm must be caught per cell
         tampered_plans = [
-            PlutoIslands.CellPlan(;
+            Snapshot.CellPlan(;
                 cell_id=p.cell_id, mime=p.mime, export_name=p.export_name,
                 fn_expr=Expr(:function, Expr(:tuple, :(x::Int64)), :(return string(x^2 + 1))),
                 ok=true)
@@ -405,4 +405,4 @@ if HAS_NODE
     end
 end
 
-println("PLUTOISLANDS TESTS DONE")
+println("SNAPSHOT TESTS DONE")

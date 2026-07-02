@@ -29,7 +29,7 @@ import AbstractPlutoDingetjes.Bonds
 md"""
 # Wasm islands: a success and a deliberate failure
 
-PlutoIslands compiles the cells behind each `@bind` to WebAssembly so the export
+Snapshot compiles the cells behind each `@bind` to WebAssembly so the export
 stays interactive without a server. This notebook shows **both outcomes on purpose**:
 
 - the first slider's cells are type-stable Julia → they ship as a **live wasm island**;

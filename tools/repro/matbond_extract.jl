@@ -1,7 +1,7 @@
 # Validate Matrix{Float64} bond support (src/bridge.jl matrix marshalling) through
 # the real pipeline: extract → compile → oracle over varied-size matrices.
 import Pluto
-using PlutoIslands
+using Snapshot
 
 NB = joinpath(@__DIR__, "..", "..", "test", "notebooks", "matbond_pared.jl")
 session = Pluto.ServerSession()

@@ -7,7 +7,7 @@
 import JSON
 
 () -> begin
-    base = get(ENV, "PIDOCS_BASE", "")
+    base = get(ENV, "SNAPDOCS_BASE", "")
     index_path = joinpath(@__DIR__, "..", "..", "notebooks-static", "index.json")
     entries = isfile(index_path) ? JSON.parsefile(index_path) : []
 

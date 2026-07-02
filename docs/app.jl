@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-# PlutoIslands.jl documentation site
+# Snapshot.jl documentation site
 #
 # Usage (from repo root):
 #   julia --project=docs docs/app.jl dev    # Development server with HMR
@@ -22,14 +22,14 @@ cd(@__DIR__)
 
 # Base path: empty in dev (localhost:8080/notebooks/), repo name on GH Pages
 const IS_BUILD = length(ARGS) > 0 && ARGS[1] == "build"
-ENV["PIDOCS_BASE"] = IS_BUILD ? "/PlutoIslands.jl" : ""
+ENV["SNAPDOCS_BASE"] = IS_BUILD ? "/Snapshot.jl" : ""
 
 app = App(
     routes_dir = "src/routes",
     components_dir = "src/components",
-    title = "PlutoIslands.jl",
+    title = "Snapshot.jl",
     output_dir = "dist",
-    base_path = ENV["PIDOCS_BASE"],
+    base_path = ENV["SNAPDOCS_BASE"],
     layout = :Layout,
     # CSS is built by npm Tailwind v4 + DaisyUI (see build.sh + input.css); Therapy's
     # standalone CLI can't load @plugin "daisyui". Layout injects the <link> itself.

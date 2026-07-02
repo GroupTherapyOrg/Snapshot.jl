@@ -1,8 +1,8 @@
 import Pluto, JSON
-using PlutoIslands
+using Snapshot
 session = Pluto.ServerSession()
 out = "/tmp/collatz_pared_out"; mkpath(out)
-nb = Pluto.SessionActions.open(session, "/Users/daleblack/Documents/dev/GroupTherapyOrg/PlutoIslands.jl/test/notebooks/collatz_pared.jl"; run_async=false)
+nb = Pluto.SessionActions.open(session, "/Users/daleblack/Documents/dev/GroupTherapyOrg/Snapshot.jl/test/notebooks/collatz_pared.jl"; run_async=false)
 st = Pluto.notebook_to_js(nb)
 delete!(st, "status_tree")
 generate_wasm_islands(session, nb, st; output_dir=out, url_path="collatz_pared.jl")

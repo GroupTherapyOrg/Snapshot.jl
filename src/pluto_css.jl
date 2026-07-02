@@ -1,7 +1,7 @@
 # pluto_css.jl — AUTO-DERIVE Pluto's output CSS, re-themed to DaisyUI tokens.
 #
 # PLUTO_OUTPUT_CSS is generated at PRECOMPILE time, so it auto-resyncs whenever
-# Pluto/PlutoUI (deps) are bumped (PlutoIslands recompiles). Editing the committed
+# Pluto/PlutoUI (deps) are bumped (Snapshot recompiles). Editing the committed
 # pluto-base.css snapshot needs a forced recompile (touch a .jl) to take effect.
 #
 # The lean export renders cell output.body using Pluto's OWN stylesheets. Rather

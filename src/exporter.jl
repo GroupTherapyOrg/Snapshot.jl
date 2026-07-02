@@ -539,9 +539,9 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
       if (nav.__pl_toc_init) return; nav.__pl_toc_init = true;
       var section = nav.querySelector("section");
       var embedded = nav.hasAttribute("data-embedded");
-      // the notebook root this ToC belongs to (its nearest .pi-notebook, else <main>,
+      // the notebook root this ToC belongs to (its nearest .snap-notebook, else <main>,
       // else the document) — keeps the heading scan scoped in BOTH contexts.
-      var root = (nav.closest && nav.closest(".pi-notebook")) || document.querySelector("main") || document;
+      var root = (nav.closest && nav.closest(".snap-notebook")) || document.querySelector("main") || document;
       var DEPTH = 3; // PlutoUI default
       var headById = {};
 
@@ -640,7 +640,7 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
       // (which CONTAINS this nav) would let our own section.replaceChildren() retrigger
       // the observer in a tight loop. A debounce + the heading fingerprint above are a
       // second safety net. The IntersectionObserver-only scroll-spy doesn't need this.
-      var cellsArea = (root.querySelector && root.querySelector(".pi-cells")) ||
+      var cellsArea = (root.querySelector && root.querySelector(".snap-cells")) ||
                       (root.querySelector && root.querySelector("main")) ||
                       (root === document ? null : root);
       if ("MutationObserver" in window && cellsArea && !cellsArea.contains(nav)) {
@@ -749,15 +749,15 @@ body{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-syste
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.pi-reactive canvas{max-width:100%;height:auto}
+img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
 a{color:var(--color-primary)}
 /* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
    ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
-.pi-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
-.pi-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
+.snap-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
+.snap-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
 /* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
    (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
 .pl-cell{margin:1.25rem 0}
@@ -766,9 +766,9 @@ a{color:var(--color-primary)}
 /* keep wide cell content inside the notebook column (don't blow out the page):
    long code lines scroll within their block; PlutoUI multi-slider rows wrap;
    widgets/markdown never exceed the column; anything still wide scrolls in-cell.
-   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .pi-notebook
+   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .snap-notebook
    wrapper (it uses <main>), and in the docs fragment the whole sheet is wrapped in
-   `@scope (.pi-notebook)` — so a `.pi-notebook X` selector matched NOTHING in either
+   `@scope (.snap-notebook)` — so a `.snap-notebook X` selector matched NOTHING in either
    context (the earlier 272px residual). Bare class/element selectors auto-scope under
    @scope for the fragment and stay notebook-specific (these are Pluto/PlutoUI classes)
    for the standalone page. */
@@ -790,7 +790,7 @@ pre,table,bond,.markdown,img{max-width:100%}
 .plutoui-aside-wrapper>div{width:auto !important;max-width:100% !important}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
-.pi-cells,main{overflow-x:auto}
+.snap-cells,main{overflow-x:auto}
 /* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
 .tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
@@ -832,9 +832,9 @@ document.addEventListener("click", function (e) {
     # Standalone pages render it; embedded-in-a-host (docs) pass theme_picker=false
     # so the HOST app's single picker drives every notebook (same-origin iframe).
     picker_block = theme_picker ? raw"""
-<div class="pi-theme-picker">
+<div class="snap-theme-picker">
   <span aria-hidden="true">🎨</span>
-  <select id="pi-theme-select" aria-label="Theme" onchange="__piSetTheme(this.value)">
+  <select id="snap-theme-select" aria-label="Theme" onchange="__piSetTheme(this.value)">
     <optgroup label="DaisyUI">
       <option value="light">light</option>
       <option value="dark">dark</option>
@@ -872,12 +872,12 @@ document.addEventListener("click", function (e) {
   </select>
 </div>
 <script>
-function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('pi-theme',t);}catch(e){}}
-(function(){var sel=document.getElementById('pi-theme-select');if(sel)sel.value=document.documentElement.getAttribute('data-theme')||'light';})();
+function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('snap-theme',t);}catch(e){}}
+(function(){var sel=document.getElementById('snap-theme-select');if(sel)sel.value=document.documentElement.getAttribute('data-theme')||'light';})();
 </script>
 """ : ""
     if fragment
-        # NATIVE INLINE COMPONENT: a self-contained <div class="pi-notebook"> with
+        # NATIVE INLINE COMPONENT: a self-contained <div class="snap-notebook"> with
         # @scope-isolated CSS (no leakage to/from the host app), the SSR cells, and
         # the island shim/wiring. The docs serve these via a FULL page load (links
         # carry data-no-router) so every script runs fresh — same as the standalone
@@ -888,24 +888,24 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         # the notebook inherits the host's DaisyUI theme; flow transparently into the
         # page (no card/box bg) so it reads as native content, not an embed.
         scoped = string(scoped, "\n:scope{background:transparent;max-width:none;padding:0;margin:0}")
-        frag_css = string("@scope (.pi-notebook) {\n", scoped, "\n}")
+        frag_css = string("@scope (.snap-notebook) {\n", scoped, "\n}")
         frag_shim = islands_dirname === nothing ? "" :
             string("<script src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
         # apply the host picker's saved theme to THIS notebook on load
-        theme_apply = string("<script>(function(){try{var t=localStorage.getItem('pi-theme');",
-            "if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.pi-notebook'):null;",
+        theme_apply = string("<script>(function(){try{var t=localStorage.getItem('snap-theme');",
+            "if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.snap-notebook'):null;",
             "if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>")
-        # the EMBEDDED ToC lives INSIDE .pi-notebook so the @scope'd Pluto ToC CSS
+        # the EMBEDDED ToC lives INSIDE .snap-notebook so the @scope'd Pluto ToC CSS
         # styles it; data-embedded makes it position sensibly + start collapsed.
         return string(
-            "<div class=\"pi-notebook\">\n",
+            "<div class=\"snap-notebook\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
             "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
             "<style>\n", frag_css, "\n</style>\n",
             theme_apply, "\n",
             toc_html(true), "\n",
-            "<div class=\"pi-cells\">\n", cells_html, "</div>\n",
+            "<div class=\"snap-cells\">\n", cells_html, "</div>\n",
             frag_shim, "\n", wiring, "\n", katex_js, "\n", hl_js, "\n", tree_js, "\n",
             "</div>\n",
         )
@@ -913,7 +913,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
     return string(
         "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"light\">\n<head>\n<meta charset=\"utf-8\">\n",
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n",
-        "<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>\n",
+        "<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>\n",
         "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",
         "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
         "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",

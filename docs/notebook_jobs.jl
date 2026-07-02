@@ -3,7 +3,7 @@
 # and the export can NEVER disagree on a slug (that mismatch broke the docs once).
 #
 # Base Julia only — NO deps — so the CI discover step runs `julia notebook_jobs.jl
-# --json` to emit its matrix without instantiating the heavy PlutoIslands env.
+# --json` to emit its matrix without instantiating the heavy Snapshot env.
 #
 # Each job is (path, slug): the source filename may contain spaces; the slug NEVER
 # does — the static host 404s on %20 in paths, and the route + committed exports

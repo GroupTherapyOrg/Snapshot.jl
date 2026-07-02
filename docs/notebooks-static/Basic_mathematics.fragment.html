@@ -1,9 +1,9 @@
-<div class="pi-notebook">
+<div class="snap-notebook">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
 <style>
-@scope (.pi-notebook) {
+@scope (.snap-notebook) {
 :scope{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
 :scope{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
 /* Pluto's tree/table/code use white-space:pre (no wrap); the output box must
@@ -12,15 +12,15 @@
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.pi-reactive canvas{max-width:100%;height:auto}
+img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
 a{color:var(--color-primary)}
 /* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
    ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
-.pi-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
-.pi-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
+.snap-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
+.snap-theme-picker select{background:var(--color-base-100);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.4rem;padding:.25rem .45rem;font-size:.8rem;font-family:inherit;cursor:pointer}
 /* shown-code blocks = OUR Lezer-highlighted SOURCE, sit BELOW the cell's pluto-output
    (Pluto's own output CSS owns everything INSIDE pluto-output; this is the code listing) */
 .pl-cell{margin:1.25rem 0}
@@ -29,9 +29,9 @@ a{color:var(--color-primary)}
 /* keep wide cell content inside the notebook column (don't blow out the page):
    long code lines scroll within their block; PlutoUI multi-slider rows wrap;
    widgets/markdown never exceed the column; anything still wide scrolls in-cell.
-   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .pi-notebook
+   NOTE: these are intentionally UNPREFIXED. The standalone page has NO .snap-notebook
    wrapper (it uses <main>), and in the docs fragment the whole sheet is wrapped in
-   `@scope (.pi-notebook)` — so a `.pi-notebook X` selector matched NOTHING in either
+   `@scope (.snap-notebook)` — so a `.snap-notebook X` selector matched NOTHING in either
    context (the earlier 272px residual). Bare class/element selectors auto-scope under
    @scope for the fragment and stay notebook-specific (these are Pluto/PlutoUI classes)
    for the standalone page. */
@@ -53,7 +53,7 @@ pre,table,bond,.markdown,img{max-width:100%}
 .plutoui-aside-wrapper>div{width:auto !important;max-width:100% !important}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
-.pi-cells,main{overflow-x:auto}
+.snap-cells,main{overflow-x:auto}
 /* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
 .tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
@@ -168,7 +168,7 @@ pre,table,bond,.markdown,img{max-width:100%}
 /* Pluto output rules (editor.css pluto-output sections + treeview.css +
    PlutoUI TableOfContents), copied from Pluto frontend. The DaisyUI var-map
    + ansi/highlightjs/error are added by src/pluto_css.jl at load. Regenerate on
-   a Pluto/PlutoUI bump via PlutoIslands.write_pluto_css(). */
+   a Pluto/PlutoUI bump via Snapshot.write_pluto_css(). */
 /* ─── VERBATIM: Pluto editor.css 122-528 (pluto-output output rules) ─── */
 pluto-output {
     font-family: "Alegreya Sans", "Trebuchet MS", sans-serif;
@@ -1669,9 +1669,9 @@ a:visited {
 :scope{background:transparent;max-width:none;padding:0;margin:0}
 }
 </style>
-<script>(function(){try{var t=localStorage.getItem('pi-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.pi-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
+<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.snap-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
 
-<div class="pi-cells">
+<div class="snap-cells">
 <div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Mathematics-in-Julia-🍕">Mathematics in Julia 🍕</h1>
 <p>This is an introduction to programming.  Let&#39;s get started&#33;</p>
 <h2 id="Let&#39;s-make-a-calculator&#33;">Let&#39;s make a calculator&#33;</h2>

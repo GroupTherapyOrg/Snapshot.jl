@@ -13,7 +13,7 @@
 
 import Pluto
 import JSON
-using PlutoIslands
+using Snapshot
 
 const CORPUS = joinpath(@__DIR__, "..", "test", "notebooks", "featured")
 const REPORT = joinpath(@__DIR__, "ISLAND_SURVEY.md")

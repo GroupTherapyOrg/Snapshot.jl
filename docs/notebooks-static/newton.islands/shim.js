@@ -1,4 +1,4 @@
-// PlutoIslands shim — the wasm-island slider "server", running in this tab.
+// Snapshot shim — the wasm-island slider "server", running in this tab.
 //
 // Pluto's exported HTML has slider_server_url set, so its stock frontend
 // (SliderServerClient.js) does:

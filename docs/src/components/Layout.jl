@@ -1,22 +1,22 @@
-const PIDOCS_BASE = get(ENV, "PIDOCS_BASE", "")
-const REPO_URL = "https://github.com/GroupTherapyOrg/PlutoIslands.jl"
+const SNAPDOCS_BASE = get(ENV, "SNAPDOCS_BASE", "")
+const REPO_URL = "https://github.com/GroupTherapyOrg/Snapshot.jl"
 
-"""PlutoIslands.jl wordmark — serif, with the tri-color .jl suffix."""
+"""Snapshot.jl wordmark — serif, with the tri-color .jl suffix."""
 function PIWordmark()
-    A(:href => "$(PIDOCS_BASE)/", :class => "flex items-center gap-2 group no-underline",
+    A(:href => "$(SNAPDOCS_BASE)/", :class => "flex items-center gap-2 group no-underline",
         RawHtml("""<svg width="24" height="24" viewBox="0 0 100 100" aria-hidden="true" class="transition-transform duration-200 group-hover:-translate-y-0.5"><rect x="38" y="15" width="47" height="47" rx="12" fill="var(--color-primary)" stroke="currentColor" stroke-width="5"/><rect x="11" y="43" width="35" height="35" rx="9" fill="var(--color-base-100)" stroke="currentColor" stroke-width="5"/><rect x="53" y="63" width="26" height="26" rx="8" fill="var(--color-base-100)" stroke="currentColor" stroke-width="5"/></svg>"""),
-        RawHtml("""<span class="sn-display text-xl font-semibold text-base-content">PlutoIslands<span class="text-primary">.</span><span class="text-secondary">j</span><span class="text-accent">l</span></span>"""),
+        RawHtml("""<span class="sn-display text-xl font-semibold text-base-content">Snapshot<span class="text-primary">.</span><span class="text-secondary">j</span><span class="text-accent">l</span></span>"""),
     )
 end
 
 function Layout(content)
-    base = PIDOCS_BASE
+    base = SNAPDOCS_BASE
     Fragment(
         # npm-built Tailwind+DaisyUI stylesheet (Therapy tailwind=false), served via the
         # assets/ staticfiles route (base-path aware, works dev + GH Pages build).
         RawHtml("""<link rel="stylesheet" href="$(base)/assets/styles.css">"""),
-        # theme init (before paint): ?theme= → saved 'pi-theme' → system prefers-dark → light
-        RawHtml("""<script>(function(){try{var u=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('pi-theme');var dk=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=u||s||(dk?'dark':'light');document.documentElement.setAttribute('data-theme',t);if(u){try{localStorage.setItem('pi-theme',u)}catch(e){}}if(window.matchMedia){var mq=window.matchMedia('(prefers-color-scheme: dark)');var f=function(e){if(!localStorage.getItem('pi-theme'))document.documentElement.setAttribute('data-theme',e.matches?'dark':'light');};if(mq.addEventListener)mq.addEventListener('change',f);}}catch(e){}})();</script>"""),
+        # theme init (before paint): ?theme= → saved 'snap-theme' → system prefers-dark → light
+        RawHtml("""<script>(function(){try{var u=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('snap-theme');var dk=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=u||s||(dk?'dark':'light');document.documentElement.setAttribute('data-theme',t);if(u){try{localStorage.setItem('snap-theme',u)}catch(e){}}if(window.matchMedia){var mq=window.matchMedia('(prefers-color-scheme: dark)');var f=function(e){if(!localStorage.getItem('snap-theme'))document.documentElement.setAttribute('data-theme',e.matches?'dark':'light');};if(mq.addEventListener)mq.addEventListener('change',f);}}catch(e){}})();</script>"""),
         RawHtml("""<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">"""),
@@ -44,6 +44,6 @@ function Layout(content)
         ),
         # theme-picker click → set data-theme on <html> (whole site + every inline
         # notebook) + persist. Delegated on document so it survives SPA swaps.
-        RawHtml("""<script>(function(){if(window.__piThemeWired)return;window.__piThemeWired=1;document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-name]');if(!b)return;var t=b.getAttribute('data-theme-name');document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('pi-theme',t)}catch(e){}document.querySelectorAll('.pi-notebook').forEach(function(n){n.setAttribute('data-theme',t)});if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();});})();</script>"""),
+        RawHtml("""<script>(function(){if(window.__piThemeWired)return;window.__piThemeWired=1;document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-name]');if(!b)return;var t=b.getAttribute('data-theme-name');document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('snap-theme',t)}catch(e){}document.querySelectorAll('.snap-notebook').forEach(function(n){n.setAttribute('data-theme',t)});if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();});})();</script>"""),
     )
 end

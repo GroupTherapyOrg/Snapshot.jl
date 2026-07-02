@@ -62,7 +62,7 @@ f = (s::String) -> "\"" * escape_string(s) * "\""   # compiles + validates
 # TRAPS unreachable when called (even on "")
 # workaround: replace(replace(s, "\\"=>...), "\""=>...) chain — works
 ```
-Found by PlutoIslands initial-body verification (String bond plain-text
+Found by Snapshot initial-body verification (String bond plain-text
 bodies). Same validates-then-traps class as #2/#3.
 
 ## 5. `string(::DataType)` returns `""` — SILENTLY WRONG  [OPEN]
@@ -71,7 +71,7 @@ bodies). Same validates-then-traps class as #2/#3.
 f = (x::Int64) -> string(typeof(x))
 # compiles + validates + runs; wasm returns "" — native returns "Int64".
 # No trap, no validation failure: a silent wrong value. Caught only by
-# PlutoIslands' differential oracle (cell `typeof(x)` in
+# Snapshot' differential oracle (cell `typeof(x)` in
 # "Interactivity with HTML": wasm "" != native "Int64").
 ```
 Highest-severity class — silent divergence. Suggest the WT fuzzer's

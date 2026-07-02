@@ -6,8 +6,8 @@
 import Pluto
 import WasmTarget
 import Pkg
-using PlutoIslands
-const M = PlutoIslands
+using Snapshot
+const M = Snapshot
 
 pattern = isempty(ARGS) ? "Basic mathematics" : ARGS[1]
 const CORPUS = joinpath(@__DIR__, "..", "test", "notebooks", "featured")

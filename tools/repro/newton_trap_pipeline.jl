@@ -1,5 +1,5 @@
 import Pluto, JSON
-using PlutoIslands
+using Snapshot
 session = Pluto.ServerSession()
 out = mktempdir()
 nb = Pluto.SessionActions.open(session, "test/notebooks/newton_pared.jl"; run_async=false)

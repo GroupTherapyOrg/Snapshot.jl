@@ -35,7 +35,7 @@ Base.@kwdef struct CompiledIsland
     transforms::Vector{Any} = Any[]
     # E-004: canvas cells (WasmMakie figures) — the provider glue + font
     # payload the shim embeds; sourced from the NOTEBOOK's own WasmMakie
-    # (PlutoIslands has no WasmMakie dependency)
+    # (Snapshot has no WasmMakie dependency)
     canvas_glue::Union{String,Nothing} = nothing
     canvas_fonts::Union{String,Nothing} = nothing
 end
@@ -164,7 +164,7 @@ function compile_group(
 
         # E-004: a cell whose VALUE is a WasmMakie.Figure becomes a "canvas"
         # cell — detected by TYPE NAME on the raw (un-_html_body-wrapped)
-        # value fn, so PlutoIslands needs no WasmMakie dependency; the
+        # value fn, so Snapshot needs no WasmMakie dependency; the
         # compiled fn renders through the canvas2d import surface and the
         # shim provides the canvas. This must run BEFORE the generic probe:
         # the html wrapper on a Figure infers to the `_html_body(v)=error`
