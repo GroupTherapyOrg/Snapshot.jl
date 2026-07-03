@@ -2,7 +2,7 @@
 
 # Snapshot.jl
 
-### Pluto notebooks, live as Therapy components. No Julia server.
+### Pluto notebooks, interactive as Therapy components. No Julia server.
 
 A **snapshot** of a running notebook: a static export whose interactive cells still run. `@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
 
