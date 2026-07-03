@@ -498,9 +498,10 @@
         card_css_injected = true
     }
 
-    // strip PI's sandbox-module gensym from diagnostic text ("Main.var\"##PlutoIslandCompile#287\".string" → "string")
+    // strip the sandbox-module gensym from diagnostic text ("Main.var\"##SnapshotCompile#287\".string" → "string")
+    // (matches the legacy PlutoIslandCompile name too, so pre-rename exports still clean up)
     const clean_diag_text = (s) =>
-        (s ?? "").replace(/(?:Main\.)?var"##PlutoIslandCompile#\d+"\./g, "")
+        (s ?? "").replace(/(?:Main\.)?var"##(?:Snapshot|PlutoIsland)Compile#\d+"\./g, "")
 
     const KIND_PHRASE = {
         unsupported_method: "a call WasmTarget cannot lower",

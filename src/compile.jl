@@ -135,7 +135,7 @@ function compile_group(
     end
 
     # Sandbox module: preamble (structs/imports) at top level — group-level gate
-    sandbox = Module(gensym(:PlutoIslandCompile))
+    sandbox = Module(gensym(:SnapshotCompile))
     try
         # Pluto injects these into every notebook module implicitly
         Core.eval(sandbox, :(using Markdown))
