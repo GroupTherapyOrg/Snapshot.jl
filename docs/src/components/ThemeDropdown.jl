@@ -2,9 +2,11 @@
 # each row showing 3 swatch dots (primary/secondary/accent in that theme). Clicking
 # sets data-theme on <html> (the whole site + every inline .snap-notebook reskins) and
 # persists to localStorage 'snap-theme'. The click handler lives in Layout.jl (delegated).
-# PURE DaisyUI themes only — no custom themes (Dale's call).
+# classic-light/classic-dark are custom themes defined in docs/input.css — 1:1 ports
+# of Pluto's own light/dark palettes onto DaisyUI tokens; the rest are built-ins.
 
 const _THEMES = [
+    "classic-light", "classic-dark",
     "light", "dark", "cupcake", "bumblebee", "emerald", "corporate", "synthwave",
     "retro", "cyberpunk", "valentine", "halloween", "garden", "forest", "aqua",
     "lofi", "pastel", "fantasy", "wireframe", "black", "luxury", "dracula", "cmyk",

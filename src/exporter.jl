@@ -813,8 +813,10 @@ pre,table,bond,.markdown,img{max-width:100%}
     # Pluto's OWN output CSS (editor.css pluto-output rules + treeview.css) and
     # PlutoUI's TableOfContents CSS, copied VERBATIM and re-themed only by the
     # variable map at the top of the file → output.body renders exactly as Pluto
-    # does, but in our snapshot / snapshot-dark DaisyUI theme (Worker can swap it).
-    pluto_css = PLUTO_OUTPUT_CSS
+    # does, in whatever DaisyUI theme is active (Worker can swap it). The custom
+    # classic-light/classic-dark token blocks ship inline (CDN themes.css only
+    # has the built-ins).
+    pluto_css = string(CLASSIC_THEMES_CSS, "\n", PLUTO_OUTPUT_CSS)
     # Pluto trees are click-to-expand/collapse — wire the same toggle on the caret.
     tree_js = raw"""
 <script>
@@ -827,14 +829,19 @@ document.addEventListener("click", function (e) {
 """
     # Floating theme picker (TEST control). Sets <html data-theme>; the ported Pluto
     # CSS reads DaisyUI --color-* tokens so one swap restyles the WHOLE notebook.
-    # snapshot/snapshot-dark are our custom themes; the rest are DaisyUI 5 built-ins
-    # (themes.css is already loaded in <head>). Choice persists in localStorage.
+    # classic-light/classic-dark are our custom themes (1:1 Pluto palettes, tokens
+    # inlined via CLASSIC_THEMES_CSS); the rest are DaisyUI 5 built-ins (themes.css
+    # is already loaded in <head>). Choice persists in localStorage.
     # Standalone pages render it; embedded-in-a-host (docs) pass theme_picker=false
     # so the HOST app's single picker drives every notebook (same-origin iframe).
     picker_block = theme_picker ? raw"""
 <div class="snap-theme-picker">
   <span aria-hidden="true">🎨</span>
   <select id="snap-theme-select" aria-label="Theme" onchange="__piSetTheme(this.value)">
+    <optgroup label="Snapshot classic (Pluto palette)">
+      <option value="classic-light">classic-light</option>
+      <option value="classic-dark">classic-dark</option>
+    </optgroup>
     <optgroup label="DaisyUI">
       <option value="light">light</option>
       <option value="dark">dark</option>

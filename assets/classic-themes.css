@@ -1,0 +1,86 @@
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       daisyui@5/themes.css only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:root[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:root { …light tokens… }` block that the
+   CDN daisyui@5/themes.css (loaded by embedded notebook fragments, possibly
+   AFTER this sheet) declares at (0,1,0). The bare `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:root[data-theme="classic-light"],
+[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:root[data-theme="classic-dark"],
+[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}

@@ -121,6 +121,13 @@ const PLUTO_VAR_MAP = Dict{String,String}(
     "--sidebar-li-active-bg" => "color-mix(in oklab, var(--color-primary) 12%, transparent)",
 )
 
+"""DaisyUI token blocks for the two custom `classic-*` themes — 1:1 ports of Pluto's
+own palettes onto the standard DaisyUI tokens PLUTO_VAR_MAP consumes (see the header
+comment in assets/classic-themes.css, the single source of truth — docs/input.css
+@imports the same file). Inlined into every export (standalone + fragment) because
+the CDN daisyui@5/themes.css only ships the built-in themes."""
+const CLASSIC_THEMES_CSS = read(joinpath(@__DIR__, "..", "assets", "classic-themes.css"), String)
+
 """Literal colours Pluto baked into the included CSS as hex/rgb (NOT via a var, so the
 var-map can't catch them) → DaisyUI tokens, so they stay theme-aware."""
 const HARDCODED_COLOR_MAP = Dict{String,String}(

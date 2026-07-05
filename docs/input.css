@@ -1,11 +1,17 @@
 @import "tailwindcss";
 @source "./src/**/*.jl";
 
-/* PURE DaisyUI: all built-in themes, no custom themes. data-theme on <html>
-   drives the whole site (chrome + inline notebooks) at once. */
+/* All built-in DaisyUI themes + two custom "classic" themes below. data-theme on
+   <html> drives the whole site (chrome + inline notebooks) at once. */
 @plugin "daisyui" {
   themes: all;
 }
+
+/* classic-light / classic-dark: custom themes — 1:1 ports of Pluto's own palettes
+   onto DaisyUI tokens. Single source of truth in ../assets/classic-themes.css
+   (also inlined into every export by src/pluto_css.jl); see its header for the
+   selector-specificity rationale. */
+@import "../assets/classic-themes.css";
 
 /* Fonts — a Snapshot-style serif display + clean sans + mono. */
 @theme {
