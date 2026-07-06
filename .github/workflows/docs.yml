@@ -28,7 +28,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SNAPSHOT_WT_REF: main
+  # PINNED to v0.4.3 (692f9f2): WasmTarget v0.4.5 (the march-5 parity overhaul)
+  # emits wasm that fails Node's WasmGC verification ("global.get of type anyref")
+  # for 8/16 notebooks → their islands degrade to static. Unpin to `main` once
+  # the regression is fixed upstream.
+  SNAPSHOT_WT_REF: v0.4.3
 
 jobs:
   # ── 1. discover — read the canonical notebook list (shared source of truth) ──
