@@ -236,16 +236,18 @@ function compile_group(
         cd !== nothing && (canvas_wm = cd.wm; break)
     end
     bytes = try
-        if canvas_wm === nothing
-            WasmTarget.compile_multi(entries; optimize)
-        else
+        existing_module = nothing
+        import_stubs = Any[]
+        if canvas_wm !== nothing
             # E-004: canvas cells need the canvas2d import surface — the
-            # compile_with_canvas pattern over the NOTEBOOK's WasmMakie
+            # compile_with_canvas pattern over the NOTEBOOK's WasmMakie. The
+            # imports are inputs to the same canonical compile_multi path used
+            # by every other island; serialization, optimization, and validation
+            # must never fork here.
             cmod = WasmTarget.WasmModule()
             WasmTarget.add_import!(cmod, "Math", "pow",
                 WasmTarget.NumType[WasmTarget.F64, WasmTarget.F64],
                 WasmTarget.NumType[WasmTarget.F64])
-            import_stubs = Any[]
             _specs = canvas_wm === :island_img ? IMG_IMPORT_SPECS :
                      Base.invokelatest(getfield(canvas_wm, :import_specs))
             for sp in _specs
@@ -254,13 +256,9 @@ function compile_group(
                 idx = WasmTarget.add_import!(cmod, sp.mod, sp.name, params, ret)
                 push!(import_stubs, (sp.func, sp.name, Tuple(sp.arg_types), idx, sp.return_type))
             end
-            wmod = WasmTarget.compile_module(entries; existing_module=cmod, import_stubs=import_stubs)
-            cbytes = WasmTarget.to_bytes(wmod)
-            # E-004 canvas islands aren't routed through compile_multi, so apply
-            # the same wasm-opt pass here when requested (the oracle re-verifies).
-            optimize === false ? cbytes :
-                WasmTarget.optimize(cbytes; level = optimize === true ? :size : optimize)
+            existing_module = cmod
         end
+        WasmTarget.compile_multi(entries; optimize, existing_module, import_stubs)
     catch e
         return fail("module assembly (compile_multi) failed: $(sprint(showerror, e)[1:min(end, 300)])")
     end

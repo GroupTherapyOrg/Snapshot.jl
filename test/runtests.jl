@@ -15,6 +15,14 @@ const HAS_NODE = Sys.which("node") !== nothing
     @test project["compat"]["WasmTarget"] == "0.5"
 end
 
+@testset "single final wasm assembly path" begin
+    compiler_source = read(joinpath(dirname(@__DIR__), "src", "compile.jl"), String)
+    @test length(collect(eachmatch(r"WasmTarget\.compile_multi\(", compiler_source))) == 1
+    @test !occursin("WasmTarget.compile_module(", compiler_source)
+    @test !occursin("WasmTarget.to_bytes(", compiler_source)
+    @test !occursin("WasmTarget.optimize(", compiler_source)
+end
+
 const DEMO = joinpath(@__DIR__, "notebooks", "demo.jl")          # slider → x^2 → md
 const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island group + fallback group
 
