@@ -9,6 +9,12 @@ using Snapshot
 
 const HAS_NODE = Sys.which("node") !== nothing
 
+@testset "registry package contract" begin
+    project = Pkg.TOML.parsefile(joinpath(dirname(@__DIR__), "Project.toml"))
+    @test !haskey(project, "sources")
+    @test project["compat"]["WasmTarget"] == "0.5"
+end
+
 const DEMO = joinpath(@__DIR__, "notebooks", "demo.jl")          # slider → x^2 → md
 const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island group + fallback group
 
