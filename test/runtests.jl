@@ -256,6 +256,11 @@ if isdir(WASMMAKIE_DIR)
 
         island = compile_group(gf; verify_node=false, env_dir=env)
         @test island.ok
+        # A partial island remains group-valid by design, so assert the
+        # per-cell admission diagnostics before indexing the canvas result.
+        # This makes a compiler regression report its structured cause instead
+        # of collapsing into an unhelpful `only(empty)` error.
+        @test isempty(island.cell_failures)
         canvas_cells = [c for c in island.cells if c.kind == "canvas"]
         @test length(canvas_cells) == 1
         cc = only(canvas_cells)
