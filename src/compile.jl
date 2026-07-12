@@ -41,6 +41,24 @@ Base.@kwdef struct CompiledIsland
 end
 
 import WasmTarget.Bridge
+
+"""Build the declared host-import surface shared by canvas admission and assembly."""
+function _canvas_import_surface(canvas_wm)
+    cmod = WasmTarget.WasmModule()
+    WasmTarget.add_import!(cmod, "Math", "pow",
+        WasmTarget.NumType[WasmTarget.F64, WasmTarget.F64],
+        WasmTarget.NumType[WasmTarget.F64])
+    import_stubs = Any[]
+    specs = canvas_wm === :island_img ? IMG_IMPORT_SPECS :
+            Base.invokelatest(getfield(canvas_wm, :import_specs))
+    for sp in specs
+        params = WasmTarget.NumType[q === :F64 ? WasmTarget.F64 : WasmTarget.I64 for q in sp.params]
+        ret = WasmTarget.NumType[sp.ret === :F64 ? WasmTarget.F64 : WasmTarget.I64]
+        idx = WasmTarget.add_import!(cmod, sp.mod, sp.name, params, ret)
+        push!(import_stubs, (sp.func, sp.name, Tuple(sp.arg_types), idx, sp.return_type))
+    end
+    return cmod, import_stubs
+end
 import Pkg
 import Dates
 
@@ -186,7 +204,15 @@ function compile_group(
         end
 
         try
-            WasmTarget.compile(f, arg_tuple)
+            if canvas_desc === nothing
+                WasmTarget.compile(f, arg_tuple)
+            else
+                # Canvas providers are declared host imports. Admission must use
+                # the same imported closed world as final assembly.
+                probe_module, probe_stubs = _canvas_import_surface(canvas_desc.wm)
+                WasmTarget.compile_multi([(f, arg_tuple, p.export_name)];
+                    existing_module=probe_module, import_stubs=probe_stubs)
+            end
         catch e
             cellfail!(p.cell_id,
                 # validation errors carry a disassembly context — keep enough of it
@@ -244,19 +270,7 @@ function compile_group(
             # imports are inputs to the same canonical compile_multi path used
             # by every other island; serialization, optimization, and validation
             # must never fork here.
-            cmod = WasmTarget.WasmModule()
-            WasmTarget.add_import!(cmod, "Math", "pow",
-                WasmTarget.NumType[WasmTarget.F64, WasmTarget.F64],
-                WasmTarget.NumType[WasmTarget.F64])
-            _specs = canvas_wm === :island_img ? IMG_IMPORT_SPECS :
-                     Base.invokelatest(getfield(canvas_wm, :import_specs))
-            for sp in _specs
-                params = WasmTarget.NumType[q === :F64 ? WasmTarget.F64 : WasmTarget.I64 for q in sp.params]
-                ret = WasmTarget.NumType[sp.ret === :F64 ? WasmTarget.F64 : WasmTarget.I64]
-                idx = WasmTarget.add_import!(cmod, sp.mod, sp.name, params, ret)
-                push!(import_stubs, (sp.func, sp.name, Tuple(sp.arg_types), idx, sp.return_type))
-            end
-            existing_module = cmod
+            existing_module, import_stubs = _canvas_import_surface(canvas_wm)
         end
         WasmTarget.compile_multi(entries; optimize, existing_module, import_stubs)
     catch e

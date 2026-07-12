@@ -17,7 +17,8 @@ end
 
 @testset "single final wasm assembly path" begin
     compiler_source = read(joinpath(dirname(@__DIR__), "src", "compile.jl"), String)
-    @test length(collect(eachmatch(r"WasmTarget\.compile_multi\(", compiler_source))) == 1
+    # One import-aware canvas admission probe and one final assembly call.
+    @test length(collect(eachmatch(r"WasmTarget\.compile_multi\(", compiler_source))) == 2
     @test !occursin("WasmTarget.compile_module(", compiler_source)
     @test !occursin("WasmTarget.to_bytes(", compiler_source)
     @test !occursin("WasmTarget.optimize(", compiler_source)
