@@ -28,11 +28,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # PINNED to v0.4.3 (692f9f2): WasmTarget v0.4.5 (the march-5 parity overhaul)
-  # emits wasm that fails Node's WasmGC verification ("global.get of type anyref")
-  # for 8/16 notebooks → their islands degrade to static. Unpin to `main` once
-  # the regression is fixed upstream.
-  SNAPSHOT_WT_REF: v0.4.3
+  # Keep docs on the WT 0.5 release line. Snapshot's own Project.toml is the
+  # registry contract; this checkout lets docs validate the release candidate
+  # before its General registration is available.
+  SNAPSHOT_WT_REF: v0.5.0
 
 jobs:
   # ── 1. discover — read the canonical notebook list (shared source of truth) ──
@@ -106,7 +105,7 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Instantiate PI project
         working-directory: Snapshot.jl
-        run: julia --project=. -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
+        run: julia --project=. -e 'using Pkg; Pkg.Registry.add("General"); Pkg.develop(path="../WasmTarget.jl"); Pkg.instantiate()'
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Export this notebook → WASM islands (cache miss → force-rebuild it)
         working-directory: Snapshot.jl

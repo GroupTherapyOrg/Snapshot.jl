@@ -17,16 +17,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # The main project pins WasmTarget via [sources] {path = "../WasmTarget.jl"}
-      # (so WT's downstream CI can test PI against WT main). actions/checkout can't
-      # write outside the workspace, so clone WT to the expected sibling path here.
-      - name: Check out WasmTarget as a sibling (resolves the [sources] path pin)
+      # Exercise the pending WT release directly until 0.5 is in General. The
+      # package metadata itself stays registry-clean (no local [sources] path).
+      - name: Check out WasmTarget 0.5 release candidate
         run: git clone --depth 1 https://github.com/GroupTherapyOrg/WasmTarget.jl ../WasmTarget.jl
       - name: Run tests
         run: |
           julia --project=. -e '
             using Pkg
             Pkg.Registry.add("General")
+            Pkg.develop(path="../WasmTarget.jl")
             Pkg.instantiate()
             Pkg.test()
           '
