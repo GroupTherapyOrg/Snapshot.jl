@@ -14,9 +14,18 @@ const HAS_NODE = Sys.which("node") !== nothing
     project = Pkg.TOML.parsefile(joinpath(root, "Project.toml"))
     docs_project = Pkg.TOML.parsefile(joinpath(root, "docs", "Project.toml"))
     @test !haskey(project, "sources")
-    @test project["compat"]["WasmTarget"] == "0.5"
+    @test project["compat"]["WasmTarget"] == "0.5.2"
     @test !haskey(docs_project, "sources")
-    @test docs_project["compat"]["Therapy"] == "0.2.2"
+    @test docs_project["compat"]["Therapy"] == "0.2.3"
+end
+
+@testset "featured notebook coverage gate" begin
+    root = dirname(@__DIR__)
+    verifier = joinpath(root, "docs", "verify_notebook_coverage.py")
+    @test isfile(verifier)
+    @test success(`python3 $verifier $(joinpath(root, "docs", "notebooks-static", "index.json"))`)
+    workflow = read(joinpath(root, ".github", "workflows", "docs.yml"), String)
+    @test occursin("python3 docs/verify_notebook_coverage.py", workflow)
 end
 
 @testset "single final wasm assembly path" begin

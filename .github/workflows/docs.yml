@@ -61,14 +61,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Snapshot.jl/_nbout
-          # v7: resolve WasmTarget from General; the engine-content hash means
+          # v8: require the released canvas-safe WasmTarget floor (v0.5.2).
+          # The engine-content hash means
           # dependency-contract changes in Project.toml bust every notebook.
           # Only changes to
           # src/, assets/, the export driver, or Project.toml bust a notebook's
           # cache. A docs-site or README push now genuinely cache-hits every
           # notebook. (v5 was the Snapshot.jl rename; v4 the node 20→22
           # WasmGC-oracle fix; node-version still isn't in the key.)
-          key: snap-nbexport-v7-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-registry-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
+          key: snap-nbexport-v8-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-registry-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
@@ -93,11 +94,20 @@ jobs:
               (e) => { console.error("FATAL: node " + process.version + " cannot compile WasmGC — exports would all fall back to static. " + e); process.exit(1); }
             );'
       - if: steps.cache.outputs.cache-hit != 'true'
-        name: Instantiate PI project
+        name: Instantiate released Snapshot compiler stack
         working-directory: Snapshot.jl
         env:
           JULIA_PKG_SERVER: ""
-        run: julia --project=. -e 'using Pkg; try; Pkg.Registry.rm("General"); catch; end; Pkg.Registry.add("General"); Pkg.instantiate()'
+        run: |
+          julia --project=. -e '
+            using Pkg
+            try Pkg.Registry.rm("General") catch end
+            Pkg.Registry.add("General")
+            Pkg.instantiate()
+            wt = only(v for v in values(Pkg.dependencies()) if v.name == "WasmTarget")
+            wt.version >= v"0.5.2" || error("Snapshot canvas export requires WasmTarget >= 0.5.2, resolved $(wt.version)")
+            println("Snapshot export compiler: WasmTarget ", wt.version)
+          '
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Export this notebook → WASM islands (cache miss → force-rebuild it)
         working-directory: Snapshot.jl
@@ -169,13 +179,27 @@ jobs:
           else
             echo "no fresh entries — keeping committed index.json"
           fi
+      - name: Guard featured-notebook interactivity
+        run: python3 docs/verify_notebook_coverage.py docs/notebooks-static/index.json
       - uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }   # match the export job + snapshot.yml (WasmGC default)
       - uses: julia-actions/cache@v2
       - name: Install Julia docs deps
-        run: julia --project=docs -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
+        run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.Registry.add("General")
+            Pkg.resolve()
+            Pkg.instantiate()
+            deps = Pkg.dependencies()
+            th = only(v for v in values(deps) if v.name == "Therapy")
+            wt = only(v for v in values(deps) if v.name == "WasmTarget")
+            th.version >= v"0.2.3" || error("Snapshot docs require Therapy >= 0.2.3, resolved $(th.version)")
+            wt.version >= v"0.5.2" || error("Snapshot docs require WasmTarget >= 0.5.2, resolved $(wt.version)")
+            println("Snapshot docs stack: Therapy ", th.version, ", WasmTarget ", wt.version)
+          '
       - name: Build DaisyUI stylesheet (Tailwind v4)
         working-directory: docs
         run: |
