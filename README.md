@@ -76,6 +76,20 @@ static. Coverage grows with
 [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl); fallback
 reasons are tracked as work items in `WASM_FINDINGS.md`.
 
+## Security and trust boundary
+
+`export_notebook` **executes the notebook** in a Pluto workspace before it
+compiles and verifies browser islands. Snapshot.jl is an exporter, not a
+sandbox: notebook code has the Julia process's filesystem, network, environment,
+and subprocess permissions. Export only notebooks and package environments you
+trust, use an isolated CI runner with least-privilege credentials, and do not
+make secrets available to an untrusted notebook build.
+
+The generated browser bundle contains static HTML, JavaScript, and WebAssembly.
+Host bundles on an origin isolated from authenticated application pages; the
+snapshot.show service does this with per-owner origins. See [SECURITY.md](SECURITY.md)
+for reporting and deployment guidance.
+
 ## Related
 
 - [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl) — the Julia-to-WasmGC compiler doing the heavy lifting

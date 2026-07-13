@@ -33,6 +33,13 @@ end
     @test occursin("t === \"button\"", exporter)
     @test occursin("b.firstElementChild", exporter)
     @test occursin("setTimeout(rerender, 0)", exporter)
+    # Lean pages must preserve Pluto's inline-widget execution scope and marshal
+    # a combine() bond's multiple child inputs as one ordered value.
+    @test occursin("const __run=async function()", exporter)
+    @test occursin("const Generators=window.Generators", exporter)
+    @test occursin("inputs.map(inputValue)", exporter)
+    @test occursin("addEventListener(\"input\"", exporter)
+    @test occursin("}, true);", exporter)
 end
 
 @testset "single final wasm assembly path" begin
