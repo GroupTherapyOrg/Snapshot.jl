@@ -455,17 +455,41 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         # `currentScript`/`invalidation` are undefined. Wrap each inline output <script>
         # in an IIFE binding those, mimicking Pluto's runner — fixes e.g. Slider
         # show_value (its script wires the input to update the displayed <output>).
-        bodystr = replace(bodystr, r"<script>(.*?)</script>"s => function (whole)
-            inner = match(r"<script>(.*?)</script>"s, whole).captures[1]
+        bodystr = replace(bodystr, r"<script([^>]*)>(.*?)</script>"s => function (whole)
+            m = match(r"<script([^>]*)>(.*?)</script>"s, whole)
+            attrs, inner = m.captures
+            # External resources keep their original tag. Only Pluto's inline
+            # output programs need the isolated execution scope below.
+            occursin(r"\bsrc\s*="i, attrs) && return whole
             # capture currentScript DURING parse (valid only then), but DEFER the body to
             # DOMContentLoaded — at parse time the script's following siblings (e.g. the
             # Slider's <output>) aren't in the DOM yet, so currentScript.nextElementSibling
             # would be null. Wrapping the body in __run() also makes top-level `return`s legal.
-            string("<script>(function(){",
+            string("<script", attrs, ">(function(){",
                 "const currentScript=document.currentScript;",
                 "const invalidation=new Promise(function(){});",
-                "const __run=function(){\n", inner, "\n};",
-                "document.readyState===\"loading\"?document.addEventListener(\"DOMContentLoaded\",__run):__run();",
+                # Observable's `html` helper is available inside Pluto's runner,
+                # but not in a lean static page. This covers the DOM-returning
+                # widget programs emitted by PlutoUI (for example Scrubbable).
+                "const html=function(strings,...values){const t=document.createElement('template');",
+                "t.innerHTML=String.raw({raw:strings},...values);",
+                "return t.content.childNodes.length===1?t.content.firstChild:t.content;};",
+                # PlutoUI.combine/confirm use Observable's Generators.input helper.
+                # Supply the small input-iterator contract they need in a static page.
+                "const Generators=window.Generators||(window.Generators={input:function(el){",
+                "let first=true,waiter=null;",
+                "const read=function(){if(el.type==='checkbox')return el.checked;",
+                "if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};",
+                "el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});",
+                "return{next:function(){return{value:first?(first=false,Promise.resolve(read())):",
+                "new Promise(function(r){waiter=r;})};}};}});",
+                # Some Pluto widgets use top-level `await` and return their DOM node.
+                # An async wrapper admits both; mount a returned Node where Pluto's
+                # frontend would have mounted the script result.
+                "const __run=async function(){\n", inner, "\n};",
+                "const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};",
+                "const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};",
+                "document.readyState===\"loading\"?document.addEventListener(\"DOMContentLoaded\",__go):__go();",
                 "})();</script>")
         end)
         # PlutoUI.TableOfContents needs Pluto's own DOM — skip its (non-functional)
@@ -665,27 +689,38 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
   function collectBonds() {
     const vals = {};
     document.querySelectorAll("bond[def]").forEach(function (b) {
-      const inp = b.querySelector("input,select,textarea");
-      if (!inp) return;
+      const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
+      if (!inputs.length) {
+        const holder = b.firstElementChild;
+        if (holder && holder.value !== undefined) vals[b.getAttribute("def")] = holder.value;
+        return;
+      }
+      function inputValue(inp) {
       const t = inp.type;
       // Match the shim's value_tree contract per input type: numbers as Number,
       // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
       // marker the shim decodes into a Julia DateTime (the staterequest path sends
       // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
       // here would make value_tree treat the DateTime struct's value as undefined.
-      let v;
-      if (t === "range" || t === "number") v = Number(inp.value);
+      if (t === "range" || t === "number") return Number(inp.value);
       else if (t === "button") {
         // Pluto's Button displays a label on the <input>, but stores its
         // integer click count on the wrapper element that dispatches `input`.
         const holder = b.firstElementChild;
-        v = holder && holder.value !== undefined ? holder.value : 0;
+        return holder && holder.value !== undefined ? holder.value : 0;
       }
-      else if (t === "checkbox") v = inp.checked;
+      else if (t === "checkbox") return inp.checked;
       else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
-        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
-      else v = inp.value;
-      vals[b.getAttribute("def")] = v;
+        return Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else if (inp instanceof HTMLSelectElement && inp.multiple)
+        return Array.from(inp.selectedOptions, function (o) { return o.value; });
+      return inp.value;
+      }
+      // PlutoUI.combine exposes one logical bond backed by several child inputs.
+      // Preserve DOM order; the bridge's fields descriptor maps that array to the
+      // NamedTuple/struct fields in the same order.
+      vals[b.getAttribute("def")] = inputs.length === 1
+        ? inputValue(inputs[0]) : inputs.map(inputValue);
     });
     return vals;
   }
@@ -694,7 +729,7 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
   }
   document.addEventListener("input", function (e) {
     if (e.target.closest && e.target.closest("bond[def]")) rerender();
-  });
+  }, true);
   // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
   // stops the click at the button. Capture the click, then rerender after the
   // widget's target-phase handler increments the wrapper's numeric value.
