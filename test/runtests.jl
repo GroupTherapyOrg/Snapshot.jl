@@ -10,9 +10,13 @@ using Snapshot
 const HAS_NODE = Sys.which("node") !== nothing
 
 @testset "registry package contract" begin
-    project = Pkg.TOML.parsefile(joinpath(dirname(@__DIR__), "Project.toml"))
+    root = dirname(@__DIR__)
+    project = Pkg.TOML.parsefile(joinpath(root, "Project.toml"))
+    docs_project = Pkg.TOML.parsefile(joinpath(root, "docs", "Project.toml"))
     @test !haskey(project, "sources")
     @test project["compat"]["WasmTarget"] == "0.5"
+    @test !haskey(docs_project, "sources")
+    @test docs_project["compat"]["Therapy"] == "0.2.2"
 end
 
 @testset "single final wasm assembly path" begin
