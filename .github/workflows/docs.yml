@@ -17,6 +17,10 @@ on:
         description: "Ignore the cache and force-rebuild every notebook"
         type: boolean
         default: false
+      committed_exports:
+        description: "Skip notebook exports and deploy the committed certified bundle"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -47,6 +51,7 @@ jobs:
   # ── 2. export (parallel, one notebook per job, hash-cached) ────────────────
   export:
     needs: discover
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.committed_exports) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -148,12 +153,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Gather the per-notebook exports over the committed seed
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.committed_exports) }}
         uses: actions/download-artifact@v4
         with:
           pattern: nb-*
           path: _artifacts
           merge-multiple: true
       - name: Merge into docs/notebooks-static + rebuild index.json
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.committed_exports) }}
         run: |
           mkdir -p docs/notebooks-static
           shopt -s dotglob nullglob
