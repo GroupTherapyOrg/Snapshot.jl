@@ -26,12 +26,20 @@ end
     @test success(`python3 $verifier $(joinpath(root, "docs", "notebooks-static", "index.json"))`)
     workflow = read(joinpath(root, ".github", "workflows", "docs.yml"), String)
     @test occursin("python3 docs/verify_notebook_coverage.py", workflow)
+    @test occursin("committed_exports", workflow)
+    @test occursin("inputs.committed_exports", workflow)
 end
 
 @testset "single final wasm assembly path" begin
     compiler_source = read(joinpath(dirname(@__DIR__), "src", "compile.jl"), String)
     # One import-aware canvas admission probe and one final assembly call.
-    @test length(collect(eachmatch(r"WasmTarget\.compile_multi\(", compiler_source))) == 2
+    @test length(collect(eachmatch(r"WasmTarget\.compile_multi\b", compiler_source))) == 2
+    # compile_group Core.eval's fresh functions/imported bindings. Julia 1.12
+    # requires every Wasm compiler entry to cross that world-age boundary.
+    @test length(collect(eachmatch(
+        r"Base\.invokelatest\(WasmTarget\.compile", compiler_source))) == 3
+    @test occursin("pushfirst!(LOAD_PATH, env_dir)", compiler_source)
+    @test !occursin("Pkg.activate", compiler_source)
     @test !occursin("WasmTarget.compile_module(", compiler_source)
     @test !occursin("WasmTarget.to_bytes(", compiler_source)
     @test !occursin("WasmTarget.optimize(", compiler_source)

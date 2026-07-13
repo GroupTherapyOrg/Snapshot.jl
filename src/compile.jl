@@ -59,7 +59,6 @@ function _canvas_import_surface(canvas_wm)
     end
     return cmod, import_stubs
 end
-import Pkg
 import Dates
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -133,8 +132,13 @@ function compile_group(
 
     g.ok || return fail("extraction not ok", g.reasons...)
 
-    prev_project = Base.active_project()
-    env_dir !== nothing && Pkg.activate(env_dir; io=devnull)
+    # Let notebook imports resolve without replacing Snapshot's active project.
+    # Re-activating the embedded Pluto environment makes Julia 1.12 lose the
+    # already-loaded WasmTarget parent while loading stdlib-triggered extensions
+    # (notably WasmTargetStatisticsExt). LOAD_PATH composes the two environments:
+    # notebook packages first, Snapshot/compiler dependencies immediately after.
+    prev_load_path = copy(LOAD_PATH)
+    env_dir !== nothing && pushfirst!(LOAD_PATH, env_dir)
     try
     all(Bridge.args_supported, g.arg_types) ||
         return fail("bond arg types $(g.arg_types) outside the bridge universe")
@@ -205,12 +209,18 @@ function compile_group(
 
         try
             if canvas_desc === nothing
-                WasmTarget.compile(f, arg_tuple)
+                # `f` and its imported globals were defined moments ago by
+                # `Core.eval`. Julia 1.12 gives global bindings world ages too,
+                # so entering the compiler through an ordinary (older-world)
+                # call can make a perfectly valid `sandbox.Figure` look
+                # undefined. Cross the dynamic-code boundary explicitly.
+                Base.invokelatest(WasmTarget.compile, f, arg_tuple)
             else
                 # Canvas providers are declared host imports. Admission must use
                 # the same imported closed world as final assembly.
                 probe_module, probe_stubs = _canvas_import_surface(canvas_desc.wm)
-                WasmTarget.compile_multi([(f, arg_tuple, p.export_name)];
+                Base.invokelatest(WasmTarget.compile_multi,
+                    [(f, arg_tuple, p.export_name)];
                     existing_module=probe_module, import_stubs=probe_stubs)
             end
         catch e
@@ -272,7 +282,8 @@ function compile_group(
             # must never fork here.
             existing_module, import_stubs = _canvas_import_surface(canvas_wm)
         end
-        WasmTarget.compile_multi(entries; optimize, existing_module, import_stubs)
+        Base.invokelatest(WasmTarget.compile_multi, entries;
+            optimize, existing_module, import_stubs)
     catch e
         return fail("module assembly (compile_multi) failed: $(sprint(showerror, e)[1:min(end, 300)])")
     end
@@ -310,8 +321,8 @@ function compile_group(
 
     island
     finally
-        env_dir !== nothing && prev_project !== nothing &&
-            Pkg.activate(dirname(prev_project); io=devnull)
+        empty!(LOAD_PATH)
+        append!(LOAD_PATH, prev_load_path)
     end
 end
 
