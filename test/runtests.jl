@@ -28,6 +28,7 @@ end
     @test occursin("python3 docs/verify_notebook_coverage.py", workflow)
     @test occursin("committed_exports", workflow)
     @test occursin("inputs.committed_exports", workflow)
+    @test occursin("needs.build.result == 'success'", workflow)
 end
 
 @testset "single final wasm assembly path" begin
