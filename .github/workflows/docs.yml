@@ -221,6 +221,10 @@ jobs:
 
   deploy:
     needs: build
+    # `committed_exports=true` intentionally skips the export matrix. Without
+    # an explicit condition GitHub propagates that upstream skip through the
+    # otherwise-successful build and silently skips deployment too.
+    if: ${{ always() && needs.build.result == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
