@@ -20,7 +20,7 @@ jobs:
       # Exercise the pending WT release directly until 0.5 is in General. The
       # package metadata itself stays registry-clean (no local [sources] path).
       - name: Check out WasmTarget 0.5 release candidate
-        run: git clone --depth 1 https://github.com/GroupTherapyOrg/WasmTarget.jl ../WasmTarget.jl
+        run: git clone --depth 1 --branch wt-tag-run https://github.com/GroupTherapyOrg/WasmTarget.jl ../WasmTarget.jl
       - name: Run tests
         run: |
           julia --project=. -e '
