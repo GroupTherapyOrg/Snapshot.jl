@@ -675,6 +675,12 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
       // here would make value_tree treat the DateTime struct's value as undefined.
       let v;
       if (t === "range" || t === "number") v = Number(inp.value);
+      else if (t === "button") {
+        // Pluto's Button displays a label on the <input>, but stores its
+        // integer click count on the wrapper element that dispatches `input`.
+        const holder = b.firstElementChild;
+        v = holder && holder.value !== undefined ? holder.value : 0;
+      }
       else if (t === "checkbox") v = inp.checked;
       else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
         v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
@@ -689,6 +695,13 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
   document.addEventListener("input", function (e) {
     if (e.target.closest && e.target.closest("bond[def]")) rerender();
   });
+  // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
+  // stops the click at the button. Capture the click, then rerender after the
+  // widget's target-phase handler increments the wrapper's numeric value.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest('bond[def] input[type="button"]'))
+      setTimeout(rerender, 0);
+  }, true);
   (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
 })();
 </script>

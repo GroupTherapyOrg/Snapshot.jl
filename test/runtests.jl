@@ -29,6 +29,10 @@ end
     @test occursin("committed_exports", workflow)
     @test occursin("inputs.committed_exports", workflow)
     @test occursin("needs.build.result == 'success'", workflow)
+    exporter = read(joinpath(root, "src", "exporter.jl"), String)
+    @test occursin("t === \"button\"", exporter)
+    @test occursin("b.firstElementChild", exporter)
+    @test occursin("setTimeout(rerender, 0)", exporter)
 end
 
 @testset "single final wasm assembly path" begin
