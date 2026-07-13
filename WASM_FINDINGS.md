@@ -1,4 +1,12 @@
-# WasmTarget feedback ledger (from the islands work)
+# Historical WasmTarget feedback ledger (from the islands work)
+
+> **Archived 2026-07-12.** These observations were collected against pre-0.5
+> development branches and must not be read as the current WT support matrix.
+> Some remain useful regression descriptions, but every `OPEN` label below is
+> unverified against WT 0.5. Current truth comes from Snapshot's Node and
+> differential-oracle tests plus the machine-generated per-export `report.json`.
+> New compiler gaps belong in WT's minimized differential-failure corpus, not as
+> new workarounds in Snapshot.
 
 The workflow this repo feeds: **improve WT.jl → re-run islands tests + survey →
 new gaps land here → back into WT.jl.** Each entry has a deterministic repro

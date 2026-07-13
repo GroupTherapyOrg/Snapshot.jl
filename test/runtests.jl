@@ -9,6 +9,25 @@ using Snapshot
 
 const HAS_NODE = Sys.which("node") !== nothing
 
+@testset "registry package contract" begin
+    root = dirname(@__DIR__)
+    project = Pkg.TOML.parsefile(joinpath(root, "Project.toml"))
+    docs_project = Pkg.TOML.parsefile(joinpath(root, "docs", "Project.toml"))
+    @test !haskey(project, "sources")
+    @test project["compat"]["WasmTarget"] == "0.5"
+    @test !haskey(docs_project, "sources")
+    @test docs_project["compat"]["Therapy"] == "0.2.2"
+end
+
+@testset "single final wasm assembly path" begin
+    compiler_source = read(joinpath(dirname(@__DIR__), "src", "compile.jl"), String)
+    # One import-aware canvas admission probe and one final assembly call.
+    @test length(collect(eachmatch(r"WasmTarget\.compile_multi\(", compiler_source))) == 2
+    @test !occursin("WasmTarget.compile_module(", compiler_source)
+    @test !occursin("WasmTarget.to_bytes(", compiler_source)
+    @test !occursin("WasmTarget.optimize(", compiler_source)
+end
+
 const DEMO = joinpath(@__DIR__, "notebooks", "demo.jl")          # slider → x^2 → md
 const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island group + fallback group
 
@@ -242,6 +261,11 @@ if isdir(WASMMAKIE_DIR)
 
         island = compile_group(gf; verify_node=false, env_dir=env)
         @test island.ok
+        # A partial island remains group-valid by design, so assert the
+        # per-cell admission diagnostics before indexing the canvas result.
+        # This makes a compiler regression report its structured cause instead
+        # of collapsing into an unhelpful `only(empty)` error.
+        @test isempty(island.cell_failures)
         canvas_cells = [c for c in island.cells if c.kind == "canvas"]
         @test length(canvas_cells) == 1
         cc = only(canvas_cells)

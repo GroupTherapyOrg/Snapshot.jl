@@ -1,8 +1,11 @@
-> **Note (2026-06-10):** this document is the historical roadmap of the
+> **ARCHIVED DESIGN RECORD (2026-07-12):** this is not the current release
+> plan or a source of implementation status. It is the historical roadmap of the
 > PlutoSliderServer.jl fork the islands engine was born in (M0–M5). The fork
 > has since been retired; the engine lives here as Snapshot.jl. Kept for
-> the M6 work-list and the architecture record. Repo paths referencing the
-> fork are historical.
+> architectural context only. Repo paths, versions, coverage figures, `OPEN`
+> labels, and milestone states below are historical. Current behavior is locked
+> by `test/runtests.jl`; current per-export capability is recorded in
+> `report.json` and `coverage.json`.
 
 # Therapy Islands Roadmap — Precomputed Slider Servers Without the Precompute
 

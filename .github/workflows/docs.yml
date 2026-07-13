@@ -27,13 +27,6 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
-env:
-  # PINNED to v0.4.3 (692f9f2): WasmTarget v0.4.5 (the march-5 parity overhaul)
-  # emits wasm that fails Node's WasmGC verification ("global.get of type anyref")
-  # for 8/16 notebooks → their islands degrade to static. Unpin to `main` once
-  # the regression is fixed upstream.
-  SNAPSHOT_WT_REF: v0.4.3
-
 jobs:
   # ── 1. discover — read the canonical notebook list (shared source of truth) ──
   discover:
@@ -55,6 +48,7 @@ jobs:
   export:
     needs: discover
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -63,23 +57,18 @@ jobs:
       - name: Checkout Snapshot.jl
         uses: actions/checkout@v4
         with: { path: Snapshot.jl }
-      - name: Checkout WasmTarget.jl (path-dep sibling)
-        uses: actions/checkout@v4
-        with: { repository: GroupTherapyOrg/WasmTarget.jl, ref: "${{ env.SNAPSHOT_WT_REF }}", path: WasmTarget.jl }
-      - id: keys
-        name: Cache key parts (WasmTarget SHA)
-        run: |
-          echo "wt=$(git -C WasmTarget.jl rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v4
         with:
           path: Snapshot.jl/_nbout
-          # v6: engine-CONTENT hash instead of the commit SHA — only changes to
+          # v7: resolve WasmTarget from General; the engine-content hash means
+          # dependency-contract changes in Project.toml bust every notebook.
+          # Only changes to
           # src/, assets/, the export driver, or Project.toml bust a notebook's
           # cache. A docs-site or README push now genuinely cache-hits every
           # notebook. (v5 was the Snapshot.jl rename; v4 the node 20→22
           # WasmGC-oracle fix; node-version still isn't in the key.)
-          key: snap-nbexport-v6-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-wt${{ steps.keys.outputs.wt }}-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
+          key: snap-nbexport-v7-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-registry-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@v2
         with: { version: '1.12' }
@@ -106,7 +95,9 @@ jobs:
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Instantiate PI project
         working-directory: Snapshot.jl
-        run: julia --project=. -e 'using Pkg; Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate()'
+        env:
+          JULIA_PKG_SERVER: ""
+        run: julia --project=. -e 'using Pkg; try; Pkg.Registry.rm("General"); catch; end; Pkg.Registry.add("General"); Pkg.instantiate()'
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Export this notebook → WASM islands (cache miss → force-rebuild it)
         working-directory: Snapshot.jl
