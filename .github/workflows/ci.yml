@@ -8,6 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -17,16 +18,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # Exercise the pending WT release directly until 0.5 is in General. The
-      # package metadata itself stays registry-clean (no local [sources] path).
-      - name: Check out WasmTarget 0.5 release candidate
-        run: git clone --depth 1 --branch wt-tag-run https://github.com/GroupTherapyOrg/WasmTarget.jl ../WasmTarget.jl
       - name: Run tests
+        env:
+          JULIA_PKG_SERVER: ""
         run: |
           julia --project=. -e '
             using Pkg
+            try; Pkg.Registry.rm("General"); catch; end
             Pkg.Registry.add("General")
-            Pkg.develop(path="../WasmTarget.jl")
             Pkg.instantiate()
             Pkg.test()
           '
