@@ -6,10 +6,24 @@
 
 A **snapshot** of a running notebook: a static export whose interactive cells still run. `@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
 
-[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://grouptherapyorg.github.io/Snapshot.jl/)
+[![Docs](https://img.shields.io/badge/docs-live-blue.svg)](https://grouptherapyorg.github.io/Snapshot.jl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 </div>
+
+## Installation
+
+Snapshot.jl is currently in a small-community, pre-registration test phase. Until
+its first General registry release, install the audited `main` branch explicitly:
+
+```julia
+import Pkg
+Pkg.add(url="https://github.com/GroupTherapyOrg/Snapshot.jl")
+```
+
+After installation, use `using Snapshot` as shown below. Do not treat notebooks
+as data-only inputs: exporting executes their Julia code with the permissions of
+the current process. See [Security and trust boundary](#security-and-trust-boundary).
 
 ## Quick start
 
@@ -94,7 +108,8 @@ groups are interactive after all.
 
 ## Status
 
-Alpha. The featured-notebook gallery in the
+Pre-1.0 alpha, currently open for small-community testing before its first
+General registry release. The featured-notebook gallery in the
 [docs](https://grouptherapyorg.github.io/Snapshot.jl/) shows which notebooks
 ship how many islands, and lists the reason for every cell that falls back to
 static. Coverage grows with
@@ -111,9 +126,11 @@ trust, use an isolated CI runner with least-privilege credentials, and do not
 make secrets available to an untrusted notebook build.
 
 The generated browser bundle contains static HTML, JavaScript, and WebAssembly.
-Host bundles on an origin isolated from authenticated application pages; the
-snapshot.show service does this with per-owner origins. See [SECURITY.md](SECURITY.md)
-for reporting and deployment guidance.
+Host bundles on an origin isolated from authenticated application pages.
+[`snapshot.show`](https://snapshot.show) is a separate hosted service built around
+Snapshot.jl; it is not part of the package or required to use exported bundles.
+The service uses per-owner origins. See [SECURITY.md](SECURITY.md) for reporting
+and deployment guidance.
 
 ## Related
 

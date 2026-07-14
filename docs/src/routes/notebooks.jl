@@ -38,7 +38,7 @@ import JSON
             P(:class => "text-base-content/60 max-w-3xl leading-relaxed",
                 "The ",
                 A(:href => "https://github.com/JuliaPluto/featured", :target => "_blank", :class => "link link-primary", "Pluto featured notebooks"),
-                ", exported by this fork as lean Therapy components. ",
+                ", curated and lightly adapted by Snapshot as lean Therapy components. ",
                 Strong("🏝️ live"), " notebooks run their reactive cells as WasmTarget islands — move the sliders, no Julia server. ",
                 Strong("📄 static"), " notebooks have no compilable bonds yet."),
             tot_cells > 0 ?
