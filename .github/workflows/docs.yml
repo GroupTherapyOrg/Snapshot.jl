@@ -213,9 +213,24 @@ jobs:
       - name: Build docs site
         run: julia --project=docs --optimize=3 docs/app.jl build
       - uses: actions/configure-pages@1f0c5cde4bc74cd7e1254d0cb4de8d49e9068c7d # v4
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+      # upload-pages-artifact's composite action invokes mutable
+      # actions/upload-artifact@v4 internally, which violates this repository's
+      # SHA-only Actions policy. Reproduce its documented tar layout and invoke
+      # the audited upload action directly.
+      - name: Archive GitHub Pages artifact
+        run: |
+          tar --dereference --hard-dereference \
+            --directory docs/dist \
+            -cvf "$RUNNER_TEMP/artifact.tar" \
+            --exclude=.git \
+            --exclude=.github \
+            .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          path: docs/dist
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     needs: build
