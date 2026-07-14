@@ -474,6 +474,12 @@
             ctx.drawImage(cell.frame, 0, 0)
             front.dataset.wasmmakieDone = "1"
             front.dataset.wasmmakieFrame = String(seq)
+            // Older exported notebooks may embed WasmMakie glue from before
+            // canvas2d_present_frame existed. The compatibility presenter must
+            // expose the same observable commit contract as the canonical
+            // provider so coalescing remains measurable and testable.
+            front.dataset.wasmmakiePresentation = String(
+                Number(front.dataset.wasmmakiePresentation || 0) + 1)
         }
     }
 

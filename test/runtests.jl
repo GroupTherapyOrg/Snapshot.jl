@@ -438,6 +438,9 @@ if HAS_NODE
         @test haskey(manifest["bond_graph"], "x") && haskey(manifest["bond_graph"], "z")
         @test manifest["fallback_warnings"] == true
         @test isfile(joinpath(assets, "shim.js"))
+        shim = read(joinpath(assets, "shim.js"), String)
+        @test occursin("cell.present_frame(front, cell.frame, cell.w, cell.h, seq)", shim)
+        @test occursin("Number(front.dataset.wasmmakiePresentation || 0) + 1", shim)
         @test isfile(joinpath(assets, manifest["groups"][1]["wasm"]))
 
         Pluto.SessionActions.shutdown(session, nb2; async=false)
