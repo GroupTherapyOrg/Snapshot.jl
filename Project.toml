@@ -1,6 +1,6 @@
 name = "Snapshot"
 uuid = "1e64ef43-5f79-4f6b-8e97-159df4e27032"
-version = "0.1.1"
+version = "0.1.0"
 authors = ["Dale Black"]
 
 [deps]
