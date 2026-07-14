@@ -385,7 +385,10 @@ if isdir(WASMMAKIE_DIR)
         write(nbpath, replace(src, "@@WM_ENV@@" => env))
 
         out = mktempdir()
-        html_path = export_notebook(nbpath; output_dir=out, session, env_dir=env)
+        # Persistent canvases are a lean-host contract. The classic Pluto
+        # export intentionally keeps its staterequest-compatible <img> fallback.
+        html_path = export_notebook(nbpath; output_dir=out, session, env_dir=env,
+                                    therapy=true)
         Pkg.activate(dirname(prev_proj); io=devnull)   # notebook leaked its activate
         @test isfile(html_path)
 
