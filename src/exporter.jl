@@ -690,8 +690,11 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     const vals = {};
     document.querySelectorAll("bond[def]").forEach(function (b) {
       const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
+      const valueInputs = inputs.filter(function (inp) {
+        return inp.type !== "submit" && inp.type !== "reset";
+      });
+      const holder = b.firstElementChild;
       if (!inputs.length) {
-        const holder = b.firstElementChild;
         if (holder && holder.value !== undefined) vals[b.getAttribute("def")] = holder.value;
         return;
       }
@@ -716,11 +719,16 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         return Array.from(inp.selectedOptions, function (o) { return o.value; });
       return inp.value;
       }
-      // PlutoUI.combine exposes one logical bond backed by several child inputs.
-      // Preserve DOM order; the bridge's fields descriptor maps that array to the
-      // NamedTuple/struct fields in the same order.
-      vals[b.getAttribute("def")] = inputs.length === 1
-        ? inputValue(inputs[0]) : inputs.map(inputValue);
+      // Wrapper widgets such as PlutoUI.confirm expose their logical value on
+      // the wrapper.  Their descendant submit button is UI chrome, not a second
+      // field; flattening both controls produced [1, ""] and eventually tried
+      // to decode "1," as a Julia integer.  Prefer the wrapper contract whenever
+      // it exists.  Otherwise PlutoUI.combine is represented by its ordered
+      // child inputs and the bridge maps that array to the struct fields.
+      const holderIsInput = holder && holder.matches("input,select,textarea");
+      vals[b.getAttribute("def")] = holder && !holderIsInput && holder.value !== undefined
+        ? holder.value
+        : (valueInputs.length === 1 ? inputValue(valueInputs[0]) : valueInputs.map(inputValue));
     });
     return vals;
   }

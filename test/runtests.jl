@@ -37,7 +37,9 @@ end
     # a combine() bond's multiple child inputs as one ordered value.
     @test occursin("const __run=async function()", exporter)
     @test occursin("const Generators=window.Generators", exporter)
-    @test occursin("inputs.map(inputValue)", exporter)
+    @test occursin("holder && !holderIsInput && holder.value !== undefined", exporter)
+    @test occursin("inp.type !== \"submit\" && inp.type !== \"reset\"", exporter)
+    @test occursin("valueInputs.map(inputValue)", exporter)
     @test occursin("addEventListener(\"input\"", exporter)
     @test occursin("}, true);", exporter)
 end
