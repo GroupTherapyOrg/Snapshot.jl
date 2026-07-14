@@ -4,8 +4,10 @@ Please report vulnerabilities privately through GitHub Security Advisories for
 `GroupTherapyOrg/Snapshot.jl`. Do not include secrets or unpublished notebook
 content in a public issue.
 
-Snapshot.jl supports the current Julia 1.12-compatible release line. Security
-fixes are made on the default branch and released as soon as practical.
+Snapshot.jl is currently an unreleased, pre-registration package supporting
+Julia 1.12. During this test phase, security fixes are made on the default branch;
+once registered, supported release lines and security releases will be documented
+here explicitly.
 
 ## Trust model
 
@@ -18,3 +20,8 @@ fixes are made on the default branch and released as soon as practical.
   origin isolated from sessions, administration APIs, and other authors.
 - Commit or checksum-lock compiler inputs and CI actions when reproducible
   publishing or provenance matters.
+
+`snapshot.show` is a separately operated hosting service. Package vulnerability
+reports belong here; service-specific reports should use the private reporting
+channel published by that service and must not include user content in a public
+issue.
