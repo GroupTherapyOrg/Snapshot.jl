@@ -805,7 +805,7 @@ body{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-syste
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
+.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}

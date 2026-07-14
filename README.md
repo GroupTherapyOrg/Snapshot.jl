@@ -50,6 +50,31 @@ export, which works the same way under the hood:
    admonition explaining exactly why (expandable reasons). Partial islands are
    fine: compiled cells update live, failed cells warn.
 
+### Interactive canvas frame contract
+
+Lean Therapy exports present WasmMakie output with the browser's standard
+buffered-rendering model: each cell owns one permanently mounted visible
+`<canvas>`, wasm draws a complete frame into a detached `OffscreenCanvas` (or a
+detached canvas fallback), and the host copies only the newest complete frame
+during `requestAnimationFrame`. Rapid bond updates coalesce to the latest whole
+bond snapshot; stale renders are discarded before presentation. The visible
+canvas is never replaced or converted to a PNG, so recomputation cannot expose
+an empty intermediate DOM state.
+
+This is an implementation of established platform and Makie contracts, not a
+Snapshot-specific animation trick:
+
+- [WHATWG Canvas and OffscreenCanvas](https://html.spec.whatwg.org/multipage/canvas.html)
+  define the front/back canvas primitives.
+- [WHATWG animation frames](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#animation-frames)
+  define presentation aligned with the browser rendering cycle.
+- [Makie Observables and `update!`](https://docs.makie.org/dev/explanations/observables)
+  define complete logical updates; Snapshot maps one complete bond snapshot to
+  one presented frame.
+
+The wasm module and WasmMakie canvas-import ABI remain host-agnostic. Snapshot
+owns scheduling and DOM presentation, just as another embedding host would.
+
 ## Integrator API
 
 Exporters with their own run pipeline (e.g. a
