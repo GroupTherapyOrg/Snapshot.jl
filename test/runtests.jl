@@ -76,6 +76,46 @@ const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island gr
 session = Pluto.ServerSession()
 session.options.evaluation.workspace_use_distributed = false
 
+@testset "import binding syntax" begin
+    explicit_names(src) = Snapshot._import_names(session, nothing, Meta.parse(src))
+    @test explicit_names("using Foo: x, y") == Set([:x, :y])
+    @test explicit_names("import Foo: x") == Set([:x])
+    @test explicit_names("import Foo: x as renamed") == Set([:renamed])
+    @test explicit_names("using Foo: @widget") == Set([Symbol("@widget")])
+    @test explicit_names("import Base: +") == Set([:+])
+    @test explicit_names("using .Local: helper") == Set([:helper])
+    @test explicit_names("import Foo.Bar") == Set([:Bar])
+    @test explicit_names("import Foo as Alias") == Set([:Alias])
+
+    unresolved = Set([:needed])
+    successful_unknown = (names=Set{Symbol}(), direct_names=Set{Symbol}(),
+        module_names=Set([:Foo]), analysis_ok=false,
+        cell_succeeded=true, compiler_available=false,
+        expr=Meta.parse("using Foo"))
+    errored_unknown = (names=Set{Symbol}(), direct_names=Set{Symbol}(),
+        module_names=Set([:Foo]), analysis_ok=false,
+        cell_succeeded=false, compiler_available=false,
+        expr=Meta.parse("using Foo"))
+    @test Snapshot._import_relevant(successful_unknown, unresolved)
+    @test !Snapshot._import_relevant(errored_unknown, unresolved)
+    @test Snapshot._import_relevant(errored_unknown, Set([:Foo]))
+    @test !Snapshot._import_relevant(successful_unknown, Set{Symbol}())
+
+    direct_mean = (names=Set([:Statistics, :mean]),
+        direct_names=Set([:Statistics, :mean]), module_names=Set([:Statistics]),
+        analysis_ok=true, cell_succeeded=true, compiler_available=true,
+        expr=Meta.parse("using Statistics"))
+    reexported_mean = (names=Set([:PoisonReexport, :mean]),
+        direct_names=Set([:PoisonReexport]), module_names=Set([:PoisonReexport]),
+        analysis_ok=true, cell_succeeded=true, compiler_available=false,
+        expr=Meta.parse("using PoisonReexport"))
+    direct_providers = union(direct_mean.direct_names, reexported_mean.direct_names)
+    @test Snapshot._import_relevant(direct_mean, Set([:mean]), direct_providers)
+    @test !Snapshot._import_relevant(reexported_mean, Set([:mean]), direct_providers)
+    @test Snapshot._import_relevant(merge(reexported_mean,
+        (compiler_available=true,)), Set([:mean]), direct_providers)
+end
+
 # ─── demo notebook: extraction → compile → oracle ───────────────────────────
 notebook = Pluto.SessionActions.open(session, DEMO; run_async=false)
 original_state = Pluto.notebook_to_js(notebook)
@@ -98,6 +138,174 @@ connections = bound_variable_connections_graph(session, notebook)
         @test Base.invokelatest(f, g.initial_values...) ==
               original_state["cell_results"][p.cell_id]["output"]["body"]
     end
+end
+
+@testset "closure-first import fallback" begin
+    poison_path = joinpath(@__DIR__, "notebooks", "import_poison.jl")
+    fixture_parent = joinpath(@__DIR__, "fixtures")
+    pushfirst!(LOAD_PATH, fixture_parent)
+    poison = try
+        Pluto.SessionActions.open(session, poison_path; run_async=false)
+    finally
+        popfirst!(LOAD_PATH)
+    end
+    # Exact production failure shape: Pluto loaded the unrelated package, but
+    # the fresh compiler environment cannot resolve it after LOAD_PATH returns
+    # to Snapshot's own environment.
+    fresh = Module(:PoisonFreshSandbox)
+    @test_throws ArgumentError Core.eval(fresh, :(using SnapshotPoisonFixture))
+    poison_state = Pluto.notebook_to_js(poison)
+    poison_connections = bound_variable_connections_graph(session, poison)
+    poison_group = only(extract_groups(session, poison;
+        connections=poison_connections, original_state=poison_state))
+
+    # An unrelated failed package cell must neither enter the island preamble
+    # nor turn a healthy slider-dependent cell into a group-level failure.
+    @test poison_group.ok
+    @test all(p -> p.ok, poison_group.cell_plans)
+    @test !any(ex -> occursin("SnapshotPoisonFixture", string(ex)),
+               poison_group.preamble)
+    poison_island = compile_group(poison_group; verify_node=false)
+    @test poison_island.ok
+    @test isempty(poison_island.cell_failures)
+
+    poison_out = mktempdir()
+    poison_assets = generate_wasm_islands(session, poison, poison_state;
+        output_dir=poison_out, url_path="import_poison.jl", verify=false)
+    @test poison_assets !== nothing
+    poison_report = only(JSON.parsefile(joinpath(
+        poison_out, "import_poison.islands", "report.json")))
+    @test poison_report["judgement"] == "island"
+    @test all(c -> c["ok"], poison_report["cells"])
+    poison_coverage = JSON.parsefile(joinpath(
+        poison_out, "import_poison.islands", "coverage.json"))
+    @test poison_coverage["groups"] == Dict(
+        "island" => 1, "partial" => 0, "fallback" => 0, "total" => 1)
+
+    # The same filtered preamble must preserve existing per-cell honesty: an
+    # independently unsupported sibling is recorded as a partial island rather
+    # than letting the unrelated failed import collapse the whole group.
+    bad_plan = Snapshot.CellPlan(; cell_id=Base.UUID("ab000006-0000-4000-8000-000000000006"),
+        mime="text/plain", export_name="intentional_failure",
+        fn_expr=:(function (x::Int64); SnapshotMissingRuntime(x); end), ok=true)
+    partial_group = ExtractedGroup(; bond_names=poison_group.bond_names,
+        arg_types=poison_group.arg_types, initial_values=poison_group.initial_values,
+        preamble=poison_group.preamble,
+        cell_plans=vcat(poison_group.cell_plans, [bad_plan]), ok=true)
+    partial_island = compile_group(partial_group; verify_node=false)
+    @test partial_island.ok
+    @test length(partial_island.cells) == length(poison_island.cells)
+    @test length(partial_island.cell_failures) == 1
+
+    partial_src = read(poison_path, String)
+    partial_cell = """
+
+    # ╔═╡ ab000006-0000-4000-8000-000000000006
+    SnapshotMissingRuntime(x)
+    """
+    partial_src = replace(partial_src,
+        "# ╔═╡ 00000000-0000-0000-0000-000000000001" =>
+            partial_cell * "\n# ╔═╡ 00000000-0000-0000-0000-000000000001")
+    partial_src = replace(partial_src,
+        "# ╠═ab000005-0000-4000-8000-000000000005" =>
+            "# ╠═ab000005-0000-4000-8000-000000000005\n# ╠═ab000006-0000-4000-8000-000000000006")
+    partial_path = joinpath(mktempdir(), "import_partial.jl")
+    write(partial_path, partial_src)
+    pushfirst!(LOAD_PATH, fixture_parent)
+    partial_nb = try
+        Pluto.SessionActions.open(session, partial_path; run_async=false)
+    finally
+        popfirst!(LOAD_PATH)
+    end
+    partial_state = Pluto.notebook_to_js(partial_nb)
+    partial_out = mktempdir()
+    @test generate_wasm_islands(session, partial_nb, partial_state;
+        output_dir=partial_out, url_path="import_partial.jl", verify=false) !== nothing
+    partial_assets = joinpath(partial_out, "import_partial.islands")
+    partial_report = only(JSON.parsefile(joinpath(partial_assets, "report.json")))
+    @test partial_report["judgement"] == "partial"
+    @test count(c -> c["ok"], partial_report["cells"]) == 1
+    @test count(c -> !c["ok"], partial_report["cells"]) == 1
+    partial_coverage = JSON.parsefile(joinpath(partial_assets, "coverage.json"))
+    @test partial_coverage["groups"]["partial"] == 1
+    @test partial_coverage["cells"] ==
+          Dict("interactive" => 1, "fallback" => 1, "total" => 2)
+    partial_manifest = JSON.parsefile(joinpath(partial_assets, "islands.json"))
+    @test sum(length(g["cells"]) for g in partial_manifest["groups"]) == 1
+    Pluto.SessionActions.shutdown(session, partial_nb)
+
+    # Conversely, if the unavailable package is genuinely referenced, Snapshot
+    # must retain its import and report an honest group fallback—not advertise a
+    # false island or silently rewrite the user's Julia semantics.
+    required_src = replace(read(poison_path, String), "x + 1" =>
+        "SnapshotPoisonFixture.poison_marker(x)")
+    required_path = joinpath(mktempdir(), "import_required.jl")
+    write(required_path, required_src)
+    pushfirst!(LOAD_PATH, fixture_parent)
+    required_nb = try
+        Pluto.SessionActions.open(session, required_path; run_async=false)
+    finally
+        popfirst!(LOAD_PATH)
+    end
+    required_state = Pluto.notebook_to_js(required_nb)
+    required_group = only(extract_groups(session, required_nb;
+        original_state=required_state))
+    @test any(ex -> occursin("SnapshotPoisonFixture", string(ex)),
+              required_group.preamble)
+    required_island = compile_group(required_group; verify_node=false)
+    @test !required_island.ok
+    @test any(r -> occursin("preamble eval failed", r), required_island.reasons)
+    required_out = mktempdir()
+    @test generate_wasm_islands(session, required_nb, required_state;
+        output_dir=required_out, url_path="import_required.jl", verify=false) !== nothing
+    required_report = only(JSON.parsefile(joinpath(
+        required_out, "import_required.islands", "report.json")))
+    @test required_report["judgement"] == "fallback"
+    @test all(c -> !c["ok"], required_report["cells"])
+    Pluto.SessionActions.shutdown(session, required_nb)
+    Pluto.SessionActions.shutdown(session, poison)
+
+    soft_path = joinpath(@__DIR__, "notebooks", "import_softscope.jl")
+    soft = Pluto.SessionActions.open(session, soft_path; run_async=false)
+    soft_state = Pluto.notebook_to_js(soft)
+    soft_connections = bound_variable_connections_graph(session, soft)
+    soft_group = only(extract_groups(session, soft;
+        connections=soft_connections, original_state=soft_state))
+
+    # Pluto does not associate the exported `mean` binding with a plain
+    # using-cell. Snapshot must recover the ordinary package import without
+    # requiring users to rewrite it as an explicit import.
+    @test soft_group.ok
+    @test any(ex -> ex isa Expr && ex.head === :using, soft_group.preamble)
+    @test any(ex -> ex isa Expr && ex.head === :import &&
+                    occursin("magnitude", string(ex)), soft_group.preamble)
+    soft_island = compile_group(soft_group; verify_node=false)
+    @test soft_island.ok
+    @test isempty(soft_island.cell_failures)
+    Pluto.SessionActions.shutdown(session, soft)
+
+    # Independent packages exporting the same name leave the unqualified Pluto
+    # binding ambiguous. Neither package may be hoisted merely because it lists
+    # that export: a healthy sibling must survive as a partial island.
+    ambiguous_path = joinpath(@__DIR__, "notebooks", "import_ambiguous.jl")
+    pushfirst!(LOAD_PATH, fixture_parent)
+    ambiguous = try
+        Pluto.SessionActions.open(session, ambiguous_path; run_async=false)
+    finally
+        popfirst!(LOAD_PATH)
+    end
+    ambiguous_state = Pluto.notebook_to_js(ambiguous)
+    ambiguous_group = only(extract_groups(session, ambiguous;
+        original_state=ambiguous_state))
+    @test !any(ex -> occursin("SnapshotGoodClashFixture", string(ex)) ||
+                    occursin("SnapshotPoisonFixture", string(ex)),
+               ambiguous_group.preamble)
+    ambiguous_island = compile_group(ambiguous_group; verify_node=false)
+    @test ambiguous_island.ok
+    @test length(ambiguous_island.cells) == 1
+    @test length(ambiguous_island.cell_failures) == 1
+    Pluto.SessionActions.shutdown(session, ambiguous)
+
 end
 
 # ─── combine-style multi-input widget: output-suppressed bond cell, html from

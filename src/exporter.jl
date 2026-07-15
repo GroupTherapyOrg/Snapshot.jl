@@ -53,7 +53,11 @@ function generate_wasm_islands(
     env_dir::Union{Nothing,String}=nothing,
 )::Union{Nothing,String}
     connections = bound_variable_connections_graph(session, notebook)
-    groups = extract_groups(session, notebook; connections, original_state)
+    nb_env_dir = env_dir !== nothing ? env_dir :
+        notebook.nbpkg_ctx === nothing ? nothing :
+        try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
+    groups = extract_groups(session, notebook; connections, original_state,
+        env_dir=nb_env_dir)
     isempty(groups) && return nothing
 
     # original output bodies — String for text mimes, Dict for tree+object
@@ -66,10 +70,6 @@ function generate_wasm_islands(
         end
         (body isa String || body isa AbstractDict) && (initial_bodies[string(id)] = body)
     end
-
-    nb_env_dir = env_dir !== nothing ? env_dir :
-        notebook.nbpkg_ctx === nothing ? nothing :
-        try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
 
     islands = CompiledIsland[]
     all_islands = CompiledIsland[]   # per-group, shipped or not (state refresh)
