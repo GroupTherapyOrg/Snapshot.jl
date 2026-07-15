@@ -17,6 +17,7 @@ if !haskey(ENV, "JULIA_PROJECT")
 end
 
 using Therapy
+using JuliaSyntaxHighlighting
 
 cd(@__DIR__)
 

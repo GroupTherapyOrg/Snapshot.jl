@@ -1,6 +1,22 @@
 () -> begin
     base = get(ENV, "SNAPDOCS_BASE", "")
 
+    quickstart = """import Pkg
+Pkg.add("Snapshot")
+
+using Snapshot
+
+# lean, themeable Therapy-component export — every compilable bond group
+# ships as a WasmGC island, verified against the real notebook first
+export_notebook("notebook.jl"; therapy=true)
+
+# → notebook.html + notebook.islands/   (serve anywhere static)"""
+    quickstart_html = sprint(
+        show,
+        MIME("text/html"),
+        Main.JuliaSyntaxHighlighting.highlight(quickstart),
+    )
+
     feature(icon_svg, title, body) = Div(:class => "bg-base-100 rounded-box sn-bubble p-6 space-y-3",
         Div(:class => "w-10 h-10 rounded-box bg-primary/10 text-primary flex items-center justify-center", RawHtml(icon_svg)),
         H3(:class => "sn-display text-lg font-semibold text-base-content", title),
@@ -29,16 +45,7 @@
         Div(:class => "max-w-3xl mx-auto space-y-4",
             H2(:class => "sn-display text-2xl font-semibold text-base-content", "Quickstart"),
             Pre(:class => "bg-neutral text-neutral-content p-6 rounded-box overflow-x-auto sn-mono text-sm leading-relaxed",
-                Code("""import Pkg
-Pkg.add("Snapshot")
-
-using Snapshot
-
-# lean, themeable Therapy-component export — every compilable bond group
-# ships as a WasmGC island, verified against the real notebook first
-export_notebook("notebook.jl"; therapy=true)
-
-# → notebook.html + notebook.islands/   (serve anywhere static)""")),
+                Code(RawHtml(quickstart_html))),
             P(:class => "text-sm text-base-content/60 leading-relaxed",
                 "At export time the notebook runs once in Pluto. Each group of co-dependent ",
                 Code(:class => "sn-mono", "@bind"),
