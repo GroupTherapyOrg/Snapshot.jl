@@ -1,5 +1,6 @@
 [deps]
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JuliaSyntaxHighlighting = "ac6e5ff7-fb65-4e79-a425-ec3bc9c03011"
 Therapy = "b2c3d4e5-f6a7-8901-bcde-f12345678901"
 
 [compat]
