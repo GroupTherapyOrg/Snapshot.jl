@@ -17,6 +17,75 @@
    matches theme swatches / .snap-notebook divs, where inheritance proximity
    already wins. */
 
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:root[data-theme="fun-light"],
+[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:root[data-theme="fun-dark"],
+[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
 /* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
 :root[data-theme="classic-light"],
 [data-theme="classic-light"] {
