@@ -19,6 +19,17 @@ const HAS_NODE = Sys.which("node") !== nothing
     @test docs_project["compat"]["Therapy"] == "0.2.3"
 end
 
+@testset "fun export theme contract" begin
+    root = dirname(@__DIR__)
+    themes = read(joinpath(root, "assets", "classic-themes.css"), String)
+    exporter = read(joinpath(root, "src", "exporter.jl"), String)
+    @test occursin(":root[data-theme=\"fun-light\"]", themes)
+    @test occursin(":root[data-theme=\"fun-dark\"]", themes)
+    @test occursin("fun-light", exporter)
+    @test occursin("<option value=\"fun-light\">", exporter)
+    @test occursin("<option value=\"fun-dark\">", exporter)
+end
+
 @testset "featured notebook coverage gate" begin
     root = dirname(@__DIR__)
     verifier = joinpath(root, "docs", "verify_notebook_coverage.py")

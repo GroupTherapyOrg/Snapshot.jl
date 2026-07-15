@@ -6,7 +6,7 @@
 # of Pluto's own light/dark palettes onto DaisyUI tokens; the rest are built-ins.
 
 const _THEMES = [
-    "classic-light", "classic-dark",
+    "fun-light", "fun-dark", "classic-light", "classic-dark",
     "light", "dark", "cupcake", "bumblebee", "emerald", "corporate", "synthwave",
     "retro", "cyberpunk", "valentine", "halloween", "garden", "forest", "aqua",
     "lofi", "pastel", "fantasy", "wireframe", "black", "luxury", "dracula", "cmyk",

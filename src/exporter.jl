@@ -894,6 +894,10 @@ document.addEventListener("click", function (e) {
 <div class="snap-theme-picker">
   <span aria-hidden="true">🎨</span>
   <select id="snap-theme-select" aria-label="Theme" onchange="__piSetTheme(this.value)">
+    <optgroup label="Snapshot fun">
+      <option value="fun-light">fun-light</option>
+      <option value="fun-dark">fun-dark</option>
+    </optgroup>
     <optgroup label="Snapshot classic (Pluto palette)">
       <option value="classic-light">classic-light</option>
       <option value="classic-dark">classic-dark</option>
@@ -936,7 +940,7 @@ document.addEventListener("click", function (e) {
 </div>
 <script>
 function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('snap-theme',t);}catch(e){}}
-(function(){var sel=document.getElementById('snap-theme-select');if(sel)sel.value=document.documentElement.getAttribute('data-theme')||'light';})();
+(function(){var sel=document.getElementById('snap-theme-select');if(sel)sel.value=document.documentElement.getAttribute('data-theme')||'fun-light';})();
 </script>
 """ : ""
     if fragment
@@ -974,7 +978,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         )
     end
     return string(
-        "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"light\">\n<head>\n<meta charset=\"utf-8\">\n",
+        "<!DOCTYPE html>\n<html lang=\"en\" data-theme=\"fun-light\">\n<head>\n<meta charset=\"utf-8\">\n",
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n",
         "<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>\n",
         "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",
