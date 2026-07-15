@@ -30,7 +30,7 @@
             H2(:class => "sn-display text-2xl font-semibold text-base-content", "Quickstart"),
             Pre(:class => "bg-neutral text-neutral-content p-6 rounded-box overflow-x-auto sn-mono text-sm leading-relaxed",
                 Code("""import Pkg
-Pkg.add(url="https://github.com/GroupTherapyOrg/Snapshot.jl")
+Pkg.add("Snapshot")
 
 using Snapshot
 
