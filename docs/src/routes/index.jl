@@ -7,8 +7,6 @@
         P(:class => "text-sm text-base-content/60 leading-relaxed", body))
 
     Div(:class => "space-y-20",
-        Div(:class => "alert alert-info text-sm max-w-3xl mx-auto",
-            Span("Snapshot.jl is in a pre-registration community test phase. Install from the audited GitHub main branch while the first General registry release is being prepared.")),
         # Hero
         Div(:class => "text-center space-y-6 pt-8",
             H1(:class => "sn-display text-5xl md:text-6xl font-semibold text-base-content leading-tight",
