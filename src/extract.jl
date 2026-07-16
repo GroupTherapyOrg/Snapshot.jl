@@ -320,12 +320,16 @@ function _split_preamble(ex, bond_names::Set{Symbol}=Set{Symbol}())
     (pre, body)
 end
 
+_has_parse_error(ex) = ex isa Expr &&
+    (ex.head in (:error, :incomplete) || any(_has_parse_error, ex.args))
+
 function _parse_cell(cell::Cell)
-    ex = Meta.parse(cell.code; raise=false)
-    if ex isa Expr && ex.head in (:error, :incomplete)
-        return nothing
-    end
-    ex
+    # Pluto cells are complete source units, not necessarily one expression.
+    # `Meta.parse` silently stops after the first expression and reports an
+    # otherwise harmless trailing comment/newline as an extra token. Parsing
+    # the whole cell also preserves ordinary multi-expression Julia cells.
+    ex = Meta.parseall(cell.code)
+    _has_parse_error(ex) ? nothing : ex
 end
 
 _import_leaf(x) = x isa Symbol ? x :

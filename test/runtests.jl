@@ -91,6 +91,14 @@ session.options.evaluation.workspace_use_distributed = false
 end
 
 @testset "import binding syntax" begin
+    parsed_import = Snapshot._parse_cell(Pluto.Cell("""import Base as B
+    # An ordinary trailing comment is still part of a valid Pluto cell.
+    """))
+    @test parsed_import isa Expr
+    @test parsed_import.head === :toplevel
+    @test Snapshot._parse_cell(Pluto.Cell("x = 1\ny = x + 1")) isa Expr
+    @test Snapshot._parse_cell(Pluto.Cell("x =")) === nothing
+
     explicit_names(src) = Snapshot._import_names(session, nothing, Meta.parse(src))
     @test explicit_names("using Foo: x, y") == Set([:x, :y])
     @test explicit_names("import Foo: x") == Set([:x])
@@ -134,6 +142,13 @@ end
 notebook = Pluto.SessionActions.open(session, DEMO; run_async=false)
 original_state = Pluto.notebook_to_js(notebook)
 connections = bound_variable_connections_graph(session, notebook)
+
+@testset "embedded fragment inherits host theme" begin
+    fragment_html = Snapshot.generate_therapy_html(notebook, mktempdir(),
+        "demo", nothing; fragment=true)
+    @test occursin("class=\"snap-notebook\"", fragment_html)
+    @test !occursin("localStorage.getItem('snap-theme')", fragment_html)
+end
 
 @testset "extraction" begin
     groups = extract_groups(session, notebook; connections, original_state)
