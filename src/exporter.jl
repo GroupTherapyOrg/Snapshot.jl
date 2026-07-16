@@ -441,8 +441,8 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     # Pluto's stacktrace output is a structured Dict. Treating it as an ordinary
     # tree exposes internal paths and thousands of characters of implementation
     # detail in the exported document. Keep the failure honest and visible, but
-    # render the concise user-facing message; the full trace remains available in
-    # the build log and original notebook.
+    # render the concise user-facing message; the full trace remains reproducible
+    # in the original notebook without publishing machine-specific details.
     function _error_html(body)
         getkey(d, key, default=nothing) = try
             haskey(d, key) ? d[key] : haskey(d, string(key)) ? d[string(key)] : default

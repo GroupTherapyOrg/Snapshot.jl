@@ -82,8 +82,11 @@ session.options.evaluation.workspace_use_distributed = false
     html = Snapshot.generate_therapy_html(errored, mktempdir(), "error_output", nothing)
     @test occursin("Notebook cell failed", html)
     @test occursin("short public message", html)
+    @test occursin("&lt;script&gt;alert(1)&lt;/script&gt;&amp;", html)
+    @test !occursin("<script>alert(1)</script>", html)
     @test !occursin(":stacktrace", lowercase(html))
     @test !occursin("Base_compiler.jl", html)
+    @test !occursin("error_output.jl#", html)
     Pluto.SessionActions.shutdown(session, errored; async=false)
 end
 

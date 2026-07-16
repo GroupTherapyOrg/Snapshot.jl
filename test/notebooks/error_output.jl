@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ e1000001-0000-4000-8000-000000000001
-error("short public message")
+error("short public message <script>alert(1)</script>&")
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
