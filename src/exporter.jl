@@ -266,7 +266,16 @@ function generate_wasm_islands(
     # (the FULL bond graph lets non-island staterequests pass through to
     # precompute files / a live slider server) and decorates fallback cells
     bond_graph = Dict(string(k) => string.(v) for (k, v) in connections)
-    write_island_assets(assets_dir, islands; bond_graph, fallback_warnings, shared_fonts_path)
+    runtime_fallback_groups = [
+        Dict(
+            "bonds" => r["bonds"],
+            "judgement" => "fallback",
+            "fallback_kind" => get(r, "fallback_kind", nothing),
+        )
+        for r in report if r["judgement"] == "fallback"
+    ]
+    write_island_assets(assets_dir, islands; bond_graph, fallback_warnings,
+        fallback_groups=runtime_fallback_groups, shared_fonts_path)
     # Accurate, CELL-LEVEL coverage. A "partial" group ships an island but STILL has
     # fallback cells — those are non-interactive on the deployed page, so the group-level
     # island count overstates interactivity (the count then disagrees with what you see

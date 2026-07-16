@@ -606,6 +606,9 @@ function write_island_assets(
     islands::Vector{CompiledIsland};
     bond_graph::Union{Nothing,Dict{String,Vector{String}}}=nothing,
     fallback_warnings::Bool=true,
+    # Privacy-safe runtime index used to disable fully-static controls even
+    # when a publisher intentionally omits the detailed report.json.
+    fallback_groups::Vector=Any[],
     # Font dedup: the WasmMakie font atlas (~1.9 MB) is byte-identical in every
     # notebook. When `shared_fonts_path` is given, write the atlas ONCE there and
     # have each island fetch it by URL instead of inlining it per-notebook — a big
@@ -619,6 +622,7 @@ function write_island_assets(
         # (exports with a live/precompute backend set this false — those
         # groups ARE interactive, just not via wasm)
         "fallback_warnings" => fallback_warnings,
+        "fallback_groups" => fallback_groups,
         "bond_graph" => something(bond_graph, Dict(
             string(n) => string.(island.bond_names)
             for island in islands for n in island.bond_names
