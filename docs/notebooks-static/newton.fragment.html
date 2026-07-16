@@ -1,8 +1,161 @@
-<div class="snap-notebook">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
+<div class="snap-notebook" data-snapshot-requires="daisyui-themes@5.6.2 katex@0.11.1">
 <style>
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:root[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:root { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:root[data-theme="fun-light"] .snap-notebook,
+.snap-notebook[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:root[data-theme="fun-dark"] .snap-notebook,
+.snap-notebook[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:root[data-theme="classic-light"] .snap-notebook,
+.snap-notebook[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:root[data-theme="classic-dark"] .snap-notebook,
+.snap-notebook[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 @scope (.snap-notebook) {
 :scope{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
 :scope{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
@@ -12,7 +165,7 @@
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
+.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
@@ -54,14 +207,15 @@ pre,table,bond,.markdown,img{max-width:100%}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
 .snap-cells,main{overflow-x:auto}
-/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
-.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+/* Lezer-Julia token highlight. These consume the same shared syntax tokens as
+   Pluto/CodeMirror in PLUTO_VAR_MAP, so upstream and exported code cannot drift. */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:var(--snapshot-syntax-keyword)}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
-.tok-string,.tok-character,.tok-special{color:#16a34a}
-.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
-.tok-typeName{color:#0891b2}
-.tok-macroName{color:#db2777}
-.tok-function,.tok-definition{color:#2563eb}
+.tok-string,.tok-character,.tok-special{color:var(--snapshot-syntax-string)}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:var(--snapshot-syntax-number)}
+.tok-typeName{color:var(--snapshot-syntax-type)}
+.tok-macroName{color:var(--snapshot-syntax-macro)}
+.tok-function,.tok-definition{color:var(--snapshot-syntax-function)}
 .tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
 /* ── EMBEDDED ToC (docs): keep Pluto's floating aside, but make it respect the docs
    chrome. It stays a fixed top-right panel (like Pluto) so it never disturbs the
@@ -70,13 +224,175 @@ pre,table,bond,.markdown,img{max-width:100%}
    right viewport edge (translateX to right:0) instead of PAST it, so it can never
    add a horizontal scrollbar. It starts collapsed (the JS adds .hide) so it reads
    as a tidy tab the reader opens, never floating over docs text at rest. */
-.plutoui-toc.toc-embedded.aside{z-index:30;top:4.5rem;right:0;max-height:calc(100vh - 6rem);box-shadow:0 2px 14px rgba(0,0,0,.10)}
+.plutoui-toc.toc-embedded.aside{
+  z-index:var(--snapshot-toc-z,30);
+  top:var(--snapshot-toc-top,4.5rem);
+  right:var(--snapshot-toc-right,0);
+  max-height:var(--snapshot-toc-max-height,calc(100vh - 6rem));
+  box-shadow:0 2px 14px color-mix(in oklab,var(--color-base-content) 10%,transparent)
+}
 .plutoui-toc.toc-embedded.aside.hide{transform:translateX(calc(100% - 28px))}
+
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:scope[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:scope { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:scope[data-theme="fun-light"],
+[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:scope[data-theme="fun-dark"],
+[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:scope[data-theme="classic-light"],
+[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:scope[data-theme="classic-dark"],
+[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
 
 /* AUTO-GENERATED by src/pluto_css.jl — Pluto's output CSS re-themed to DaisyUI.
    Every Pluto colour var below → a DaisyUI --color-* token. Do not hand-edit;
    edit PLUTO_VAR_MAP / pluto-base.css and regenerate (write_pluto_css()). */
-:root {
+:scope {
   --a-underline: color-mix(in oklab, var(--color-primary) 45%, transparent);
   --admonition-title-color: var(--color-primary-content);
   --ansi-black: var(--color-base-content);
@@ -101,17 +417,17 @@ pre,table,bond,.markdown,img{max-width:100%}
   --blockquote-bg: var(--color-base-200);
   --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   --br: 0.4rem;
-  --cm-color-builtin: var(--color-info, #0891b2);
+  --cm-color-builtin: var(--snapshot-syntax-type);
   --cm-color-clickable-underline: var(--color-primary);
   --cm-color-comment: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   --cm-color-editor-text: var(--color-base-content);
-  --cm-color-keyword: #8b5cf6;
+  --cm-color-keyword: var(--snapshot-syntax-keyword);
   --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
-  --cm-color-literal: #d97706;
-  --cm-color-macro: #db2777;
-  --cm-color-string: #16a34a;
-  --cm-color-symbol: #d97706;
-  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-literal: var(--snapshot-syntax-number);
+  --cm-color-macro: var(--snapshot-syntax-macro);
+  --cm-color-string: var(--snapshot-syntax-string);
+  --cm-color-symbol: var(--snapshot-syntax-number);
+  --cm-color-type: var(--snapshot-syntax-type);
   --cm-color-variable: var(--color-base-content);
   --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
   --cm-var-color: var(--color-base-content);
@@ -158,6 +474,12 @@ pre,table,bond,.markdown,img{max-width:100%}
   --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
   --rule-color: var(--color-base-300);
   --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --snapshot-syntax-function: #2563eb;
+  --snapshot-syntax-keyword: #8b5cf6;
+  --snapshot-syntax-macro: #db2777;
+  --snapshot-syntax-number: #d97706;
+  --snapshot-syntax-string: #16a34a;
+  --snapshot-syntax-type: #0891b2;
   --system-fonts-mono: var(--julia-mono-font-stack);
   --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --table-bg-hover-color: var(--color-base-200);
@@ -939,7 +1261,7 @@ jlerror > section > ol > li:not(.important)::marker {
     font-weight: 100;
 }
 jlerror > section > ol > li.from_this_notebook {
-    --bg: var(--jl-info-acccolor);
+    --bg: var(--color-base-100);
     background: var(--bg);
     outline: 3px solid var(--bg);
     padding: 0.4em 0em;
@@ -1010,9 +1332,9 @@ jlerror li a.frame-line-preview {
     display: block;
     text-decoration: none;
     border: 3px solid var(--cm-color-clickable-underline);
-    --br: 0.6em;
+    --br: 0.4rem;
     border-radius: var(--br);
-    --crop: -0.5em;
+    --crop: 0;
 }
 jlerror li .frame-line-preview pre:not(.asdfdsaf) {
     background-color: var(--code-background);
@@ -1184,20 +1506,20 @@ pluto-tree.collapsed p-v > pre {
 .plutoui-toc {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
 		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
-	--main-bg-color: #fafafa;
-	--pluto-output-color: hsl(0, 0%, 36%);
-	--pluto-output-h-color: hsl(0, 0%, 21%);
-	--sidebar-li-active-bg: rgb(235, 235, 235);
-	--icon-filter: unset;
+	--main-bg-color: var(--color-base-100);
+	--pluto-output-color: var(--color-base-content);
+	--pluto-output-h-color: var(--color-base-content);
+	--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+	--icon-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
 	.plutoui-toc {
-		--main-bg-color: #303030;
-		--pluto-output-color: hsl(0, 0%, 90%);
-		--pluto-output-h-color: hsl(0, 0%, 97%);
-		--sidebar-li-active-bg: rgb(82, 82, 82);
-		--icon-filter: invert(1);
+		--main-bg-color: var(--color-base-100);
+		--pluto-output-color: var(--color-base-content);
+		--pluto-output-h-color: var(--color-base-content);
+		--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+		--icon-filter: none;
 	}
 }
 
@@ -1219,7 +1541,7 @@ pluto-tree.collapsed p-v > pre {
 }
 
 .plutoui-toc.smallscreen:not(.hide) {
-	box-shadow: 0 0 11px 0px #00000010;
+	box-shadow: 0 0 11px 0px color-mix(in oklab, var(--color-base-content) 6%, transparent);
 }
 
 .plutoui-toc.aside.hide {
@@ -1323,7 +1645,7 @@ pluto-tree.collapsed p-v > pre {
 
 	
 .highlight-pluto-cell-shoulder {
-	background: rgba(0, 0, 0, 0.05);
+	background: color-mix(in oklab, var(--color-primary) 7%, transparent);
 	background-clip: padding-box;
 }
 
@@ -1375,37 +1697,37 @@ pluto-tree.collapsed p-v > pre {
 /* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
 .plutoui-toc {
   --main-bg-color: var(--color-base-100);
-  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-color: var(--color-base-content);
   --pluto-output-h-color: var(--color-base-content);
-  --sidebar-li-active-bg: var(--color-base-200);
+  --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
   --icon-filter: none;
-  --cm-var-color: var(--color-primary);
+  --cm-var-color: var(--color-base-content);
   border: 1px solid var(--color-base-300);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: invert(1); } }
+@media (prefers-color-scheme: dark) { :scope:not([data-theme]) .plutoui-toc { --icon-filter: none; } }
 
 
 /* ── ansi-colors.css (stdout colour) ── */
 
 /* ANSI color classes */
 
-:root {
-    --ansi-black: rgb(0, 0, 0);
-    --ansi-red: rgb(187, 0, 0);
-    --ansi-green: rgb(0, 187, 0);
-    --ansi-yellow: rgb(187, 187, 0);
-    --ansi-blue: rgb(0, 0, 187);
-    --ansi-magenta: rgb(187, 0, 187);
-    --ansi-cyan: rgb(0, 187, 187);
-    --ansi-white: rgb(255, 255, 255);
-    --ansi-bright-black: rgb(85, 85, 85);
-    --ansi-bright-red: rgb(255, 85, 85);
-    --ansi-bright-green: rgb(0, 255, 0);
-    --ansi-bright-yellow: rgb(255, 255, 85);
-    --ansi-bright-blue: rgb(85, 85, 255);
-    --ansi-bright-magenta: rgb(255, 85, 255);
-    --ansi-bright-cyan: rgb(85, 255, 255);
-    --ansi-bright-white: rgb(255, 255, 255);
+:scope {
+    --ansi-black: var(--color-base-content);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-green: var(--color-success, #16a34a);
+    --ansi-yellow: var(--color-warning, #d97706);
+    --ansi-blue: var(--color-info, #3b82f6);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-cyan: var(--color-accent, #0891b2);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-red: var(--color-error, #ef4444);
+    --ansi-bright-green: var(--color-success, #22c55e);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-magenta: var(--color-secondary, #a855f7);
+    --ansi-bright-cyan: var(--color-accent, #22d3ee);
+    --ansi-bright-white: var(--color-base-content);
 }
 
 /* Foreground colors */
@@ -1512,14 +1834,14 @@ pluto-tree.collapsed p-v > pre {
 
 /* Some custom styles for stdout to improve contrast and readability */
 pluto-log-dot.Stdout {
-    --ansi-red: rgb(220, 0, 0);
-    --ansi-magenta: rgb(200, 0, 200);
-    --ansi-white: rgb(220, 220, 220);
-    --ansi-bright-black: rgb(50, 50, 50);
-    --ansi-bright-yellow: rgb(240, 240, 50);
-    --ansi-bright-blue: rgb(110, 110, 255);
-    --ansi-bright-white: rgb(240, 240, 240);
-    --ansi-bright-black: rgb(183 183 183);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-white: var(--color-base-content);
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 }
 
 pluto-log-dot.Stdout .ansi-bright-black-fg:is(.ansi-white-bg, .ansi-bright-white-bg) {
@@ -1597,30 +1919,28 @@ code.hljs {
     box-sizing: border-box;
 }
 
-:root {
-    --inter-ui-font-stack:
-        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        system-ui, sans-serif;
-    --system-fonts-mono: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+:scope {
+    --inter-ui-font-stack: var(--system-ui-font-stack);
+    --system-fonts-mono: var(--julia-mono-font-stack);
 
     color-scheme: light dark;
     font-family: var(--inter-ui-font-stack);
     font-size: 17px;
 
-    --black: black;
-    --gray1: gray;
-    --white: white;
+    --black: var(--color-base-content);
+    --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --white: var(--color-base-100);
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
-        --black: white;
-        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
-        --white: black;
+    :scope {
+        --black: var(--color-base-content);
+        --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+        --white: var(--color-base-100);
     }
 }
 
-body {
+:scope {
     max-width: 700px;
     margin: 0 auto;
     margin-top: 3rem;
@@ -1669,10 +1989,9 @@ a:visited {
 :scope{background:transparent;max-width:none;padding:0;margin:0}
 }
 </style>
-<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.snap-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
 
 <div class="snap-cells">
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="The-Newton-method-for-finding-roots">The Newton method for finding roots</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d82f1eae-7b9c-11eb-24d8-e1dcb2eef71a"><div class="markdown"><h1 id="The-Newton-method-for-finding-roots">The Newton method for finding roots</h1>
 <p>In science and engineering we constantly need to <em>solve equations</em> like <span class="tex">$f&#40;x&#41; &#61; 0$</span>. A point <span class="tex">$x^*$</span> with <span class="tex">$f&#40;x^*&#41; &#61; 0$</span> is called a <strong>root</strong> &#40;or <strong>zero</strong>&#41; of <span class="tex">$f$</span>.</p>
 <p>The <strong>Newton method</strong> is a classic iterative algorithm that finds such a root by <em>following the direction in which the function is pointing</em>: at the current guess it builds the <strong>tangent line</strong> and follows it down to the <span class="tex">$x$</span>-axis to obtain the next, hopefully better, guess.</p>
 <p>Everything below the sliders runs <strong>in your browser as WebAssembly</strong> — no Julia server, no install.</p>
@@ -1680,16 +1999,16 @@ a:visited {
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">begin
     using PlutoUI, WasmMakie
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="The-idea">The idea</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-e410c1d0-7ba1-11eb-394f-71dac89756b7"><div class="markdown"><h2 id="The-idea">The idea</h2>
 <p>Suppose we have a guess <span class="tex">$x_n$</span> for the root. The tangent line at <span class="tex">$x_n$</span> has slope <span class="tex">$f&#39;&#40;x_n&#41;$</span>, so it crosses zero at</p>
 <p class="tex">$$x_&#123;n&#43;1&#125; &#61; x_n - \frac&#123;f&#40;x_n&#41;&#125;&#123;f&#39;&#40;x_n&#41;&#125;.$$</p>
 <p>Repeating this gives a <em>sequence</em> <span class="tex">$x_0, x_1, x_2, \dots$</span> that converges very quickly &#40;quadratically&#41; once it is close to a root.</p>
 <p>The original lecture used automatic differentiation &#40;<code>ForwardDiff.jl</code>&#41; to get <span class="tex">$f&#39;$</span>. WebAssembly can&#39;t run that machinery, so here we instead supply <strong>hand-written analytic derivatives</strong> for a small menu of example functions — the mathematics is exactly the same.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Pick-an-example-function">Pick an example function</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5ea7344c-7ba2-11eb-2cc5-0bbdca218c82"><div class="markdown"><h2 id="Pick-an-example-function">Pick an example function</h2>
 <table><tr><th align="center">choice</th><th align="center"><span class="tex">$f&#40;x&#41;$</span></th><th align="center"><span class="tex">$f&#39;&#40;x&#41;$</span></th><th align="center">a root</th></tr><tr><td align="center">1</td><td align="center"><span class="tex">$x^2 - 2$</span></td><td align="center"><span class="tex">$2x$</span></td><td align="center"><span class="tex">$\sqrt 2 \approx 1.41421$</span></td></tr><tr><td align="center">2</td><td align="center"><span class="tex">$x^3 - x$</span></td><td align="center"><span class="tex">$3x^2 - 1$</span></td><td align="center"><span class="tex">$0,\ \pm 1$</span></td></tr><tr><td align="center">3</td><td align="center"><span class="tex">$\cos x - x$</span></td><td align="center"><span class="tex">$-\sin x - 1$</span></td><td align="center"><span class="tex">$\approx 0.73909$</span></td></tr></table>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="wyyxtnvmprcl"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ce44554e-847f-4129-8841-1a729dfa7a2e"><div class="markdown"><p>example function &#61; <bond def="which" unique_id="vriwevcdwpty"><input type='range' min='1' max='3' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1707,7 +2026,7 @@ end</code></pre></div>
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1715,7 +2034,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="wkpnimfmenhu"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-77ef0cfb-60db-4599-bec2-b65e99e5b246"><div class="markdown"><p>starting point x₀ &#61; <bond def="x0" unique_id="upboobwtpiym"><input type='range' min='1' max='61' value='51'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1733,7 +2052,7 @@ end</code></pre></div>
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1741,7 +2060,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>2.0</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="lklaevzzohcz"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2445da24-7b9d-11eb-02bd-eb99a3d95a2e"><div class="markdown"><p>number of iterations n &#61; <bond def="n" unique_id="aftxfwjniuxp"><input type='range' min='1' max='13' value='6'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1759,7 +2078,7 @@ end</code></pre></div>
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1767,7 +2086,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>5</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-6dc89964-7c30-11eb-0a41-8d97b210ed34"><div class="pluto-docs-binding">
 <span id="f">f</span>
 <div class="markdown"><p>The example function <code>f&#40;x&#41;</code> selected by the slider &#40;<code>which</code> &#61; 1, 2 or 3&#41;.</p>
 
@@ -1784,7 +2103,7 @@ function f(x::Float64, which::Int64)
         return cos(x) - x
     end
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d35e0cc8-7c30-11eb-28d3-17c9e221ea62"><div class="pluto-docs-binding">
 <span id="fprime">fprime</span>
 <div class="markdown"><p>The hand-written analytic derivative <code>fprime&#40;x&#41;</code> matching <code>f</code>.</p>
 
@@ -1801,10 +2120,10 @@ function fprime(x::Float64, which::Int64)
         return -sin(x) - 1.0
     end
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="The-iteration">The iteration</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ba570c4c-7ba2-11eb-2125-9f23e415a1dc"><div class="markdown"><h2 id="The-iteration">The iteration</h2>
 <p><code>newton_sequence</code> runs the Newton update <span class="tex">$x_&#123;n&#43;1&#125; &#61; x_n - f&#40;x_n&#41;/f&#39;&#40;x_n&#41;$</span> a fixed number of times and records every iterate, so we can watch it converge.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d690f83a-7c2e-11eb-14d7-79a250deb473"><div class="pluto-docs-binding">
 <span id="newton_sequence">newton_sequence</span>
 <div class="markdown"><p>Return the Newton iterates x₀, x₁, …, xₙ for example <code>which</code> starting at <code>x0</code>.</p>
 
@@ -1831,7 +2150,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-2fb40dc6-7c2f-11eb-2469-8deb4db59b5c"><pluto-tree class="collapsed Array"><pluto-tree-prefix></pluto-tree-prefix><pluto-tree-items class="Array"><p-r><p-k>1</p-k><p-v>"2.0"</p-v></p-r><p-r><p-k>2</p-k><p-v>"1.5"</p-v></p-r><p-r><p-k>3</p-k><p-v>"1.4166666666666667"</p-v></p-r><p-r><p-k>4</p-k><p-v>"1.4142156862745099"</p-v></p-r><p-r><p-k>5</p-k><p-v>"1.4142135623746899"</p-v></p-r><p-r><p-k>6</p-k><p-v>"1.4142135623730951"</p-v></p-r></pluto-tree-items></pluto-tree></pluto-output><pre class="pl-code"><code class="pl-jl"># shown as strings so the Float64 list renders identically in-browser
 # (whole-number iterates like 2.0 print as "2.0", matching Julia)
 iterates = string.(newton_sequence(which, x0, n))</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-35791bca-7c2f-11eb-1cfb-8d5ebd0208cb"><div class="pluto-docs-binding">
 <span id="newton_root">newton_root</span>
 <div class="markdown"><p>The final Newton estimate of the root after <code>n</code> iterations.</p>
 
@@ -1844,10 +2163,10 @@ function newton_root(which::Int64, x0::Float64, n::Int64)
     return xs[end]
 end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-2e2e5f0e-7c31-11eb-0da7-770b07ee6202">1.4142135623730951</pluto-output><pre class="pl-code"><code class="pl-jl">root_estimate = newton_root(which, x0, n)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="How-well-did-it-converge?">How well did it converge?</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-1ba1ae44-7ba1-11eb-21ff-558c95446435"><div class="markdown"><h2 id="How-well-did-it-converge?">How well did it converge?</h2>
 <p><code>residual</code> is <span class="tex">$|f&#40;x_n&#41;|$</span> at the final iterate — it should shrink toward <code>0</code> as you increase the number of iterations <code>n</code> &#40;try the slider&#33;&#41;.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-9addbcbe-7b9e-11eb-3e8c-fbab3be40e05"><div class="pluto-docs-binding">
 <span id="residual">residual</span>
 <div class="markdown"><p>The absolute residual |f&#40;x&#41;| at the final Newton iterate.</p>
 
@@ -1865,7 +2184,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-f153b4b8-7ba0-11eb-37ec-4f1a3dbe20e9"><div class="markdown"><p><strong>Residual |f&#40;x&#41;| at that estimate:</strong> 4.440892098500626e-16</p>
 <p>&#40;this shrinks toward 0 as you raise the iteration count <code>n</code>&#41;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Visualising-the-steps">Visualising the steps</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ba570c4c-7ba2-11eb-2125-aaaaaaaaaaaa"><div class="markdown"><h2 id="Visualising-the-steps">Visualising the steps</h2>
 <p>The curve is <span class="tex">$f$</span>. The horizontal line is the <span class="tex">$x$</span>-axis &#40;where the root lives&#41;. The vertical ticks mark each iterate <span class="tex">$x_0, x_1, \dots$</span> as Newton&#39;s method homes in on the root.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-f25af026-7b9c-11eb-1f11-77a8b06b2d71"></pluto-output><pre class="pl-code"><code class="pl-jl">let
@@ -1897,7 +2216,7 @@ end</code></pre></div>
     end
     fig
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Appendix">Appendix</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ee91563e-7c3e-11eb-3f65-1f336073869a"><div class="markdown"><h2 id="Appendix">Appendix</h2>
 <p>Newton&#39;s method converges <em>quadratically</em> near a simple root — the number of correct digits roughly doubles each step — but it can fail if it lands on a point where <span class="tex">$f&#39;&#40;x&#41; &#61; 0$</span> &#40;a flat tangent&#41;, or wander off if it starts far from any root. Try example <code>2</code> &#40;<span class="tex">$x^3 - x$</span>&#41; with different starting points to see both fast convergence and the method jumping between the three roots <span class="tex">$0, \pm 1$</span>.</p>
 </div></pluto-output></div>
 </div>
@@ -1907,21 +2226,46 @@ end</code></pre></div>
   function collectBonds() {
     const vals = {};
     document.querySelectorAll("bond[def]").forEach(function (b) {
-      const inp = b.querySelector("input,select,textarea");
-      if (!inp) return;
+      const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
+      const valueInputs = inputs.filter(function (inp) {
+        return inp.type !== "submit" && inp.type !== "reset";
+      });
+      const holder = b.firstElementChild;
+      if (!inputs.length) {
+        if (holder && holder.value !== undefined) vals[b.getAttribute("def")] = holder.value;
+        return;
+      }
+      function inputValue(inp) {
       const t = inp.type;
       // Match the shim's value_tree contract per input type: numbers as Number,
       // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
       // marker the shim decodes into a Julia DateTime (the staterequest path sends
       // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
       // here would make value_tree treat the DateTime struct's value as undefined.
-      let v;
-      if (t === "range" || t === "number") v = Number(inp.value);
-      else if (t === "checkbox") v = inp.checked;
+      if (t === "range" || t === "number") return Number(inp.value);
+      else if (t === "button") {
+        // Pluto's Button displays a label on the <input>, but stores its
+        // integer click count on the wrapper element that dispatches `input`.
+        const holder = b.firstElementChild;
+        return holder && holder.value !== undefined ? holder.value : 0;
+      }
+      else if (t === "checkbox") return inp.checked;
       else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
-        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
-      else v = inp.value;
-      vals[b.getAttribute("def")] = v;
+        return Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else if (inp instanceof HTMLSelectElement && inp.multiple)
+        return Array.from(inp.selectedOptions, function (o) { return o.value; });
+      return inp.value;
+      }
+      // Wrapper widgets such as PlutoUI.confirm expose their logical value on
+      // the wrapper.  Their descendant submit button is UI chrome, not a second
+      // field; flattening both controls produced [1, ""] and eventually tried
+      // to decode "1," as a Julia integer.  Prefer the wrapper contract whenever
+      // it exists.  Otherwise PlutoUI.combine is represented by its ordered
+      // child inputs and the bridge maps that array to the struct fields.
+      const holderIsInput = holder && holder.matches("input,select,textarea");
+      vals[b.getAttribute("def")] = holder && !holderIsInput && holder.value !== undefined
+        ? holder.value
+        : (valueInputs.length === 1 ? inputValue(valueInputs[0]) : valueInputs.map(inputValue));
     });
     return vals;
   }
@@ -1930,7 +2274,14 @@ end</code></pre></div>
   }
   document.addEventListener("input", function (e) {
     if (e.target.closest && e.target.closest("bond[def]")) rerender();
-  });
+  }, true);
+  // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
+  // stops the click at the button. Capture the click, then rerender after the
+  // widget's target-phase handler increments the wrapper's numeric value.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest('bond[def] input[type="button"]'))
+      setTimeout(rerender, 0);
+  }, true);
   (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
 })();
 </script>
@@ -1950,8 +2301,8 @@ end</code></pre></div>
 </script>
 
 <script type="module">
-import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
-import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1.2.0";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1.2.3";
 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 function hl(code) {
   const tree = parser.parse(code); let out = "", pos = 0;

@@ -29,6 +29,11 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  # Keep the committed/generated notebook corpus reproducible while the newest
+  # WasmTarget fixes are ahead of the next registry release.
+  SNAPSHOT_WT_REF: cadb908093efee3b08a065f50930d3337916391d
+
 jobs:
   # ── 1. discover — read the canonical notebook list (shared source of truth) ──
   discover:
@@ -72,7 +77,7 @@ jobs:
           # cache. A docs-site or README push now genuinely cache-hits every
           # notebook. (v5 was the Snapshot.jl rename; v4 the node 20→22
           # WasmGC-oracle fix; node-version still isn't in the key.)
-          key: snap-nbexport-v8-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-registry-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
+          key: snap-nbexport-v9-wt${{ env.SNAPSHOT_WT_REF }}-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
         with: { version: '1.12' }
@@ -107,9 +112,13 @@ jobs:
             try Pkg.Registry.rm("General") catch end
             Pkg.Registry.add("General")
             Pkg.instantiate()
+            Pkg.add(url="https://github.com/GroupTherapyOrg/WasmTarget.jl",
+                    rev=ENV["SNAPSHOT_WT_REF"])
             wt = only(v for v in values(Pkg.dependencies()) if v.name == "WasmTarget")
             wt.version >= v"0.5.2" || error("Snapshot canvas export requires WasmTarget >= 0.5.2, resolved $(wt.version)")
-            println("Snapshot export compiler: WasmTarget ", wt.version)
+            wt.git_revision == ENV["SNAPSHOT_WT_REF"] ||
+              error("Snapshot export compiler resolved unexpected WasmTarget revision $(wt.git_revision)")
+            println("Snapshot export compiler: WasmTarget ", wt.version, " @ ", wt.git_revision)
           '
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Export this notebook → WASM islands (cache miss → force-rebuild it)

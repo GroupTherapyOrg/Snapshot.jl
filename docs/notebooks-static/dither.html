@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="fun-light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>(function(){try{var t=localStorage.getItem('snap-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.6.2/themes.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
 <title>dither</title>
@@ -17,7 +17,7 @@ body{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-syste
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
+.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
@@ -59,14 +59,15 @@ pre,table,bond,.markdown,img{max-width:100%}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
 .snap-cells,main{overflow-x:auto}
-/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
-.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+/* Lezer-Julia token highlight. These consume the same shared syntax tokens as
+   Pluto/CodeMirror in PLUTO_VAR_MAP, so upstream and exported code cannot drift. */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:var(--snapshot-syntax-keyword)}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
-.tok-string,.tok-character,.tok-special{color:#16a34a}
-.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
-.tok-typeName{color:#0891b2}
-.tok-macroName{color:#db2777}
-.tok-function,.tok-definition{color:#2563eb}
+.tok-string,.tok-character,.tok-special{color:var(--snapshot-syntax-string)}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:var(--snapshot-syntax-number)}
+.tok-typeName{color:var(--snapshot-syntax-type)}
+.tok-macroName{color:var(--snapshot-syntax-macro)}
+.tok-function,.tok-definition{color:var(--snapshot-syntax-function)}
 .tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
 /* ── EMBEDDED ToC (docs): keep Pluto's floating aside, but make it respect the docs
    chrome. It stays a fixed top-right panel (like Pluto) so it never disturbs the
@@ -75,8 +76,170 @@ pre,table,bond,.markdown,img{max-width:100%}
    right viewport edge (translateX to right:0) instead of PAST it, so it can never
    add a horizontal scrollbar. It starts collapsed (the JS adds .hide) so it reads
    as a tidy tab the reader opens, never floating over docs text at rest. */
-.plutoui-toc.toc-embedded.aside{z-index:30;top:4.5rem;right:0;max-height:calc(100vh - 6rem);box-shadow:0 2px 14px rgba(0,0,0,.10)}
+.plutoui-toc.toc-embedded.aside{
+  z-index:var(--snapshot-toc-z,30);
+  top:var(--snapshot-toc-top,4.5rem);
+  right:var(--snapshot-toc-right,0);
+  max-height:var(--snapshot-toc-max-height,calc(100vh - 6rem));
+  box-shadow:0 2px 14px color-mix(in oklab,var(--color-base-content) 10%,transparent)
+}
 .plutoui-toc.toc-embedded.aside.hide{transform:translateX(calc(100% - 28px))}
+
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:root[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:root { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:root[data-theme="fun-light"],
+[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:root[data-theme="fun-dark"],
+[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:root[data-theme="classic-light"],
+[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:root[data-theme="classic-dark"],
+[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
 
 /* AUTO-GENERATED by src/pluto_css.jl — Pluto's output CSS re-themed to DaisyUI.
    Every Pluto colour var below → a DaisyUI --color-* token. Do not hand-edit;
@@ -106,17 +269,17 @@ pre,table,bond,.markdown,img{max-width:100%}
   --blockquote-bg: var(--color-base-200);
   --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   --br: 0.4rem;
-  --cm-color-builtin: var(--color-info, #0891b2);
+  --cm-color-builtin: var(--snapshot-syntax-type);
   --cm-color-clickable-underline: var(--color-primary);
   --cm-color-comment: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   --cm-color-editor-text: var(--color-base-content);
-  --cm-color-keyword: #8b5cf6;
+  --cm-color-keyword: var(--snapshot-syntax-keyword);
   --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
-  --cm-color-literal: #d97706;
-  --cm-color-macro: #db2777;
-  --cm-color-string: #16a34a;
-  --cm-color-symbol: #d97706;
-  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-literal: var(--snapshot-syntax-number);
+  --cm-color-macro: var(--snapshot-syntax-macro);
+  --cm-color-string: var(--snapshot-syntax-string);
+  --cm-color-symbol: var(--snapshot-syntax-number);
+  --cm-color-type: var(--snapshot-syntax-type);
   --cm-color-variable: var(--color-base-content);
   --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
   --cm-var-color: var(--color-base-content);
@@ -163,6 +326,12 @@ pre,table,bond,.markdown,img{max-width:100%}
   --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
   --rule-color: var(--color-base-300);
   --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --snapshot-syntax-function: #2563eb;
+  --snapshot-syntax-keyword: #8b5cf6;
+  --snapshot-syntax-macro: #db2777;
+  --snapshot-syntax-number: #d97706;
+  --snapshot-syntax-string: #16a34a;
+  --snapshot-syntax-type: #0891b2;
   --system-fonts-mono: var(--julia-mono-font-stack);
   --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --table-bg-hover-color: var(--color-base-200);
@@ -944,7 +1113,7 @@ jlerror > section > ol > li:not(.important)::marker {
     font-weight: 100;
 }
 jlerror > section > ol > li.from_this_notebook {
-    --bg: var(--jl-info-acccolor);
+    --bg: var(--color-base-100);
     background: var(--bg);
     outline: 3px solid var(--bg);
     padding: 0.4em 0em;
@@ -1015,9 +1184,9 @@ jlerror li a.frame-line-preview {
     display: block;
     text-decoration: none;
     border: 3px solid var(--cm-color-clickable-underline);
-    --br: 0.6em;
+    --br: 0.4rem;
     border-radius: var(--br);
-    --crop: -0.5em;
+    --crop: 0;
 }
 jlerror li .frame-line-preview pre:not(.asdfdsaf) {
     background-color: var(--code-background);
@@ -1189,20 +1358,20 @@ pluto-tree.collapsed p-v > pre {
 .plutoui-toc {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
 		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
-	--main-bg-color: #fafafa;
-	--pluto-output-color: hsl(0, 0%, 36%);
-	--pluto-output-h-color: hsl(0, 0%, 21%);
-	--sidebar-li-active-bg: rgb(235, 235, 235);
-	--icon-filter: unset;
+	--main-bg-color: var(--color-base-100);
+	--pluto-output-color: var(--color-base-content);
+	--pluto-output-h-color: var(--color-base-content);
+	--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+	--icon-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
 	.plutoui-toc {
-		--main-bg-color: #303030;
-		--pluto-output-color: hsl(0, 0%, 90%);
-		--pluto-output-h-color: hsl(0, 0%, 97%);
-		--sidebar-li-active-bg: rgb(82, 82, 82);
-		--icon-filter: invert(1);
+		--main-bg-color: var(--color-base-100);
+		--pluto-output-color: var(--color-base-content);
+		--pluto-output-h-color: var(--color-base-content);
+		--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+		--icon-filter: none;
 	}
 }
 
@@ -1224,7 +1393,7 @@ pluto-tree.collapsed p-v > pre {
 }
 
 .plutoui-toc.smallscreen:not(.hide) {
-	box-shadow: 0 0 11px 0px #00000010;
+	box-shadow: 0 0 11px 0px color-mix(in oklab, var(--color-base-content) 6%, transparent);
 }
 
 .plutoui-toc.aside.hide {
@@ -1328,7 +1497,7 @@ pluto-tree.collapsed p-v > pre {
 
 	
 .highlight-pluto-cell-shoulder {
-	background: rgba(0, 0, 0, 0.05);
+	background: color-mix(in oklab, var(--color-primary) 7%, transparent);
 	background-clip: padding-box;
 }
 
@@ -1380,14 +1549,14 @@ pluto-tree.collapsed p-v > pre {
 /* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
 .plutoui-toc {
   --main-bg-color: var(--color-base-100);
-  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-color: var(--color-base-content);
   --pluto-output-h-color: var(--color-base-content);
-  --sidebar-li-active-bg: var(--color-base-200);
+  --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
   --icon-filter: none;
-  --cm-var-color: var(--color-primary);
+  --cm-var-color: var(--color-base-content);
   border: 1px solid var(--color-base-300);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: invert(1); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: none; } }
 
 
 /* ── ansi-colors.css (stdout colour) ── */
@@ -1395,22 +1564,22 @@ pluto-tree.collapsed p-v > pre {
 /* ANSI color classes */
 
 :root {
-    --ansi-black: rgb(0, 0, 0);
-    --ansi-red: rgb(187, 0, 0);
-    --ansi-green: rgb(0, 187, 0);
-    --ansi-yellow: rgb(187, 187, 0);
-    --ansi-blue: rgb(0, 0, 187);
-    --ansi-magenta: rgb(187, 0, 187);
-    --ansi-cyan: rgb(0, 187, 187);
-    --ansi-white: rgb(255, 255, 255);
-    --ansi-bright-black: rgb(85, 85, 85);
-    --ansi-bright-red: rgb(255, 85, 85);
-    --ansi-bright-green: rgb(0, 255, 0);
-    --ansi-bright-yellow: rgb(255, 255, 85);
-    --ansi-bright-blue: rgb(85, 85, 255);
-    --ansi-bright-magenta: rgb(255, 85, 255);
-    --ansi-bright-cyan: rgb(85, 255, 255);
-    --ansi-bright-white: rgb(255, 255, 255);
+    --ansi-black: var(--color-base-content);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-green: var(--color-success, #16a34a);
+    --ansi-yellow: var(--color-warning, #d97706);
+    --ansi-blue: var(--color-info, #3b82f6);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-cyan: var(--color-accent, #0891b2);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-red: var(--color-error, #ef4444);
+    --ansi-bright-green: var(--color-success, #22c55e);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-magenta: var(--color-secondary, #a855f7);
+    --ansi-bright-cyan: var(--color-accent, #22d3ee);
+    --ansi-bright-white: var(--color-base-content);
 }
 
 /* Foreground colors */
@@ -1517,14 +1686,14 @@ pluto-tree.collapsed p-v > pre {
 
 /* Some custom styles for stdout to improve contrast and readability */
 pluto-log-dot.Stdout {
-    --ansi-red: rgb(220, 0, 0);
-    --ansi-magenta: rgb(200, 0, 200);
-    --ansi-white: rgb(220, 220, 220);
-    --ansi-bright-black: rgb(50, 50, 50);
-    --ansi-bright-yellow: rgb(240, 240, 50);
-    --ansi-bright-blue: rgb(110, 110, 255);
-    --ansi-bright-white: rgb(240, 240, 240);
-    --ansi-bright-black: rgb(183 183 183);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-white: var(--color-base-content);
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 }
 
 pluto-log-dot.Stdout .ansi-bright-black-fg:is(.ansi-white-bg, .ansi-bright-white-bg) {
@@ -1603,25 +1772,23 @@ code.hljs {
 }
 
 :root {
-    --inter-ui-font-stack:
-        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        system-ui, sans-serif;
-    --system-fonts-mono: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --inter-ui-font-stack: var(--system-ui-font-stack);
+    --system-fonts-mono: var(--julia-mono-font-stack);
 
     color-scheme: light dark;
     font-family: var(--inter-ui-font-stack);
     font-size: 17px;
 
-    --black: black;
-    --gray1: gray;
-    --white: white;
+    --black: var(--color-base-content);
+    --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --white: var(--color-base-100);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --black: white;
-        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
-        --white: black;
+        --black: var(--color-base-content);
+        --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+        --white: var(--color-base-100);
     }
 }
 
@@ -1675,17 +1842,17 @@ a:visited {
 <body>
 
 <main>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Dithering-❤️-Pluto&#33;">Dithering ❤️ Pluto&#33;</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-9258ccd2-c6ef-4fff-b7bf-13f09dfd5b42"><div class="markdown"><h1 id="Dithering-❤️-Pluto&#33;">Dithering ❤️ Pluto&#33;</h1>
 <p><strong>Dithering</strong> is a technique for <em>image quantization</em>: it lets us represent an image faithfully using only a handful of colors &#40;or shades of gray&#41;.</p>
 <p>Everything below the sliders runs <strong>in your browser as WebAssembly</strong> — no Julia server, no install. We don&#39;t load any real image files; instead we <em>build</em> a synthetic grayscale image with plain <code>for</code> loops and then dither it with code we write from scratch.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pre class="pl-code"><code class="pl-jl">begin
 	using PlutoUI, WasmMakie
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="A-synthetic-test-image">A synthetic test image</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-43744742-b8c7-4506-8ed6-1729fcd19321"><div class="markdown"><h2 id="A-synthetic-test-image">A synthetic test image</h2>
 <p>Each image here is just a flat <code>Vector&#123;Float64&#125;</code> of pixel brightnesses between <code>0.0</code> &#40;black&#41; and <code>1.0</code> &#40;white&#41;, stored <strong>column by column</strong> with <code>nc</code> columns and <code>nr</code> rows. The helper <code>make_gradient</code> fills it with a smooth diagonal ramp plus a soft circular bump in the middle — enough structure to make dithering interesting.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-1e9359f2-59c1-4910-b00f-81dc74f889ae"><div class="pluto-docs-binding">
 <span id="make_gradient">make_gradient</span>
 <div class="markdown"><p>Build an <code>nr × nc</code> grayscale image &#40;flat, column-major&#41; with a smooth gradient and a soft central bump. Values lie in <code>&#91;0, 1&#93;</code>.</p>
 
@@ -1715,7 +1882,7 @@ function make_gradient(nr::Int64, nc::Int64)
 	end
 	return img
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-b72d08fd-58b2-4e75-a5a6-e5be5d4438dd"><div class="pluto-docs-binding">
 <span id="gray_figure">gray_figure</span>
 <div class="markdown"><p>Render a flat column-major <code>Vector&#123;Float64&#125;</code> image &#40;<code>nr</code> rows, <code>nc</code> cols, pixel <code>idx &#61; i &#43; &#40;j-1&#41;*nr</code>&#41; as a grayscale WasmMakie figure. Each brightness <code>v</code> is shown as the neutral colour <code>&#40;v, v, v&#41;</code>, drawn through the wasm-stable <code>image&#33;</code> path &#40;the <code>heatmap&#33;</code> codegen path traps in compiled islands&#41;.</p>
 
@@ -1746,7 +1913,7 @@ function gray_figure(img::Vector{Float64}, nr::Int64, nc::Int64; px::Int64=320)
 	       Int64(nc), Int64(nr); interpolate = false)
 	return fig
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="kgxwzijtgjny"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a4a610a0-2034-4548-b9b1-283eaba05b59"><div class="markdown"><p>Pick the image size — smaller images make the individual dithered pixels easier to see: <bond def="imgsize" unique_id="uzaelyucxsxg"><input type='range' min='1' max='7' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1764,7 +1931,7 @@ end</code></pre></div>
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1772,7 +1939,7 @@ end</code></pre></div>
     					transform: translateY(-4px);
     					display: inline-block;'>48</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="The-original-&#40;continuous&#41;-image">The original &#40;continuous&#41; image</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-b509f437-be95-4272-a675-2d1e6af498ca"><div class="markdown"><h3 id="The-original-&#40;continuous&#41;-image">The original &#40;continuous&#41; image</h3>
 <p>This is the smooth, full-precision image before any quantization.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-09cbe381-c39e-4431-a9d3-624091ea42d0"></pluto-output><pre class="pl-code"><code class="pl-jl">let
@@ -1780,11 +1947,11 @@ end</code></pre></div>
 	img = make_gradient(n, n)
 	gray_figure(img, n, n)
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Step-1:-Just-round-each-pixel">Step 1: Just round each pixel</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-53d3af8c-88b5-4409-bf6a-9e1b22ac34a0"><div class="markdown"><h2 id="Step-1:-Just-round-each-pixel">Step 1: Just round each pixel</h2>
 <p>The simplest way to quantize is to <strong>snap every pixel to its nearest allowed level</strong>. With 2 levels that means black or white; with more levels we get a few shades of gray.</p>
 <p><code>quantize</code> does exactly this: it rounds each pixel to the closest of <code>levels</code> evenly-spaced values. <strong>A lot of detail gets lost</strong> — large flat bands appear where the smooth gradient used to be. 🥲</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-0c6aff98-350e-4935-834c-6b9aa9fa3a38"><div class="pluto-docs-binding">
 <span id="snap">snap</span>
 <div class="markdown"><p>Snap a brightness <code>v ∈ &#91;0,1&#93;</code> to the nearest of <code>levels</code> evenly-spaced values.</p>
 
@@ -1802,7 +1969,7 @@ function snap(v::Float64, levels::Int64)
 	end
 	return q
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-dc829cc3-213b-4f8f-b1e0-ad705be35edb"><div class="pluto-docs-binding">
 <span id="quantize">quantize</span>
 <div class="markdown"><p>Quantize a flat image to <code>levels</code> shades by rounding each pixel independently.</p>
 
@@ -1817,7 +1984,7 @@ function quantize(img::Vector{Float64}, levels::Int64)
 	end
 	return out
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="ncuyidkjpoeh"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3ed9b4fd-2da0-419e-986c-16faa80ad536"><div class="markdown"><p>Number of gray levels &#61; <bond def="levels" unique_id="kqwrxmnjpoaq"><input type='range' min='1' max='5' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1835,7 +2002,7 @@ end</code></pre></div>
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1849,11 +2016,11 @@ end</code></pre></div>
 	q = quantize(img, levels)
 	gray_figure(q, n, n)
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Step-2:-Dither-with-error-diffusion">Step 2: Dither with error diffusion</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-7de553b7-e19f-4482-9b5e-d4c8755a033a"><div class="markdown"><h2 id="Step-2:-Dither-with-error-diffusion">Step 2: Dither with error diffusion</h2>
 <p>Dithering does much better. Instead of throwing away the rounding error at each pixel, <strong>Floyd–Steinberg error diffusion</strong> spreads that error onto the not-yet-visited neighbours. The errors cancel out on average, so a region that is <em>half-way</em> between two levels gets a 50/50 sprinkle of the two — your eye blends them into the in-between shade.</p>
 <p>The classic weights push the error to the right &#40;<code>7/16</code>&#41; and to the three pixels below &#40;<code>3/16</code>, <code>5/16</code>, <code>1/16</code>&#41;:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-44d594ff-a25b-4455-be56-863345c67b68"><div class="pluto-docs-binding">
 <span id="floyd_steinberg">floyd_steinberg</span>
 <div class="markdown"><p>Floyd–Steinberg dithering on a flat column-major image &#40;<code>nr</code> rows, <code>nc</code> cols&#41; quantized to <code>levels</code> shades. Returns a new flat <code>Vector&#123;Float64&#125;</code>.</p>
 
@@ -1902,7 +2069,7 @@ function floyd_steinberg(img::Vector{Float64}, nr::Int64, nc::Int64, levels::Int
 	end
 	return out
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Use the <strong>same</strong> number of levels as Step 1 &#40;the slider above&#41; so you can compare fairly. The dithered image only ever uses those few shades — yet it looks far closer to the original. Zoom in to see the high-frequency pattern that fools your eye.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ab69309f-6a08-4f9f-b503-7a9610b1994a"><div class="markdown"><p>Use the <strong>same</strong> number of levels as Step 1 &#40;the slider above&#41; so you can compare fairly. The dithered image only ever uses those few shades — yet it looks far closer to the original. Zoom in to see the high-frequency pattern that fools your eye.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-0210462f-851b-4e2b-ba99-d7ade531fe11"></pluto-output><pre class="pl-code"><code class="pl-jl">let
 	n = imgsize
@@ -1910,10 +2077,10 @@ end</code></pre></div>
 	d = floyd_steinberg(img, n, n, levels)
 	gray_figure(d, n, n)
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="How-much-error-is-left?">How much error is left?</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-9e1f34a2-c092-4b58-acac-b354f47465e5"><div class="markdown"><h2 id="How-much-error-is-left?">How much error is left?</h2>
 <p>A simple way to measure quality is the <strong>mean absolute error</strong> between the quantized result and the original continuous image — averaged over every pixel. Lower is better.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-354f38ba-a8cf-4405-a0ef-1ec243f18acf"><div class="pluto-docs-binding">
 <span id="mean_abs_error">mean_abs_error</span>
 <div class="markdown"><p>Mean absolute difference between two flat images of equal length.</p>
 
@@ -1947,7 +2114,7 @@ end</code></pre></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-ce25faed-be1c-4b74-9c3c-968638eb7813"><div class="markdown"><p><strong>Mean abs. error — Floyd–Steinberg:</strong> 0.3623699989702734</p>
 <p>Per-pixel, dithering does <em>not</em> reduce the absolute error &#40;it still snaps to the same few levels&#41;. What it changes is <em>where</em> the error goes: it scatters it as high-frequency noise that the eye averages out, instead of leaving big visible bands. That&#39;s the whole trick. ✨</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Appendix">Appendix</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-83252609-ff10-4395-82b5-06b592998647"><div class="markdown"><h1 id="Appendix">Appendix</h1>
 <p>The idea behind dithering goes back to an engraving technique from the 15th century called <a href="https://en.wikipedia.org/wiki/Stippling">stippling</a>, and a related concept, <a href="https://en.wikipedia.org/wiki/Halftone">halftoning</a>, is what lets newspapers print shades of gray with only black ink. You may also recognise the look from retro video games with limited palettes — it&#39;s what gives the <a href="https://en.wikipedia.org/wiki/Game_Boy_Camera">Game Boy Camera</a> its distinctive style&#33;</p>
 <p>For the real thing on actual images, take a look at <a href="https://github.com/JuliaImages/DitherPunk.jl">DitherPunk.jl</a>.</p>
 </div></pluto-output></div>
@@ -1958,21 +2125,46 @@ end</code></pre></div>
   function collectBonds() {
     const vals = {};
     document.querySelectorAll("bond[def]").forEach(function (b) {
-      const inp = b.querySelector("input,select,textarea");
-      if (!inp) return;
+      const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
+      const valueInputs = inputs.filter(function (inp) {
+        return inp.type !== "submit" && inp.type !== "reset";
+      });
+      const holder = b.firstElementChild;
+      if (!inputs.length) {
+        if (holder && holder.value !== undefined) vals[b.getAttribute("def")] = holder.value;
+        return;
+      }
+      function inputValue(inp) {
       const t = inp.type;
       // Match the shim's value_tree contract per input type: numbers as Number,
       // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
       // marker the shim decodes into a Julia DateTime (the staterequest path sends
       // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
       // here would make value_tree treat the DateTime struct's value as undefined.
-      let v;
-      if (t === "range" || t === "number") v = Number(inp.value);
-      else if (t === "checkbox") v = inp.checked;
+      if (t === "range" || t === "number") return Number(inp.value);
+      else if (t === "button") {
+        // Pluto's Button displays a label on the <input>, but stores its
+        // integer click count on the wrapper element that dispatches `input`.
+        const holder = b.firstElementChild;
+        return holder && holder.value !== undefined ? holder.value : 0;
+      }
+      else if (t === "checkbox") return inp.checked;
       else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
-        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
-      else v = inp.value;
-      vals[b.getAttribute("def")] = v;
+        return Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else if (inp instanceof HTMLSelectElement && inp.multiple)
+        return Array.from(inp.selectedOptions, function (o) { return o.value; });
+      return inp.value;
+      }
+      // Wrapper widgets such as PlutoUI.confirm expose their logical value on
+      // the wrapper.  Their descendant submit button is UI chrome, not a second
+      // field; flattening both controls produced [1, ""] and eventually tried
+      // to decode "1," as a Julia integer.  Prefer the wrapper contract whenever
+      // it exists.  Otherwise PlutoUI.combine is represented by its ordered
+      // child inputs and the bridge maps that array to the struct fields.
+      const holderIsInput = holder && holder.matches("input,select,textarea");
+      vals[b.getAttribute("def")] = holder && !holderIsInput && holder.value !== undefined
+        ? holder.value
+        : (valueInputs.length === 1 ? inputValue(valueInputs[0]) : valueInputs.map(inputValue));
     });
     return vals;
   }
@@ -1981,7 +2173,14 @@ end</code></pre></div>
   }
   document.addEventListener("input", function (e) {
     if (e.target.closest && e.target.closest("bond[def]")) rerender();
-  });
+  }, true);
+  // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
+  // stops the click at the button. Capture the click, then rerender after the
+  // widget's target-phase handler increments the wrapper's numeric value.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest('bond[def] input[type="button"]'))
+      setTimeout(rerender, 0);
+  }, true);
   (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
 })();
 </script>
@@ -2001,8 +2200,8 @@ end</code></pre></div>
 </script>
 
 <script type="module">
-import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
-import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1.2.0";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1.2.3";
 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 function hl(code) {
   const tree = parser.parse(code); let out = "", pos = 0;

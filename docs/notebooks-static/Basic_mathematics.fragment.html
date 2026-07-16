@@ -1,8 +1,161 @@
-<div class="snap-notebook">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
+<div class="snap-notebook" data-snapshot-requires="daisyui-themes@5.6.2 katex@0.11.1">
 <style>
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:root[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:root { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:root[data-theme="fun-light"] .snap-notebook,
+.snap-notebook[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:root[data-theme="fun-dark"] .snap-notebook,
+.snap-notebook[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:root[data-theme="classic-light"] .snap-notebook,
+.snap-notebook[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:root[data-theme="classic-dark"] .snap-notebook,
+.snap-notebook[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 @scope (.snap-notebook) {
 :scope{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
 :scope{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
@@ -12,7 +165,7 @@
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
+.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
@@ -54,14 +207,15 @@ pre,table,bond,.markdown,img{max-width:100%}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
 .snap-cells,main{overflow-x:auto}
-/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
-.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+/* Lezer-Julia token highlight. These consume the same shared syntax tokens as
+   Pluto/CodeMirror in PLUTO_VAR_MAP, so upstream and exported code cannot drift. */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:var(--snapshot-syntax-keyword)}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
-.tok-string,.tok-character,.tok-special{color:#16a34a}
-.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
-.tok-typeName{color:#0891b2}
-.tok-macroName{color:#db2777}
-.tok-function,.tok-definition{color:#2563eb}
+.tok-string,.tok-character,.tok-special{color:var(--snapshot-syntax-string)}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:var(--snapshot-syntax-number)}
+.tok-typeName{color:var(--snapshot-syntax-type)}
+.tok-macroName{color:var(--snapshot-syntax-macro)}
+.tok-function,.tok-definition{color:var(--snapshot-syntax-function)}
 .tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
 /* ── EMBEDDED ToC (docs): keep Pluto's floating aside, but make it respect the docs
    chrome. It stays a fixed top-right panel (like Pluto) so it never disturbs the
@@ -70,13 +224,175 @@ pre,table,bond,.markdown,img{max-width:100%}
    right viewport edge (translateX to right:0) instead of PAST it, so it can never
    add a horizontal scrollbar. It starts collapsed (the JS adds .hide) so it reads
    as a tidy tab the reader opens, never floating over docs text at rest. */
-.plutoui-toc.toc-embedded.aside{z-index:30;top:4.5rem;right:0;max-height:calc(100vh - 6rem);box-shadow:0 2px 14px rgba(0,0,0,.10)}
+.plutoui-toc.toc-embedded.aside{
+  z-index:var(--snapshot-toc-z,30);
+  top:var(--snapshot-toc-top,4.5rem);
+  right:var(--snapshot-toc-right,0);
+  max-height:var(--snapshot-toc-max-height,calc(100vh - 6rem));
+  box-shadow:0 2px 14px color-mix(in oklab,var(--color-base-content) 10%,transparent)
+}
 .plutoui-toc.toc-embedded.aside.hide{transform:translateX(calc(100% - 28px))}
+
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:scope[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:scope { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:scope[data-theme="fun-light"],
+[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:scope[data-theme="fun-dark"],
+[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:scope[data-theme="classic-light"],
+[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:scope[data-theme="classic-dark"],
+[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
 
 /* AUTO-GENERATED by src/pluto_css.jl — Pluto's output CSS re-themed to DaisyUI.
    Every Pluto colour var below → a DaisyUI --color-* token. Do not hand-edit;
    edit PLUTO_VAR_MAP / pluto-base.css and regenerate (write_pluto_css()). */
-:root {
+:scope {
   --a-underline: color-mix(in oklab, var(--color-primary) 45%, transparent);
   --admonition-title-color: var(--color-primary-content);
   --ansi-black: var(--color-base-content);
@@ -101,17 +417,17 @@ pre,table,bond,.markdown,img{max-width:100%}
   --blockquote-bg: var(--color-base-200);
   --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   --br: 0.4rem;
-  --cm-color-builtin: var(--color-info, #0891b2);
+  --cm-color-builtin: var(--snapshot-syntax-type);
   --cm-color-clickable-underline: var(--color-primary);
   --cm-color-comment: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   --cm-color-editor-text: var(--color-base-content);
-  --cm-color-keyword: #8b5cf6;
+  --cm-color-keyword: var(--snapshot-syntax-keyword);
   --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
-  --cm-color-literal: #d97706;
-  --cm-color-macro: #db2777;
-  --cm-color-string: #16a34a;
-  --cm-color-symbol: #d97706;
-  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-literal: var(--snapshot-syntax-number);
+  --cm-color-macro: var(--snapshot-syntax-macro);
+  --cm-color-string: var(--snapshot-syntax-string);
+  --cm-color-symbol: var(--snapshot-syntax-number);
+  --cm-color-type: var(--snapshot-syntax-type);
   --cm-color-variable: var(--color-base-content);
   --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
   --cm-var-color: var(--color-base-content);
@@ -158,6 +474,12 @@ pre,table,bond,.markdown,img{max-width:100%}
   --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
   --rule-color: var(--color-base-300);
   --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --snapshot-syntax-function: #2563eb;
+  --snapshot-syntax-keyword: #8b5cf6;
+  --snapshot-syntax-macro: #db2777;
+  --snapshot-syntax-number: #d97706;
+  --snapshot-syntax-string: #16a34a;
+  --snapshot-syntax-type: #0891b2;
   --system-fonts-mono: var(--julia-mono-font-stack);
   --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --table-bg-hover-color: var(--color-base-200);
@@ -939,7 +1261,7 @@ jlerror > section > ol > li:not(.important)::marker {
     font-weight: 100;
 }
 jlerror > section > ol > li.from_this_notebook {
-    --bg: var(--jl-info-acccolor);
+    --bg: var(--color-base-100);
     background: var(--bg);
     outline: 3px solid var(--bg);
     padding: 0.4em 0em;
@@ -1010,9 +1332,9 @@ jlerror li a.frame-line-preview {
     display: block;
     text-decoration: none;
     border: 3px solid var(--cm-color-clickable-underline);
-    --br: 0.6em;
+    --br: 0.4rem;
     border-radius: var(--br);
-    --crop: -0.5em;
+    --crop: 0;
 }
 jlerror li .frame-line-preview pre:not(.asdfdsaf) {
     background-color: var(--code-background);
@@ -1184,20 +1506,20 @@ pluto-tree.collapsed p-v > pre {
 .plutoui-toc {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
 		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
-	--main-bg-color: #fafafa;
-	--pluto-output-color: hsl(0, 0%, 36%);
-	--pluto-output-h-color: hsl(0, 0%, 21%);
-	--sidebar-li-active-bg: rgb(235, 235, 235);
-	--icon-filter: unset;
+	--main-bg-color: var(--color-base-100);
+	--pluto-output-color: var(--color-base-content);
+	--pluto-output-h-color: var(--color-base-content);
+	--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+	--icon-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
 	.plutoui-toc {
-		--main-bg-color: #303030;
-		--pluto-output-color: hsl(0, 0%, 90%);
-		--pluto-output-h-color: hsl(0, 0%, 97%);
-		--sidebar-li-active-bg: rgb(82, 82, 82);
-		--icon-filter: invert(1);
+		--main-bg-color: var(--color-base-100);
+		--pluto-output-color: var(--color-base-content);
+		--pluto-output-h-color: var(--color-base-content);
+		--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+		--icon-filter: none;
 	}
 }
 
@@ -1219,7 +1541,7 @@ pluto-tree.collapsed p-v > pre {
 }
 
 .plutoui-toc.smallscreen:not(.hide) {
-	box-shadow: 0 0 11px 0px #00000010;
+	box-shadow: 0 0 11px 0px color-mix(in oklab, var(--color-base-content) 6%, transparent);
 }
 
 .plutoui-toc.aside.hide {
@@ -1323,7 +1645,7 @@ pluto-tree.collapsed p-v > pre {
 
 	
 .highlight-pluto-cell-shoulder {
-	background: rgba(0, 0, 0, 0.05);
+	background: color-mix(in oklab, var(--color-primary) 7%, transparent);
 	background-clip: padding-box;
 }
 
@@ -1375,37 +1697,37 @@ pluto-tree.collapsed p-v > pre {
 /* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
 .plutoui-toc {
   --main-bg-color: var(--color-base-100);
-  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-color: var(--color-base-content);
   --pluto-output-h-color: var(--color-base-content);
-  --sidebar-li-active-bg: var(--color-base-200);
+  --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
   --icon-filter: none;
-  --cm-var-color: var(--color-primary);
+  --cm-var-color: var(--color-base-content);
   border: 1px solid var(--color-base-300);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: invert(1); } }
+@media (prefers-color-scheme: dark) { :scope:not([data-theme]) .plutoui-toc { --icon-filter: none; } }
 
 
 /* ── ansi-colors.css (stdout colour) ── */
 
 /* ANSI color classes */
 
-:root {
-    --ansi-black: rgb(0, 0, 0);
-    --ansi-red: rgb(187, 0, 0);
-    --ansi-green: rgb(0, 187, 0);
-    --ansi-yellow: rgb(187, 187, 0);
-    --ansi-blue: rgb(0, 0, 187);
-    --ansi-magenta: rgb(187, 0, 187);
-    --ansi-cyan: rgb(0, 187, 187);
-    --ansi-white: rgb(255, 255, 255);
-    --ansi-bright-black: rgb(85, 85, 85);
-    --ansi-bright-red: rgb(255, 85, 85);
-    --ansi-bright-green: rgb(0, 255, 0);
-    --ansi-bright-yellow: rgb(255, 255, 85);
-    --ansi-bright-blue: rgb(85, 85, 255);
-    --ansi-bright-magenta: rgb(255, 85, 255);
-    --ansi-bright-cyan: rgb(85, 255, 255);
-    --ansi-bright-white: rgb(255, 255, 255);
+:scope {
+    --ansi-black: var(--color-base-content);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-green: var(--color-success, #16a34a);
+    --ansi-yellow: var(--color-warning, #d97706);
+    --ansi-blue: var(--color-info, #3b82f6);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-cyan: var(--color-accent, #0891b2);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-red: var(--color-error, #ef4444);
+    --ansi-bright-green: var(--color-success, #22c55e);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-magenta: var(--color-secondary, #a855f7);
+    --ansi-bright-cyan: var(--color-accent, #22d3ee);
+    --ansi-bright-white: var(--color-base-content);
 }
 
 /* Foreground colors */
@@ -1512,14 +1834,14 @@ pluto-tree.collapsed p-v > pre {
 
 /* Some custom styles for stdout to improve contrast and readability */
 pluto-log-dot.Stdout {
-    --ansi-red: rgb(220, 0, 0);
-    --ansi-magenta: rgb(200, 0, 200);
-    --ansi-white: rgb(220, 220, 220);
-    --ansi-bright-black: rgb(50, 50, 50);
-    --ansi-bright-yellow: rgb(240, 240, 50);
-    --ansi-bright-blue: rgb(110, 110, 255);
-    --ansi-bright-white: rgb(240, 240, 240);
-    --ansi-bright-black: rgb(183 183 183);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-white: var(--color-base-content);
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 }
 
 pluto-log-dot.Stdout .ansi-bright-black-fg:is(.ansi-white-bg, .ansi-bright-white-bg) {
@@ -1597,30 +1919,28 @@ code.hljs {
     box-sizing: border-box;
 }
 
-:root {
-    --inter-ui-font-stack:
-        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        system-ui, sans-serif;
-    --system-fonts-mono: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+:scope {
+    --inter-ui-font-stack: var(--system-ui-font-stack);
+    --system-fonts-mono: var(--julia-mono-font-stack);
 
     color-scheme: light dark;
     font-family: var(--inter-ui-font-stack);
     font-size: 17px;
 
-    --black: black;
-    --gray1: gray;
-    --white: white;
+    --black: var(--color-base-content);
+    --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --white: var(--color-base-100);
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
-        --black: white;
-        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
-        --white: black;
+    :scope {
+        --black: var(--color-base-content);
+        --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+        --white: var(--color-base-100);
     }
 }
 
-body {
+:scope {
     max-width: 700px;
     margin: 0 auto;
     margin-top: 3rem;
@@ -1669,147 +1989,152 @@ a:visited {
 :scope{background:transparent;max-width:none;padding:0;margin:0}
 }
 </style>
-<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.snap-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
 
 <div class="snap-cells">
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Mathematics-in-Julia-🍕">Mathematics in Julia 🍕</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-03664f5c-d45c-11ea-21b6-91cd647a07aa"><div class="markdown"><h1 id="Mathematics-in-Julia-🍕">Mathematics in Julia 🍕</h1>
 <p>This is an introduction to programming.  Let&#39;s get started&#33;</p>
 <h2 id="Let&#39;s-make-a-calculator&#33;">Let&#39;s make a calculator&#33;</h2>
 <p>First let&#39;s do some simple math with setting <strong>a &#61; 2</strong>, <strong>b &#61; 6</strong> and <strong>c &#61; a * b</strong>.  What will <strong>c</strong> equal?</p>
 <p>Type in the cells &#40;with the coloured background&#41; below and press <strong><code>Shift-Enter</code></strong> or the click the right-arrow button &#40;▶️&#41; to the right to execute the cell after changing the values.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">2</pluto-output><pre class="pl-code"><code class="pl-jl">a = 2</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">6</pluto-output><pre class="pl-code"><code class="pl-jl">b = 6</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Fix the value of <code>c</code> below to make it <code>c &#61; a * b</code></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-14158eb0-d45c-11ea-088f-330e45412320">2</pluto-output><pre class="pl-code"><code class="pl-jl">a = 2</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2ed4bb92-d45c-11ea-0b31-2d8e32ce7b44">6</pluto-output><pre class="pl-code"><code class="pl-jl">b = 6</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-e5e0a0da-d45c-11ea-1042-e9b5d0654d4f"><div class="markdown"><p>Fix the value of <code>c</code> below to make it <code>c &#61; a * b</code></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">10</pluto-output><pre class="pl-code"><code class="pl-jl">c = 10</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>The answer is not quite right.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-30f0f882-d45c-11ea-2adc-7d84ecf8a7a6">10</pluto-output><pre class="pl-code"><code class="pl-jl">c = 10</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-33b1975c-d45c-11ea-035f-ab76e46a31ed"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>The answer is not quite right.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Now-you-have-a-calculator&#33;">Now you have a calculator&#33;</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a38cb92e-d45e-11ea-2959-05be909befb2"><div class="markdown"><h3 id="Now-you-have-a-calculator&#33;">Now you have a calculator&#33;</h3>
 <p>You did multiplication above.  Here&#39;s how you do other mathematical operations:</p>
 <table><tr><th align="left">Operation</th><th align="center">Type This</th></tr><tr><td align="left">add</td><td align="center">&#43;</td></tr><tr><td align="left">subtract</td><td align="center">-</td></tr><tr><td align="left">multiply</td><td align="center">*</td></tr><tr><td align="left">divide</td><td align="center">/</td></tr><tr><td align="left">power</td><td align="center">^</td></tr></table>
 <h3 id="Pizza-Slices">Pizza Slices</h3>
 <p>Let&#39;s try this out on a problem.  Let&#39;s say you want to order pizzas for 10 people &#40;<strong>people &#61; 10</strong>&#41; and each person wants 2.5 slices on average &#40;<strong>avg &#61; 2.5</strong>&#41;.  A pizza has 8 slices per pizza &#40;<strong>slices &#61; 8</strong>&#41;.  How many pizzas should you order &#40;<strong>pizzas &#61; ?</strong>&#41;?  So we have the following</p>
 <table><tr><th align="left">Meaning</th><th align="center">Variable</th></tr><tr><td align="left">Number of people</td><td align="center">people</td></tr><tr><td align="left">Average number of slices each person eats</td><td align="center">avg</td></tr><tr><td align="left">Number of slices on a piece of pizza</td><td align="center">slices</td></tr></table>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">10</pluto-output><pre class="pl-code"><code class="pl-jl">people = 10</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">2.5</pluto-output><pre class="pl-code"><code class="pl-jl">avg = 2.5</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">8</pluto-output><pre class="pl-code"><code class="pl-jl">slices = 8</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Edit the equation below to calculate the number of pizzas to order using the variables above for <strong>people</strong>, <strong>avg</strong>, and <strong>slices</strong>:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-262b312a-d460-11ea-26c5-df30459effc5">10</pluto-output><pre class="pl-code"><code class="pl-jl">people = 10</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2ea7f162-d460-11ea-0e8e-25340e2e64da">2.5</pluto-output><pre class="pl-code"><code class="pl-jl">avg = 2.5</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3da812c6-d460-11ea-0170-79fbb6a4347c">8</pluto-output><pre class="pl-code"><code class="pl-jl">slices = 8</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-4dff4b5e-d461-11ea-29c8-d548fdb5f08b"><div class="markdown"><p>Edit the equation below to calculate the number of pizzas to order using the variables above for <strong>people</strong>, <strong>avg</strong>, and <strong>slices</strong>:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">pizzas = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>The answer is not quite right.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-444e2fa4-d460-11ea-12aa-57e0576c2d66">1</pluto-output><pre class="pl-code"><code class="pl-jl">pizzas = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f26d50da-d46b-11ea-0c2d-77ca13532b3d"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>The answer is not quite right.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Writing-your-own-math-functions">Writing your own math functions</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d9c31dfa-d470-11ea-23b2-838975b71f7c"><div class="markdown"><h2 id="Writing-your-own-math-functions">Writing your own math functions</h2>
 <p>The area of a pizza is <span class="tex">$A &#61; \pi r^2$</span>.  Lets try calculating the area of a pizza that has a radius of 6 inches &#40;<strong>r &#61; 6</strong>&#41;. Type <strong>pi</strong> to get the value of <span class="tex">$\pi$</span> and <strong>r^2</strong> to get the radius squared.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">6</pluto-output><pre class="pl-code"><code class="pl-jl">r = 6</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">36</pluto-output><pre class="pl-code"><code class="pl-jl">A =  r^2</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>Let&#39;s fix the above cell before we move on&#33;  Find the formula to calculate the area using <strong>pi</strong> and <strong>r</strong>.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3c12f2b4-d471-11ea-2d37-539f061f7cf2">6</pluto-output><pre class="pl-code"><code class="pl-jl">r = 6</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-50f0f6d6-d471-11ea-304e-8f72e7ef9d7e">36</pluto-output><pre class="pl-code"><code class="pl-jl">A =  r^2</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5c4a5f22-d471-11ea-260f-9338d8bfa2d6"><div class="markdown"><div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>Let&#39;s fix the above cell before we move on&#33;  Find the formula to calculate the area using <strong>pi</strong> and <strong>r</strong>.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>The diameter of a pizza is often stated on a menu so let&#39;s define a <strong>formula</strong> to calculate the area of a pizza given the diameter <strong>d</strong>.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f907e46a-d471-11ea-07e5-f30e2aab3d08"><div class="markdown"><p>The diameter of a pizza is often stated on a menu so let&#39;s define a <strong>formula</strong> to calculate the area of a pizza given the diameter <strong>d</strong>.</p>
 <p>We do this by writing a formula like this: <code>area&#40;d&#41; &#61; pi * &#40;d/2&#41;^2</code></p>
 <p>Let&#39;s write that below:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">area (generic function with 1 method)</pluto-output><pre class="pl-code"><code class="pl-jl">area(d) = pi * (d / 2)^2</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Now we have a function called <strong>area</strong> that we can pass any diameter and it will return the area of a pizza &#40;or circle&#41;, let&#39;s try that with the pizza from before with <code>area&#40;2*r&#41;</code> to get the area of the pizza:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-cb36a9ee-d472-11ea-1835-bf7963137e18">area (generic function with 1 method)</pluto-output><pre class="pl-code"><code class="pl-jl">area(d) = pi * (d / 2)^2</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d9575e9c-d472-11ea-1eda-2d335d039f28"><div class="markdown"><p>Now we have a function called <strong>area</strong> that we can pass any diameter and it will return the area of a pizza &#40;or circle&#41;, let&#39;s try that with the pizza from before with <code>area&#40;2*r&#41;</code> to get the area of the pizza:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">28.274333882308138</pluto-output><pre class="pl-code"><code class="pl-jl">A2 = area(r)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>Keep trying to get the right answer.   	<strong>Hint</strong>: you need to multiply the radius by 2 to convert it into the diameter.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-04b010c0-d473-11ea-1767-136c7e26e122">28.274333882308138</pluto-output><pre class="pl-code"><code class="pl-jl">A2 = area(r)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a07e5c3e-d476-11ea-308c-718f8f128334"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>Keep trying to get the right answer.   	<strong>Hint</strong>: you need to multiply the radius by 2 to convert it into the diameter.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Finding-the-best-pizza-deal">Finding the best pizza deal</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-edb95b14-d473-11ea-3a5a-77382d31f941"><div class="markdown"><h2 id="Finding-the-best-pizza-deal">Finding the best pizza deal</h2>
 <p>Let&#39;s see if a larger pizza is a better value by calculating the price per area.  There are 4 sizes: small, medium, large, extra large with the following prices:</p>
 <table><tr><th align="left">Size</th><th align="center">Diameter &#40;inches&#41;</th><th align="right">Price &#40;&#36;&#41;</th></tr><tr><td align="left">small</td><td align="center">9</td><td align="right">13.10</td></tr><tr><td align="left">medium</td><td align="center">13</td><td align="right">20.95</td></tr><tr><td align="left">large</td><td align="center">15</td><td align="right">24.90</td></tr><tr><td align="left">XL</td><td align="center">17</td><td align="right">30.95</td></tr></table>
 <h3 id="1.-How-many-small-pizzas-is-the-same-as-one-XL-pizza?">1. How many small pizzas is the same as one XL pizza?</h3>
 <p>Edit the expression below:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">smalls_in_xl = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>The diameter of the XL pizza is 17 inches while the diameter of the small pizza is 9 inches.  Use the <strong>area&#40;&#41;</strong> function from before to find the area of each and divide them.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-637c26fa-d475-11ea-2c5b-2b0f4775b119">1</pluto-output><pre class="pl-code"><code class="pl-jl">smalls_in_xl = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-8700d986-d475-11ea-0d0e-790448cf92ba"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>The diameter of the XL pizza is 17 inches while the diameter of the small pizza is 9 inches.  Use the <strong>area&#40;&#41;</strong> function from before to find the area of each and divide them.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="2.-Calculate-the-cost-per-area-of-each-pizza:">2. Calculate the cost per area of each pizza:</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5b07b8fe-d475-11ea-01aa-6b88d6ed8a05"><div class="markdown"><h3 id="2.-Calculate-the-cost-per-area-of-each-pizza:">2. Calculate the cost per area of each pizza:</h3>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">0.2059189880991436</pluto-output><pre class="pl-code"><code class="pl-jl">small = 13.10 / area(9)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">0.15783649977634118</pluto-output><pre class="pl-code"><code class="pl-jl">medium = 20.95 / area(13)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">0.14090517628402466</pluto-output><pre class="pl-code"><code class="pl-jl">large = 24.90 / area(15)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output">0.1363555844621221</pluto-output><pre class="pl-code"><code class="pl-jl">xl = 30.95 / area(17)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Which size of pizza is the best deal?  Write your answer below and assign it to the variable <strong>best_value</strong>.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3823d09e-d474-11ea-194e-59b5805f303b">0.2059189880991436</pluto-output><pre class="pl-code"><code class="pl-jl">small = 13.10 / area(9)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-76c11174-d474-11ea-29c5-81856d47cf74">0.15783649977634118</pluto-output><pre class="pl-code"><code class="pl-jl">medium = 20.95 / area(13)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-8b12d200-d474-11ea-3035-01eccf39f917">0.14090517628402466</pluto-output><pre class="pl-code"><code class="pl-jl">large = 24.90 / area(15)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-962e6b86-d474-11ea-11a6-a1d11e33ae42">0.1363555844621221</pluto-output><pre class="pl-code"><code class="pl-jl">xl = 30.95 / area(17)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a42e4eb0-d474-11ea-316a-3d864451bc01"><div class="markdown"><p>Which size of pizza is the best deal?  Write your answer below and assign it to the variable <strong>best_value</strong>.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">0.2059189880991436</pluto-output><pre class="pl-code"><code class="pl-jl">best_value = small</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>No need to copy these digits yourself - what should we assign to <strong>best_value</strong>?</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-16ec3f32-d4ff-11ea-20e2-5bc6dd5db083">0.2059189880991436</pluto-output><pre class="pl-code"><code class="pl-jl">best_value = small</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-1ba2c208-d4ff-11ea-0a8e-e75bf7e1c3e6"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>No need to copy these digits yourself - what should we assign to <strong>best_value</strong>?</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="3.-Is-this-a-good-deal?">3. Is this a good deal?</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-cb419286-d4ff-11ea-1d7f-af5c8574b775"><div class="markdown"><h3 id="3.-Is-this-a-good-deal?">3. Is this a good deal?</h3>
 <p>San Marinos has a special <strong>&quot;Buy two medium pizzas and save &#36;5&quot;</strong>.  Is this a better deal than buying a extra-large pizza?</p>
 <p>Calculate the total cost of two medium pizzas deal &#40;saving &#36;5&#41;:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">20.95</pluto-output><pre class="pl-code"><code class="pl-jl">two_medium_cost = 20.95 * 1 - 0</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Calculate the total area of two medium pizzas:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f147b6cc-d4ff-11ea-05ad-6f5b441e5d1b">20.95</pluto-output><pre class="pl-code"><code class="pl-jl">two_medium_cost = 20.95 * 1 - 0</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-0d76d97c-d500-11ea-2433-e96c6fc43b05"><div class="markdown"><p>Calculate the total area of two medium pizzas:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">132.73228961416876</pluto-output><pre class="pl-code"><code class="pl-jl">two_medium_area = 1 * area(13)</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Now calculate cost per area by taking the total cost of two medium pizzas and divide by the total area:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-19eb2a82-d500-11ea-3782-596adc689382">132.73228961416876</pluto-output><pre class="pl-code"><code class="pl-jl">two_medium_area = 1 * area(13)</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-20a1e9cc-d500-11ea-3d9b-279c71bc20f1"><div class="markdown"><p>Now calculate cost per area by taking the total cost of two medium pizzas and divide by the total area:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">two_medium_deal = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Is it a better deal to get two medium pizzas for &#36;5 off or to just buy an extra-large?</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-70e85498-d500-11ea-35af-474574f5c011">1</pluto-output><pre class="pl-code"><code class="pl-jl">two_medium_deal = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-57f024ae-d500-11ea-1cc4-ed28348fdf93"><div class="markdown"><p>Is it a better deal to get two medium pizzas for &#36;5 off or to just buy an extra-large?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="4.-Advanced-Problem">4. Advanced Problem</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-180c8fdc-d503-11ea-04ca-bf2c07fd1c17"><div class="markdown"><h3 id="4.-Advanced-Problem">4. Advanced Problem</h3>
 <p>A new worker at a pizza shop was getting paid for cutting pizza into pieces.  The pieces of pizza could be any size.  Calculate the maximum number of pieces the worker could make with two cuts of the pizza.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts2 = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>The cuts must go all the way across the pizza&#33;</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-6494e270-d503-11ea-38a7-df96e7f0a241">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts2 = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-6ae748b2-d503-11ea-1c51-6b2df24fd212"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>The cuts must go all the way across the pizza&#33;</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Now what about 3 cuts across the pizza?  What is the maximum number of pieces that can be made with <strong>3 cuts</strong>?</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-92b4a012-d503-11ea-15a2-1f3a446d3284"><div class="markdown"><p>Now what about 3 cuts across the pizza?  What is the maximum number of pieces that can be made with <strong>3 cuts</strong>?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts3 = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>Try drawing it out on a piece of paper.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a05aae8e-d506-11ea-190f-57e9ce53b8b9">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts3 = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a679bddc-d506-11ea-143a-6d4dcd70e918"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>Try drawing it out on a piece of paper.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Now, how many pieces can be made with <strong>4 cuts</strong>?</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2eb9a560-d507-11ea-3b8b-9d06678fe131"><div class="markdown"><p>Now, how many pieces can be made with <strong>4 cuts</strong>?</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts4 = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>Draw it out on a piece of paper.  You can make more pieces with 4 cuts.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5a8ede88-d507-11ea-30d9-c99a67243781">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts4 = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5df7eefc-d507-11ea-0d1f-45b224a04774"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>Draw it out on a piece of paper.  You can make more pieces with 4 cuts.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Are you starting to see a pattern?  Can you figure out a formula for how many pieces of pizza can be made with &quot;n&quot; cuts?  Make a table and fill in the number of pieces for a number of cuts and see if you can find the pattern:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d1e3dec0-d507-11ea-1213-d37a9325ee2f"><div class="markdown"><p>Are you starting to see a pattern?  Can you figure out a formula for how many pieces of pizza can be made with &quot;n&quot; cuts?  Make a table and fill in the number of pieces for a number of cuts and see if you can find the pattern:</p>
 <table><tr><th align="left">Cuts</th><th align="right">Pieces</th></tr><tr><td align="left">0</td><td align="right">1</td></tr><tr><td align="left">1</td><td align="right">2</td></tr><tr><td align="left">2</td><td align="right">4</td></tr><tr><td align="left">3</td><td align="right"></td></tr><tr><td align="left">4</td><td align="right"></td></tr></table>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>For each extra cut, start out with the solution for the previous number. When you add one extra cut, how many new slices do you get?</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2814a1d4-dcc0-11ea-3d42-f52765e478fe"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>For each extra cut, start out with the solution for the previous number. When you add one extra cut, how many new slices do you get?</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>A new cut will create the maximum number of <em>new slices</em> if it intersects all previous cuts.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-48647ab2-daa5-11ea-0494-ef87be7cbf7c"><div class="markdown"><div class="admonition hint"><p class="admonition-title">Hint</p><p>A new cut will create the maximum number of <em>new slices</em> if it intersects all previous cuts.</p>
 
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>To get an extra hint, figure out how many slices we can get from <strong>5 cuts</strong>:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-97bfd13c-dcc2-11ea-0067-ad8c2c6517fc"><div class="markdown"><p>To get an extra hint, figure out how many slices we can get from <strong>5 cuts</strong>:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts5 = 1</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"></div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Have you found the pattern? Write down the formula below:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-bae0cb62-dcc2-11ea-0667-512e1c407d40">1</pluto-output><pre class="pl-code"><code class="pl-jl">cuts5 = 1</code></pre></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-8cada086-daa5-11ea-220c-0f660938b604"><div class="markdown"></div></pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-e0cb2822-dcc2-11ea-2c85-5748bfe526dc"><div class="markdown"><p>Have you found the pattern? Write down the formula below:</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">pieces (generic function with 1 method)</pluto-output><pre class="pl-code"><code class="pl-jl">function pieces(n)
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f5f89724-d507-11ea-0a93-6d904f36bbe4">pieces (generic function with 1 method)</pluto-output><pre class="pl-code"><code class="pl-jl">function pieces(n)
 	return n
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h5 id="Let&#39;s-test-your-formula&#33;">Let&#39;s test your formula&#33;</h5>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-03249876-d508-11ea-16bb-fd5afed37a1f"><div class="markdown"><h5 id="Let&#39;s-test-your-formula&#33;">Let&#39;s test your formula&#33;</h5>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Move the slider to change the number of cuts: </p>
-<bond def="n" unique_id="mswjmcaqxqak"><input type=range max=50></bond>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-bd9f3d24-d509-11ea-165d-3d465a0b4542"><div class="markdown"><p>Move the slider to change the number of cuts: </p>
+<bond def="n" unique_id="ejaholvnxfyt"><input type=range max=50></bond>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output" id="out-e80986c6-d509-11ea-12e3-f79a54b5ab31">Dict{Symbol, Any}(:msg =&gt; "TypeError: non-boolean (Missing) used in boolean context", :stacktrace =&gt; Dict{Symbol, Any}[Dict(:call_short =&gt; "top-level scope", :inlined =&gt; false, :url =&gt; nothing, :path =&gt; "/var/folders/cc/2fhyrfnd7x39rgjk39v38nk40000gn/T/jl_EMJe0O/Basic_mathematics.jl#==#e80986c6-d509-11ea-12e3-f79a54b5ab31", :source_package =&gt; nothing, :call =&gt; "top-level scope", :linfo_type =&gt; "Core.CodeInfo", :line =&gt; 1, :file =&gt; "Basic_mathematics.jl#==#e80986c6-d509-11ea-12e3-f79a54b5ab31", :func =&gt; "top-level scope", :parent_module =&gt; nothing, :from_c =&gt; false)], :plain_error =&gt; "TypeError: non-boolean (Missing) used in boolean context\nStacktrace:\n [1] top-level scope\n   @ /var/folders/cc/2fhyrfnd7x39rgjk39v38nk40000gn/T/jl_EMJe0O/Basic_mathematics.jl#==#e80986c6-d509-11ea-12e3-f79a54b5ab31:1")</pluto-output></div>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-e80986c6-d509-11ea-12e3-f79a54b5ab31"><div class="markdown"><p><em>Testing...</em></p>
+<p><strong>For 25 cuts, you predict 25 pieces.</strong></p>
+<div class="admonition danger"><p class="admonition-title">Keep working on it!</p><p>The answer should be 326.</p>
+
+</div>
+
+</div></pluto-output></div>
 </div>
 <script src="__PI_ASSETS_BASE__/Basic_mathematics.islands/shim.js"></script>
 <script>
@@ -1817,21 +2142,46 @@ end</code></pre></div>
   function collectBonds() {
     const vals = {};
     document.querySelectorAll("bond[def]").forEach(function (b) {
-      const inp = b.querySelector("input,select,textarea");
-      if (!inp) return;
+      const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
+      const valueInputs = inputs.filter(function (inp) {
+        return inp.type !== "submit" && inp.type !== "reset";
+      });
+      const holder = b.firstElementChild;
+      if (!inputs.length) {
+        if (holder && holder.value !== undefined) vals[b.getAttribute("def")] = holder.value;
+        return;
+      }
+      function inputValue(inp) {
       const t = inp.type;
       // Match the shim's value_tree contract per input type: numbers as Number,
       // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
       // marker the shim decodes into a Julia DateTime (the staterequest path sends
       // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
       // here would make value_tree treat the DateTime struct's value as undefined.
-      let v;
-      if (t === "range" || t === "number") v = Number(inp.value);
-      else if (t === "checkbox") v = inp.checked;
+      if (t === "range" || t === "number") return Number(inp.value);
+      else if (t === "button") {
+        // Pluto's Button displays a label on the <input>, but stores its
+        // integer click count on the wrapper element that dispatches `input`.
+        const holder = b.firstElementChild;
+        return holder && holder.value !== undefined ? holder.value : 0;
+      }
+      else if (t === "checkbox") return inp.checked;
       else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
-        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
-      else v = inp.value;
-      vals[b.getAttribute("def")] = v;
+        return Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else if (inp instanceof HTMLSelectElement && inp.multiple)
+        return Array.from(inp.selectedOptions, function (o) { return o.value; });
+      return inp.value;
+      }
+      // Wrapper widgets such as PlutoUI.confirm expose their logical value on
+      // the wrapper.  Their descendant submit button is UI chrome, not a second
+      // field; flattening both controls produced [1, ""] and eventually tried
+      // to decode "1," as a Julia integer.  Prefer the wrapper contract whenever
+      // it exists.  Otherwise PlutoUI.combine is represented by its ordered
+      // child inputs and the bridge maps that array to the struct fields.
+      const holderIsInput = holder && holder.matches("input,select,textarea");
+      vals[b.getAttribute("def")] = holder && !holderIsInput && holder.value !== undefined
+        ? holder.value
+        : (valueInputs.length === 1 ? inputValue(valueInputs[0]) : valueInputs.map(inputValue));
     });
     return vals;
   }
@@ -1840,7 +2190,14 @@ end</code></pre></div>
   }
   document.addEventListener("input", function (e) {
     if (e.target.closest && e.target.closest("bond[def]")) rerender();
-  });
+  }, true);
+  // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
+  // stops the click at the button. Capture the click, then rerender after the
+  // widget's target-phase handler increments the wrapper's numeric value.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest('bond[def] input[type="button"]'))
+      setTimeout(rerender, 0);
+  }, true);
   (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
 })();
 </script>
@@ -1860,8 +2217,8 @@ end</code></pre></div>
 </script>
 
 <script type="module">
-import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
-import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1.2.0";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1.2.3";
 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 function hl(code) {
   const tree = parser.parse(code); let out = "", pos = 0;

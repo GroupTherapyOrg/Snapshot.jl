@@ -15,6 +15,10 @@ function Layout(content)
         # npm-built Tailwind+DaisyUI stylesheet (Therapy tailwind=false), served via the
         # assets/ staticfiles route (base-path aware, works dev + GH Pages build).
         RawHtml("""<link rel="stylesheet" href="$(base)/assets/styles.css">"""),
+        # Snapshot fragments remain scoped components; document-global resources
+        # belong in the host and are loaded once rather than once per notebook.
+        RawHtml("""<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>"""),
         # theme init (before paint): ?theme= → saved 'snap-theme' → system prefers-dark → light
         RawHtml("""<script>(function(){try{var u=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('snap-theme');var dk=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var t=u||s||(dk?'dark':'light');document.documentElement.setAttribute('data-theme',t);if(u){try{localStorage.setItem('snap-theme',u)}catch(e){}}if(window.matchMedia){var mq=window.matchMedia('(prefers-color-scheme: dark)');var f=function(e){if(!localStorage.getItem('snap-theme'))document.documentElement.setAttribute('data-theme',e.matches?'dark':'light');};if(mq.addEventListener)mq.addEventListener('change',f);}}catch(e){}})();</script>"""),
         RawHtml("""<link rel="preconnect" href="https://fonts.googleapis.com">

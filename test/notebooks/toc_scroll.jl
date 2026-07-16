@@ -6,9 +6,16 @@ using InteractiveUtils
 
 # ╔═╡ c1000001-0000-4000-8000-000000000001
 begin
-    TableOfContents() = nothing
-    TableOfContents()
+    # Semantic stand-in for PlutoUI.TableOfContents output. Snapshot must detect
+    # the rendered widget, not the spelling of a function in source code.
+    Base.HTML("""<nav class="plutoui-toc aside indent"><header>Table of Contents</header></nav>""")
 end
+
+# ╔═╡ c1000007-0000-4000-8000-000000000001
+md"""
+The text `TableOfContents` is ordinary notebook content and must not make this
+cell disappear from an export.
+"""
 
 # ╔═╡ c1000002-0000-4000-8000-000000000001
 md"""
@@ -55,6 +62,7 @@ project_hash = "71853c6197a6a7f222db0f1978c7cb232b87c5ee"
 
 # ╔═╡ Cell order:
 # ╠═c1000001-0000-4000-8000-000000000001
+# ╟─c1000007-0000-4000-8000-000000000001
 # ╟─c1000002-0000-4000-8000-000000000001
 # ╟─c1000003-0000-4000-8000-000000000001
 # ╟─c1000005-0000-4000-8000-000000000001

@@ -4,7 +4,7 @@
   "description": "Tailwind v4 + DaisyUI build for the Snapshot.jl docs styles.css",
   "devDependencies": {
     "@tailwindcss/cli": "^4.1",
-    "daisyui": "^5.0.0"
+    "daisyui": "5.6.2"
   },
   "scripts": {
     "css": "tailwindcss -i input.css -o assets/styles.css --minify",

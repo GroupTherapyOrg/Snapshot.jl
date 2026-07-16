@@ -7,13 +7,13 @@
    SINGLE SOURCE OF TRUTH, used twice:
      - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
        into every export (standalone + fragment), because the CDN
-       daisyui@5/themes.css only ships the built-in themes.
+       pinned DaisyUI themes sheet only ships the built-in themes.
      - docs/input.css @imports it into the site stylesheet.
 
    Selector shape matters: `:root[data-theme=…]` is specificity (0,2,0) so the
    html-level attribute beats the bare `:root { …light tokens… }` block that the
-   CDN daisyui@5/themes.css (loaded by embedded notebook fragments, possibly
-   AFTER this sheet) declares at (0,1,0). The bare `[data-theme=…]` alternative
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
    matches theme swatches / .snap-notebook divs, where inheritance proximity
    already wins. */
 

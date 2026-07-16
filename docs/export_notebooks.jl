@@ -18,6 +18,7 @@
 using Snapshot
 import Pluto
 import JSON
+import Pkg
 using SHA: sha256, bytes2hex
 
 const CORPUS = joinpath(@__DIR__, "..", "test", "notebooks", "featured")
@@ -27,6 +28,28 @@ mkpath(OUT)
 
 pattern = isempty(ARGS) ? "" : ARGS[1]
 force = get(ENV, "FORCE_NB_REBUILD", "0") == "1"
+
+# A notebook-only cache key leaves committed exports stale whenever Snapshot's
+# renderer, Pluto CSS bridge, or theme tokens change. Bind the cache to every
+# presentation input that materially shapes generated HTML/CSS; package/compiler
+# changes flow through Project.toml plus the resolved direct-dependency fingerprint.
+const EXPORTER_INPUTS = [
+    joinpath(@__DIR__, "..", "Project.toml"),
+    joinpath(@__DIR__, "..", "src", "exporter.jl"),
+    joinpath(@__DIR__, "..", "src", "pluto_css.jl"),
+    joinpath(@__DIR__, "..", "assets", "pluto-base.css"),
+    joinpath(@__DIR__, "..", "assets", "classic-themes.css"),
+]
+const DIRECT_DEPENDENCY_FINGERPRINT = join(sort([
+    string(info.name, '=', info.version, ':', something(info.tree_hash, info.git_revision, "path"))
+    for info in values(Pkg.dependencies()) if info.is_direct_dep
+]), '\n')
+const EXPORTER_HASH = bytes2hex(sha256(string(
+    join((read(p, String) for p in EXPORTER_INPUTS), "\0"),
+    '\0', DIRECT_DEPENDENCY_FINGERPRINT,
+)))
+export_cache_hash(src::AbstractString) =
+    bytes2hex(sha256(string(src, '\0', EXPORTER_HASH)))
 
 old_index = isfile(INDEX) ? Dict(e["slug"] => e for e in JSON.parsefile(INDEX)) : Dict()
 
@@ -86,7 +109,7 @@ entries = [old_index[s] for s in all_slugs
 for (i, (path, slug)) in enumerate(jobs)
     f = basename(path)
     src = read(path, String)
-    hash = bytes2hex(sha256(src))
+    hash = export_cache_hash(src)
     html_name = slug * ".html"
 
     # exports are named after the source file — stage under the slug name
@@ -130,7 +153,8 @@ for (i, (path, slug)) in enumerate(jobs)
         # fragment=true → also write <slug>.fragment.html (native-inline component);
         # assets_base placeholder is rewritten to "<base>/notebooks-static" at serve.
         Snapshot.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false,
-            fragment=true, assets_base="__PI_ASSETS_BASE__")
+            fragment=true, fragment_dependencies=:host,
+            assets_base="__PI_ASSETS_BASE__")
         isfile(joinpath(OUT, html_name)) || error("export produced no HTML (notebook failed to run?)")
         # island (group) + accurate cell-level counts from the export's report/coverage
         apply_counts!(entry, read_counts(slug))
@@ -147,6 +171,18 @@ for (i, (path, slug)) in enumerate(jobs)
 end
 
 write(INDEX, JSON.json(entries, 2))
+if isempty(pattern)
+    produced_slugs = [String(e["slug"]) for e in entries]
+    length(produced_slugs) == length(all_slugs) ||
+        error("incomplete docs corpus: produced $(length(produced_slugs)) of $(length(all_slugs)) notebooks")
+    length(unique(produced_slugs)) == length(produced_slugs) ||
+        error("duplicate notebook slugs in docs index")
+    Set(produced_slugs) == Set(all_slugs) ||
+        error("docs index slug set differs from notebook_jobs()")
+    failed_slugs = [String(e["slug"]) for e in entries if get(e, "status", "") == "failed"]
+    isempty(failed_slugs) ||
+        error("docs corpus contains failed exports: $(join(failed_slugs, ", "))")
+end
 n_int = count(e -> e["status"] == "interactive", entries)
 n_static = count(e -> e["status"] == "static", entries)
 n_fail = count(e -> e["status"] == "failed", entries)

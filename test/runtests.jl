@@ -23,6 +23,8 @@ end
     root = dirname(@__DIR__)
     themes = read(joinpath(root, "assets", "classic-themes.css"), String)
     exporter = read(joinpath(root, "src", "exporter.jl"), String)
+    docs_exporter = read(joinpath(root, "docs", "export_notebooks.jl"), String)
+    docs_workflow = read(joinpath(root, ".github", "workflows", "docs.yml"), String)
     @test occursin(":root[data-theme=\"fun-light\"]", themes)
     @test occursin(":root[data-theme=\"fun-dark\"]", themes)
     @test occursin("fun-light", exporter)
@@ -37,6 +39,26 @@ end
     @test occursin("restoreCollectionHash", exporter)
     @test occursin("window.addEventListener(\"hashchange\"", exporter)
     @test occursin("prefers-reduced-motion: reduce", exporter)
+    @test occursin("--snapshot-toc-top", exporter)
+    @test occursin("--snapshot-toc-max-height", exporter)
+    @test occursin("daisyui@5.6.2/themes.css", exporter)
+    @test occursin("@plutojl/lezer-julia@1.2.0", exporter)
+    @test occursin("@lezer/highlight@1.2.3", exporter)
+    @test !occursin("daisyui@5/themes.css", exporter)
+    @test occursin("joinpath(@__DIR__, \"..\", \"Project.toml\")", docs_exporter)
+    @test occursin("DIRECT_DEPENDENCY_FINGERPRINT", docs_exporter)
+    @test occursin("Pkg.dependencies()", docs_exporter)
+    @test occursin("SNAPSHOT_WT_REF: cadb908093efee3b08a065f50930d3337916391d", docs_workflow)
+    @test occursin("rev=ENV[\"SNAPSHOT_WT_REF\"]", docs_workflow)
+end
+
+@testset "generated Pluto styling is current and token-driven" begin
+    committed = read(joinpath(dirname(@__DIR__), "assets", "pluto-output.css"), String)
+    @test committed == Snapshot.PLUTO_OUTPUT_CSS
+    @test occursin("--snapshot-syntax-keyword", committed)
+    @test occursin("var(--snapshot-syntax-keyword)", committed)
+    @test !occursin("#00000010", committed)
+    @test !occursin("rgba(0, 0, 0, 0.05)", committed)
 end
 
 @testset "featured notebook coverage gate" begin
@@ -50,6 +72,9 @@ end
     @test occursin("inputs.committed_exports", workflow)
     @test occursin("needs.build.result == 'success'", workflow)
     exporter = read(joinpath(root, "src", "exporter.jl"), String)
+    docs_exporter = read(joinpath(root, "docs", "export_notebooks.jl"), String)
+    @test occursin("EXPORTER_INPUTS", docs_exporter)
+    @test occursin("export_cache_hash(src)", docs_exporter)
     @test occursin("t === \"button\"", exporter)
     @test occursin("b.firstElementChild", exporter)
     @test occursin("setTimeout(rerender, 0)", exporter)
@@ -89,14 +114,29 @@ session.options.evaluation.workspace_use_distributed = false
 
 @testset "lean error output is concise" begin
     errored = Pluto.SessionActions.open(session, ERROR_OUTPUT; run_async=false)
-    html = Snapshot.generate_therapy_html(errored, mktempdir(), "error_output", nothing)
+    error_out = mktempdir()
+    html = Snapshot.generate_therapy_html(errored, error_out, "error_output", nothing)
+    write(joinpath(error_out, "error_output.html"), html)
     @test occursin("Notebook cell failed", html)
+    @test occursin("<jlerror class=\"snapshot-error\">", html)
+    @test occursin("<div class=\"error-header\"><secret-h1>Notebook cell failed</secret-h1></div>", html)
+    @test occursin("<header translate=\"no\"><p>", html)
+    @test !occursin("<jlerror><header>Notebook cell failed</header><pre>", html)
     @test occursin("short public message", html)
     @test occursin("&lt;script&gt;alert(1)&lt;/script&gt;&amp;", html)
     @test !occursin("<script>alert(1)</script>", html)
     @test !occursin(":stacktrace", lowercase(html))
     @test !occursin("Base_compiler.jl", html)
     @test !occursin("error_output.jl#", html)
+    if HAS_NODE
+        error_e2e = joinpath(@__DIR__, "e2e_error_theme.mjs")
+        error_proc = run(ignorestatus(`node $error_e2e $error_out`))
+        if error_proc.exitcode == 2
+            @test_skip "playwright unavailable"
+        else
+            @test error_proc.exitcode == 0
+        end
+    end
     Pluto.SessionActions.shutdown(session, errored; async=false)
 end
 
@@ -154,13 +194,25 @@ original_state = Pluto.notebook_to_js(notebook)
 connections = bound_variable_connections_graph(session, notebook)
 
 @testset "embedded fragment inherits host theme" begin
-    fragment_html = Snapshot.generate_therapy_html(notebook, mktempdir(),
+    inline_fragment_html = Snapshot.generate_therapy_html(notebook, mktempdir(),
         "demo", nothing; fragment=true)
+    @test occursin("data-snapshot-requires=\"daisyui-themes@5.6.2 katex@0.11.1\"", inline_fragment_html)
+    @test occursin("daisyui@5.6.2/themes.css", inline_fragment_html)
+    @test occursin("katex@0.11.1/dist/katex.min.css", inline_fragment_html)
+    @test occursin("katex@0.11.1/dist/katex.min.js", inline_fragment_html)
+
+    fragment_html = Snapshot.generate_therapy_html(notebook, mktempdir(),
+        "demo", nothing; fragment=true, fragment_dependencies=:host)
     @test occursin("class=\"snap-notebook\"", fragment_html)
+    @test occursin("data-snapshot-requires=\"daisyui-themes@5.6.2 katex@0.11.1\"", fragment_html)
+    @test !occursin("<link rel=\"stylesheet\"", fragment_html)
+    @test !occursin("<script defer src=\"https://cdn.jsdelivr.net/npm/katex", fragment_html)
     @test !occursin("localStorage.getItem('snap-theme')", fragment_html)
     @test occursin(":root[data-theme=\"fun-dark\"] .snap-notebook", fragment_html)
     @test occursin(".snap-notebook[data-theme=\"classic-light\"]", fragment_html)
     @test !occursin("__snapshotThemeObserver", fragment_html)
+    @test_throws ArgumentError Snapshot.generate_therapy_html(notebook, mktempdir(),
+        "demo", nothing; fragment=true, fragment_dependencies=:invalid)
 end
 
 @testset "embedded ToC scrolls only the collection pane" begin
@@ -168,6 +220,7 @@ end
     toc_fragment = Snapshot.generate_therapy_html(toc_notebook, mktempdir(),
         "toc_scroll", nothing; fragment=true)
     @test occursin("class=\"plutoui-toc aside indent toc-embedded\"", toc_fragment)
+    @test occursin("ordinary notebook content", toc_fragment)
     @test occursin("h.closest && h.closest(\".sn-main\")", toc_fragment)
     @test occursin("scroller.scrollTo", toc_fragment)
     @test occursin("hr.top - sr.top - inset", toc_fragment)
@@ -176,6 +229,16 @@ end
     @test occursin("restoreCollectionHash", toc_fragment)
     @test occursin("history.replaceState", toc_fragment)
     Pluto.SessionActions.shutdown(session, toc_notebook; async=false)
+end
+
+@testset "real PlutoUI TableOfContents export is recognized semantically" begin
+    # The featured PlutoUI notebook uses the installed upstream
+    # `PlutoUI.TableOfContents()`. Its committed export is a real integration
+    # fixture: Snapshot must suppress the captured widget and emit exactly one
+    # collection-aware ToC of its own.
+    featured_fragment = read(joinpath(dirname(@__DIR__), "docs",
+        "notebooks-static", "PlutoUI.jl.fragment.html"), String)
+    @test count("<nav class=\"plutoui-toc aside indent toc-embedded\"", featured_fragment) == 1
 end
 
 @testset "extraction" begin

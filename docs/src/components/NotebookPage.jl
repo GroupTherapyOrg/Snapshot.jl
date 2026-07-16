@@ -1,6 +1,7 @@
 # NotebookPage — renders an exported notebook as a NATIVE INLINE Therapy component
-# (no iframe). It reads the committed <slug>.fragment.html — a self-contained
-# <div class="snap-notebook"> with @scope-isolated CSS + the wasm-island shim/wiring —
+# (no iframe). It reads the committed <slug>.fragment.html — a scoped
+# <div class="snap-notebook"> with its wasm-island shim/wiring. Layout owns the
+# pinned document-global DaisyUI/KaTeX resources once for every fragment. It
 # rewrites the asset-base placeholder for the docs base_path, and injects it as REAL
 # DOM in the page. The notebook inherits the site's DaisyUI theme and flows into the
 # page (no card/box). Reached via a FULL page load (cards use target=_self), so the

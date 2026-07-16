@@ -149,7 +149,10 @@
             .then((r) => r.json())
             .then((m) => {
                 console.log(`🏝️ islands manifest: ${m.groups.length} group(s)`, m)
-                m.groups.forEach((g) => (g._instance = null))
+                m.groups.forEach((g) => {
+                    g._instance = null
+                    g._render_tail = Promise.resolve()
+                })
                 return m
             })
         return manifest_promise
@@ -188,7 +191,8 @@
                     },
                     set: (_, prop, val) => { const c = group._ctx; if (c) c[prop] = val; return true },
                 })
-                const factory = new Function(group.canvas_glue + "\nreturn { canvas2d_imports, canvas2d_load_fonts };")()
+                const factory = new Function(group.canvas_glue + "\nreturn { canvas2d_imports, canvas2d_load_fonts, create_back_buffer: typeof canvas2d_create_back_buffer === 'function' ? canvas2d_create_back_buffer : null, present_frame: typeof canvas2d_present_frame === 'function' ? canvas2d_present_frame : null };")()
+                group._canvas_api = factory
                 canvas2d = factory.canvas2d_imports(ctx_proxy)
                 try {
                     // fonts are inline (group.canvas_fonts) OR externalized to a
@@ -215,7 +219,7 @@
                 return new TextDecoder().decode(bytes)
             }
             console.log(`🏝️ island loaded: ${group.wasm} [${group.bonds.map((b) => b.name).join(", ")}]`)
-            return { ex, read_str }
+            return { ex, read_str, canvas_api: group._canvas_api ?? null }
         })()
         return group._instance
     }
@@ -436,8 +440,12 @@ const pluto_tree_body = (d, t, depth = 0) => {
     // Run a group's cells with bond values from `get_raw(name)` and return
     // [{id, kind, body}]. Used by BOTH the Pluto staterequest path and the lean
     // Therapy __pi_renderAll path → one marshalling implementation, no drift.
-    const render_group_cells = async (group, get_raw) => {
-        const { ex, read_str } = await load_group(group)
+    const render_group_cells = (group, get_raw) => {
+      // The wasm instance's canvas imports forward through group._ctx. Serialize
+      // every invocation (lean page and legacy staterequest alike) so overlapping
+      // input events can never redirect one render into another frame's context.
+      const run = group._render_tail.catch(() => {}).then(async () => {
+        const { ex, read_str, canvas_api } = await load_group(group)
         // args in manifest order; untouched bonds default to initial values.
         // transform tables map raw widget values (what the client sends) to what
         // the notebook actually sees (transform_value); rebuilt INSIDE wasm.
@@ -450,15 +458,21 @@ const pluto_tree_body = (d, t, depth = 0) => {
             }
             return build(ex, b.desc, value_tree(b.desc, v ?? b.initial))
         })
-        // canvas cells render into an offscreen canvas → data-URL <img>
+        // Render a complete frame into a detached back buffer. Presentation is a
+        // separate operation: lean pages copy this buffer into a permanently
+        // mounted canvas on the next animation frame. No PNG encode or DOM swap.
         const render_canvas = (cell) => {
             const w = Number(cell.desc?.w ?? 640), h = Number(cell.desc?.h ?? 480)
-            const cv = document.createElement("canvas")
+            const cv = canvas_api?.create_back_buffer
+                ? canvas_api.create_back_buffer(w, h)
+                : typeof OffscreenCanvas === "function"
+                  ? new OffscreenCanvas(w, h)
+                  : document.createElement("canvas")
             cv.width = w
             cv.height = h
             group._ctx = cv.getContext("2d")
             try { ex[cell.fn](...args) } finally { group._ctx = null }
-            return `<img class="wasmmakie-island" width="${w}" height="${h}" src="${cv.toDataURL()}">`
+            return { frame: cv, w, h, present_frame: canvas_api?.present_frame ?? null }
         }
         return group.cells.map((cell) => {
             if (cell.kind === "tree") {
@@ -469,9 +483,25 @@ const pluto_tree_body = (d, t, depth = 0) => {
                          body: pluto_tree_body(cell.desc, walked),
                          html: tree_to_html(walked) }
             }
-            const s = cell.kind === "canvas" ? render_canvas(cell) : read_str(ex[cell.fn](...args))
+            if (cell.kind === "canvas")
+                return { id: cell.id, kind: cell.kind, ...render_canvas(cell) }
+            const s = read_str(ex[cell.fn](...args))
             return { id: cell.id, kind: cell.kind, body: s, html: s }
         })
+      })
+      group._render_tail = run.then(() => undefined, () => undefined)
+      return run
+    }
+
+    // The classic Pluto staterequest protocol can only carry serialized HTML.
+    // Keep that compatibility path isolated; the lean/static runtime below never
+    // encodes frames and therefore never replaces its visible canvas.
+    const legacy_canvas_html = (cell) => {
+        const cv = document.createElement("canvas")
+        cv.width = cell.w
+        cv.height = cell.h
+        cv.getContext("2d").drawImage(cell.frame, 0, 0)
+        return `<img class="wasmmakie-island" width="${cell.w}" height="${cell.h}" src="${cv.toDataURL()}">`
     }
 
     const handle_staterequest = async (bonds_u8, passthrough) => {
@@ -492,8 +522,9 @@ const pluto_tree_body = (d, t, depth = 0) => {
         // (which CellOutput uses to invalidate) + persist_js_state + logs + runtime.
         const patches = []
         for (const cell of cells) {
+            const body = cell.kind === "canvas" ? legacy_canvas_html(cell) : cell.body
             patches.push({ op: "replace", path: ["cell_results", cell.id, "logs"], value: [] })
-            patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "body"], value: cell.body })
+            patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "body"], value: body })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "persist_js_state"], value: true })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "output", "last_run_timestamp"], value: Date.now() / 1000 })
             patches.push({ op: "replace", path: ["cell_results", cell.id, "runtime"], value: 1000 })
@@ -502,35 +533,120 @@ const pluto_tree_body = (d, t, depth = 0) => {
     }
 
     // ─── lean Therapy runtime: drive islands directly from HTML inputs ───
-    // The lean exported page (no Pluto frontend, no fetch interception) calls
-    // window.__pi_renderAll({bondName: rawValue}) on every input change; we run
-    // EVERY island group and patch each cell's mount div (#out-<cellId>).
-    window.__pi_renderAll = async (bondValues) => {
-        const m = await load_manifest()
-        for (const group of m.groups) {
-            let cells
-            try { cells = await render_group_cells(group, (name) => bondValues[name]) }
-            catch (e) {
-                console.warn("🏝️ island render failed:", e)
-                // LOUD, never silent: a render that THROWS at runtime gets the SAME
-                // Pluto !!! warning admonition as a compile-time fallback, on each of
-                // the group's cells — a broken island is always visible, not a blank.
-                for (const cell of group.cells ?? []) {
-                    const mount = document.getElementById("out-" + cell.id)
-                    if (mount && !mount.querySelector("." + WARN_CLASS))
-                        mount.prepend(warning_node({
-                            id: null,
-                            reasons: [],
-                            diag: { kind: "runtime", construct: "the compiled island threw while rendering in your browser: " + ((e && e.message) || String(e)) },
-                        }, null))
-                }
-                continue
-            }
-            for (const c of cells) {
-                const mount = document.getElementById("out-" + c.id)
-                if (mount) mount.innerHTML = c.html ?? c.body
-            }
+    // ─── lean-page frame scheduler ───
+    // One stable visible canvas per cell, detached back buffers, and one atomic
+    // presentation phase per browser frame. Rapid slider events coalesce to the
+    // newest complete bond snapshot; obsolete renders are discarded, never shown.
+    let lean_seq = 0
+    let lean_latest = {}
+    let lean_running = false
+    let lean_scheduled = false
+    let lean_waiters = []
+    const on_animation_frame = (f) => new Promise((resolve) =>
+        requestAnimationFrame(() => { f(); resolve() }))
+
+    const present_canvas = (cell, mount, seq) => {
+        let front = mount.querySelector("canvas.wasmmakie-island, canvas")
+        if (!front) {
+            front = document.createElement("canvas")
+            mount.replaceChildren(front)
         }
+        front.classList.add("wasmmakie-island")
+        if (front.width !== cell.w) front.width = cell.w
+        if (front.height !== cell.h) front.height = cell.h
+        if (cell.present_frame) {
+            cell.present_frame(front, cell.frame, cell.w, cell.h, seq)
+        } else {
+            const ctx = front.getContext("2d")
+            ctx.setTransform(1, 0, 0, 1, 0, 0)
+            ctx.clearRect(0, 0, cell.w, cell.h)
+            ctx.drawImage(cell.frame, 0, 0)
+            front.dataset.wasmmakieDone = "1"
+            front.dataset.wasmmakieFrame = String(seq)
+            // Older exported notebooks may embed WasmMakie glue from before
+            // canvas2d_present_frame existed. The compatibility presenter must
+            // expose the same observable commit contract as the canonical
+            // provider so coalescing remains measurable and testable.
+            front.dataset.wasmmakiePresentation = String(
+                Number(front.dataset.wasmmakiePresentation || 0) + 1)
+        }
+    }
+
+    const show_runtime_failure = (group, e) => {
+        console.warn("🏝️ island render failed:", e)
+        for (const cell of group.cells ?? []) {
+            const mount = document.getElementById("out-" + cell.id)
+            if (mount && !mount.querySelector("." + WARN_CLASS))
+                mount.prepend(warning_node({
+                    id: null,
+                    reasons: [],
+                    diag: { kind: "runtime", construct: "the compiled island threw while rendering in your browser: " + ((e && e.message) || String(e)) },
+                }, null))
+        }
+    }
+
+    const schedule_lean_render = () => {
+        if (lean_scheduled || lean_running) return
+        lean_scheduled = true
+        requestAnimationFrame(run_lean_render)
+    }
+
+    const run_lean_render = async () => {
+        lean_scheduled = false
+        if (lean_running) return
+        lean_running = true
+        const seq = lean_seq
+        const values = lean_latest
+        const rendered = []
+        const failures = []
+        let fatal = null
+        try {
+            const m = await load_manifest()
+            for (const group of m.groups) {
+                try {
+                    rendered.push(...await render_group_cells(group, (name) => values[name]))
+                } catch (e) {
+                    failures.push([group, e])
+                }
+            }
+            // A newer input arrived while wasm was drawing. Keep the old visible
+            // frame intact and discard this obsolete back buffer wholesale.
+            if (seq === lean_seq) {
+                await on_animation_frame(() => {
+                    for (const c of rendered) {
+                        const mount = document.getElementById("out-" + c.id)
+                        if (!mount) continue
+                        if (c.kind === "canvas") present_canvas(c, mount, seq)
+                        else mount.innerHTML = c.html ?? c.body
+                    }
+                    for (const [group, e] of failures) show_runtime_failure(group, e)
+                })
+                const done = lean_waiters.filter((w) => w.seq <= seq)
+                lean_waiters = lean_waiters.filter((w) => w.seq > seq)
+                done.forEach((w) => w.resolve())
+            }
+        } catch (e) {
+            fatal = e
+            console.warn("🏝️ island scheduler failed:", e)
+        } finally {
+            lean_running = false
+            if (fatal && seq === lean_seq) {
+                const done = lean_waiters.filter((w) => w.seq <= seq)
+                lean_waiters = lean_waiters.filter((w) => w.seq > seq)
+                done.forEach((w) => w.reject(fatal))
+            } else if (seq !== lean_seq) schedule_lean_render()
+        }
+    }
+
+    // The lean exported page calls this with a complete bond snapshot. The
+    // returned promise resolves when that snapshot—or a newer superseding one—
+    // has been presented, preserving the existing host contract.
+    window.__pi_renderAll = (bondValues) => {
+        lean_latest = bondValues
+        const seq = ++lean_seq
+        const promise = new Promise((resolve, reject) => lean_waiters.push({ seq, resolve, reject }))
+        schedule_lean_render()
+        return promise
     }
 
     window.fetch = (resource, options) => {
@@ -554,6 +670,7 @@ const pluto_tree_body = (d, t, depth = 0) => {
     // (hybrid setups with a live/precompute backend disable it — those cells
     // ARE interactive, just not via wasm).
     const WARN_CLASS = "pss-island-fallback-warning"
+    const DISABLED_BOND_CLASS = "pss-island-fallback-bond"
 
     // Token-themed card styles: DaisyUI --color-* variables (shipped by the export
     // head) with plain fallbacks so the classic Pluto export renders fine too.
@@ -578,18 +695,30 @@ const pluto_tree_body = (d, t, depth = 0) => {
     .${WARN_CLASS} details{margin-top:.4rem}
     .${WARN_CLASS} summary{cursor:pointer;font-size:.9em;opacity:.8}
     .${WARN_CLASS} pre{font-size:.78em;white-space:pre-wrap;overflow-x:auto;opacity:.9;margin:.3rem 0 0}`
+    const BOND_CSS = `
+    bond.${DISABLED_BOND_CLASS}{opacity:.72;pointer-events:none;user-select:none}
+    bond.${DISABLED_BOND_CLASS} input,
+    bond.${DISABLED_BOND_CLASS} select,
+    bond.${DISABLED_BOND_CLASS} textarea,
+    bond.${DISABLED_BOND_CLASS} button{cursor:not-allowed}
+    .pss-island-fallback-bond-status{display:inline-block;
+      margin-left:.55rem;padding:.12rem .45rem;border-radius:999px;font-size:.72rem;font-weight:700;
+      letter-spacing:.02em;color:var(--color-base-content,#1f2937);
+      background:color-mix(in srgb,var(--color-warning,#f59e0b) 14%,var(--color-base-100,#fff));
+      border:1px solid color-mix(in srgb,var(--color-warning,#f59e0b) 38%,transparent)}`
     let card_css_injected = false
     const ensure_card_css = () => {
         if (card_css_injected) return
         const st = document.createElement("style")
-        st.textContent = CARD_CSS
+        st.textContent = CARD_CSS + BOND_CSS
         document.head.append(st)
         card_css_injected = true
     }
 
-    // strip PI's sandbox-module gensym from diagnostic text ("Main.var\"##PlutoIslandCompile#287\".string" → "string")
+    // strip the sandbox-module gensym from diagnostic text ("Main.var\"##SnapshotCompile#287\".string" → "string")
+    // (matches the legacy PlutoIslandCompile name too, so pre-rename exports still clean up)
     const clean_diag_text = (s) =>
-        (s ?? "").replace(/(?:Main\.)?var"##PlutoIslandCompile#\d+"\./g, "")
+        (s ?? "").replace(/(?:Main\.)?var"##(?:Snapshot|PlutoIsland)Compile#\d+"\./g, "")
 
     const KIND_PHRASE = {
         unsupported_method: "a call WasmTarget cannot lower",
@@ -740,9 +869,52 @@ const pluto_tree_body = (d, t, depth = 0) => {
     const decorate = async () => {
         const m = await load_manifest()
         if (!m.fallback_warnings) return
-        const report = await load_report()
-        if (!report) return
+        // Detailed reports are optional production review artifacts. The
+        // manifest carries a privacy-safe bond-only fallback index so static
+        // controls remain honest when report.json is deliberately not shipped.
+        const report = (await load_report()) ?? m.fallback_groups ?? []
+        if (!report.length) return
         for (const group of report) {
+            // A fully-fallback group has no browser recomputation path. Leaving
+            // its widgets enabled is deceptive: the native Pluto control moves,
+            // but every dependent output stays frozen at export time. Disable
+            // the complete group while keeping partial groups usable for the
+            // cells that did compile.
+            if (group.judgement === "fallback") {
+                ensure_card_css()
+                for (const name of group.bonds ?? []) {
+                    for (const bond of document.querySelectorAll("bond[def]")) {
+                        if (bond.getAttribute("def") !== name) continue
+                        const statusId = `pss-fallback-bond-${group.id ?? "group"}-${name}`
+                        bond.classList.add(DISABLED_BOND_CLASS)
+                        bond.inert = true
+                        bond.setAttribute("aria-disabled", "true")
+                        bond.setAttribute("aria-describedby", statusId)
+                        for (const control of bond.querySelectorAll("input,select,textarea,button")) {
+                            control.disabled = true
+                            control.setAttribute("aria-disabled", "true")
+                            control.setAttribute("aria-describedby", statusId)
+                        }
+                        if (!document.getElementById(statusId)) {
+                            const status = document.createElement("span")
+                            status.id = statusId
+                            status.className = "pss-island-fallback-bond-status"
+                            status.setAttribute("role", "status")
+                            // The bond itself is inert and therefore absent from
+                            // the accessibility tree. This sibling is its complete
+                            // accessible replacement; identify the Julia binding
+                            // without echoing a possibly-sensitive input value.
+                            const configured = group.fallback_kind === "configured"
+                            const statusText = configured
+                                ? `@bind ${name} — static in this published export (configured by the publisher)`
+                                : `@bind ${name} — static in this export`
+                            status.setAttribute("aria-label", statusText)
+                            status.textContent = statusText
+                            bond.after(status)
+                        }
+                    }
+                }
+            }
             for (const cell of group.cells ?? []) {
                 if (cell.ok) continue
                 // lean export mount (#out-<id>) first, classic Pluto DOM as fallback —
