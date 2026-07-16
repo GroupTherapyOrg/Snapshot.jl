@@ -14,12 +14,29 @@
 import Pluto: without_pluto_file_extension
 using Base64: base64encode
 
+struct InvalidFallbackBondSelection <: Exception
+    message::String
+end
+Base.showerror(io::IO, e::InvalidFallbackBondSelection) = print(io, e.message)
+
+function _normalize_fallback_bonds(value)::Set{Symbol}
+    values = value isa Union{Symbol,AbstractString} ? (value,) :
+             value isa Union{Tuple,AbstractVector,AbstractSet} ? value :
+             throw(InvalidFallbackBondSelection(
+                 "force_fallback_bonds must be a Symbol/String or a collection of them"))
+    all(v -> v isa Union{Symbol,AbstractString}, values) ||
+        throw(InvalidFallbackBondSelection(
+            "force_fallback_bonds must contain only Symbol/String names"))
+    Set(Symbol(v) for v in values)
+end
+
 """
     generate_wasm_islands(session, notebook, original_state;
                           output_dir, url_path,
                           verify=true, oracle_samples=5,
                           max_wasm_size_per_group=5_000_000,
-                          fallback_warnings=true) -> Union{Nothing,String}
+                          fallback_warnings=true,
+                          force_fallback_bonds=()) -> Union{Nothing,String}
 
 Compile every bond group of a RUNNING notebook to wasm islands (per-cell
 granularity, Node-verified, differential-oracle checked) and write the
@@ -29,6 +46,13 @@ written whenever the notebook has bond groups).
 
 Set `fallback_warnings=false` when a precompute/live slider-server backend
 will serve the non-island groups — they are interactive then, just not wasm.
+
+`force_fallback_bonds` is an advanced publication policy for controls whose
+dependent Julia workload is known to be native-only. Matching one bond forces
+its entire co-dependent group to an honest fallback without extracting that
+group's cell plans or running its compilation, optimization, or oracle. Names are
+validated against the running notebook; stale/unknown names fail the export.
+Ordinary notebooks should leave this empty and retain automatic detection.
 """
 function generate_wasm_islands(
     session::Pluto.ServerSession,
@@ -40,6 +64,7 @@ function generate_wasm_islands(
     oracle_samples::Integer=5,
     max_wasm_size_per_group::Integer=5_000_000,
     fallback_warnings::Bool=true,
+    force_fallback_bonds=(),
     shared_fonts_path::Union{Nothing,AbstractString}=nothing,
     # WasmTarget.optimize level applied to every island: false (off) |
     # true/:size (-Os) | :speed (-O3) | :debug (-O1). Verify + oracle run on the
@@ -53,12 +78,41 @@ function generate_wasm_islands(
     env_dir::Union{Nothing,String}=nothing,
 )::Union{Nothing,String}
     connections = bound_variable_connections_graph(session, notebook)
+    configured = _normalize_fallback_bonds(force_fallback_bonds)
+    components = sort(filter(!isempty, _bond_components(connections));
+                      by=g -> string(sort(g)))
+    known_bonds = Set(Iterators.flatten(components))
+    unknown = sort!(collect(setdiff(configured, known_bonds)); by=string)
+    isempty(unknown) || throw(InvalidFallbackBondSelection(
+        "force_fallback_bonds contains unknown @bind name(s): " *
+        join(string.(unknown), ", ")))
+    isempty(components) && return nothing
+
+    configured_components = [sort(c) for c in components if !isdisjoint(configured, Set(c))]
+    active_components = [sort(c) for c in components if isdisjoint(configured, Set(c))]
+    active_bonds = Set(Iterators.flatten(active_components))
+    active_connections = Dict(
+        n => Symbol[v for v in get(connections, n, Symbol[]) if v in active_bonds]
+        for n in active_bonds)
+
     nb_env_dir = env_dir !== nothing ? env_dir :
         notebook.nbpkg_ctx === nothing ? nothing :
         try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
-    groups = extract_groups(session, notebook; connections, original_state,
-        env_dir=nb_env_dir)
-    isempty(groups) && return nothing
+    extracted = isempty(active_components) ? ExtractedGroup[] :
+        extract_groups(session, notebook; connections=active_connections, original_state,
+            env_dir=nb_env_dir)
+    extracted_by_bonds = Dict(Tuple(g.bond_names) => g for g in extracted)
+    configured_keys = Set(Tuple(c) for c in configured_components)
+    groups = ExtractedGroup[
+        Tuple(sort(c)) in configured_keys ? ExtractedGroup(;
+            bond_names=sort(c), arg_types=DataType[], initial_values=Any[],
+            preamble=Expr[], cell_plans=CellPlan[], ok=false,
+            reasons=["configured fallback (matched " *
+                join(("@bind " * string(n) for n in sort(collect(intersect(configured, Set(c))))), ", ") *
+                "); island inference intentionally skipped"]) :
+            extracted_by_bonds[Tuple(sort(c))]
+        for c in components
+    ]
 
     # original output bodies — String for text mimes, Dict for tree+object
     initial_bodies = Dict{String,Any}()
@@ -75,13 +129,20 @@ function generate_wasm_islands(
     all_islands = CompiledIsland[]   # per-group, shipped or not (state refresh)
     report = []   # the judgement record, one entry per group
     for g in groups
-        island = compile_group(g;
-            env_dir=nb_env_dir,
-            # missing-initial groups: original bodies are missing-tainted and
-            # not reproducible — skip initial-body check, the oracle covers them
-            initial_bodies=g.synthetic_initials ? nothing : initial_bodies,
-            verify_node=verify,
-            optimize)
+        configured_fallback = Tuple(g.bond_names) in configured_keys
+        island = if configured_fallback
+            CompiledIsland(; bond_names=g.bond_names, arg_types=DataType[],
+                initial_values=Any[], bytes=UInt8[], cells=[], ok=false,
+                reasons=g.reasons)
+        else
+            compile_group(g;
+                env_dir=nb_env_dir,
+                # missing-initial groups: original bodies are missing-tainted and
+                # not reproducible — skip initial-body check, the oracle covers them
+                initial_bodies=g.synthetic_initials ? nothing : initial_bodies,
+                verify_node=verify,
+                optimize)
+        end
         if island.ok && length(island.bytes) > max_wasm_size_per_group
             island = CompiledIsland(;
                 bond_names=island.bond_names, arg_types=island.arg_types,
@@ -157,6 +218,7 @@ function generate_wasm_islands(
             "arg_types" => string.(island.arg_types),
             "judgement" => !ship ? "fallback" :
                            any(r -> !r["ok"], cell_records) ? "partial" : "island",
+            "fallback_kind" => configured_fallback ? "configured" : nothing,
             "reasons" => island.reasons,
             "oracle_samples" => oracle === nothing ? 0 : oracle.samples_run,
             "oracle_skipped" => oracle === nothing ? nothing : oracle.skipped_reason,
@@ -265,6 +327,7 @@ function export_notebook(
     verify::Bool=true,
     oracle_samples::Integer=5,
     max_wasm_size_per_group::Integer=5_000_000,
+    force_fallback_bonds=(),
     # WasmTarget.optimize level for every island: false | true/:size | :speed | :debug
     optimize=false,
     baked_state::Bool=true,
@@ -303,8 +366,13 @@ function export_notebook(
                 session, notebook, original_state;
                 output_dir, url_path=basename(notebook_path),
                 verify, oracle_samples, max_wasm_size_per_group, env_dir, optimize,
-                shared_fonts_path)
+                shared_fonts_path, force_fallback_bonds)
         catch e
+            if e isa InvalidFallbackBondSelection
+                Pluto.SessionActions.shutdown(session, notebook; async=false)
+                own_session && @async nothing
+                rethrow()
+            end
             @error "🏝️ island generation failed — exporting static" exception =
                 (e, catch_backtrace())
             nothing

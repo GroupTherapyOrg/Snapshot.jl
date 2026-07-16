@@ -211,6 +211,54 @@ end
     @test poison_coverage["groups"] == Dict(
         "island" => 1, "partial" => 0, "fallback" => 0, "total" => 1)
 
+    # Publisher-declared native-only controls must bypass extraction and
+    # compilation entirely while retaining an honest report + warning shim.
+    configured_out = mktempdir()
+    configured_assets = generate_wasm_islands(session, poison, poison_state;
+        output_dir=configured_out, url_path="import_poison.jl", verify=false,
+        force_fallback_bonds=[:x])
+    @test configured_assets == "import_poison.islands"
+    configured_report = only(JSON.parsefile(joinpath(
+        configured_out, configured_assets, "report.json")))
+    @test configured_report["judgement"] == "fallback"
+    @test configured_report["fallback_kind"] == "configured"
+    @test configured_report["oracle_samples"] == 0
+    @test all(c -> !c["ok"], configured_report["cells"])
+    @test any(r -> occursin("island inference intentionally skipped", r),
+              configured_report["reasons"])
+    configured_manifest = JSON.parsefile(joinpath(
+        configured_out, configured_assets, "islands.json"))
+    @test isempty(configured_manifest["groups"])
+    @test occursin("configured by the publisher",
+        read(joinpath(configured_out, configured_assets, "shim.js"), String))
+
+    invalid_out = mktempdir()
+    @test_throws Snapshot.InvalidFallbackBondSelection generate_wasm_islands(
+        session, poison, poison_state;
+        output_dir=invalid_out, url_path="import_poison.jl", verify=false,
+        force_fallback_bonds=[:renamed_or_missing])
+    @test !ispath(joinpath(invalid_out, "import_poison.islands"))
+    @test_throws Snapshot.InvalidFallbackBondSelection generate_wasm_islands(
+        session, poison, poison_state;
+        output_dir=invalid_out, url_path="import_poison.jl", verify=false,
+        force_fallback_bonds=[1])
+    @test_throws Snapshot.InvalidFallbackBondSelection generate_wasm_islands(
+        session, poison, poison_state;
+        output_dir=invalid_out, url_path="import_poison.jl", verify=false,
+        force_fallback_bonds=42)
+
+    bondless = Pluto.SessionActions.open(session, ERROR_OUTPUT; run_async=false)
+    bondless_state = Pluto.notebook_to_js(bondless)
+    @test_throws Snapshot.InvalidFallbackBondSelection generate_wasm_islands(
+        session, bondless, bondless_state;
+        output_dir=invalid_out, url_path="error_output.jl", verify=false,
+        force_fallback_bonds=[:removed_last_bond])
+    @test_throws Snapshot.InvalidFallbackBondSelection generate_wasm_islands(
+        session, bondless, bondless_state;
+        output_dir=invalid_out, url_path="error_output.jl", verify=false,
+        force_fallback_bonds=42)
+    Pluto.SessionActions.shutdown(session, bondless)
+
     # The same filtered preamble must preserve existing per-cell honesty: an
     # independently unsupported sibling is recorded as a partial island rather
     # than letting the unrelated failed import collapse the whole group.
@@ -701,6 +749,40 @@ if HAS_NODE
         @test by_bonds["z"]["judgement"] == "island"
         @test all(c -> c["ok"], by_bonds["z"]["cells"])
 
+        mixed_out = mktempdir()
+        mixed_name = generate_wasm_islands(session, nb2, st2;
+            output_dir=mixed_out, url_path="two_groups.jl",
+            force_fallback_bonds=["x"])
+        mixed_report = JSON.parsefile(joinpath(mixed_out, mixed_name, "report.json"))
+        mixed_by_bonds = Dict(first(r["bonds"]) => r for r in mixed_report)
+        @test mixed_by_bonds["x"]["judgement"] == "fallback"
+        @test mixed_by_bonds["x"]["fallback_kind"] == "configured"
+        @test mixed_by_bonds["z"]["judgement"] == "island"
+        mixed_manifest = JSON.parsefile(joinpath(mixed_out, mixed_name, "islands.json"))
+        @test length(mixed_manifest["groups"]) == 1
+        @test only(mixed_manifest["groups"])["bonds"][1]["name"] == "z"
+
+        # Connected groups are atomic: selecting one bond must never leave its
+        # co-dependent sibling falsely live.
+        connected_path = joinpath(mktempdir(), "connected_groups.jl")
+        write(connected_path, replace(read(TWO_GROUPS, String),
+            "collect(1:z)" => "(collect(1:z), x + z)"))
+        connected_nb = Pluto.SessionActions.open(session, connected_path; run_async=false)
+        connected_state = Pluto.notebook_to_js(connected_nb)
+        connected_out = mktempdir()
+        connected_name = generate_wasm_islands(session, connected_nb, connected_state;
+            output_dir=connected_out, url_path="connected_groups.jl",
+            verify=false, force_fallback_bonds=[:x])
+        connected_report = JSON.parsefile(joinpath(
+            connected_out, connected_name, "report.json"))
+        @test length(connected_report) == 1
+        @test Set(only(connected_report)["bonds"]) == Set(["x", "z"])
+        @test only(connected_report)["judgement"] == "fallback"
+        @test only(connected_report)["fallback_kind"] == "configured"
+        @test isempty(JSON.parsefile(joinpath(
+            connected_out, connected_name, "islands.json"))["groups"])
+        Pluto.SessionActions.shutdown(session, connected_nb; async=false)
+
         manifest = JSON.parsefile(joinpath(assets, "islands.json"))
         @test length(manifest["groups"]) == 2
         tree_cells = [c for g in manifest["groups"] for c in g["cells"] if c["kind"] == "tree"]
@@ -723,6 +805,15 @@ if HAS_NODE
 
     @testset "export_notebook (self-contained)" begin
         out = mktempdir()
+        invalid_out = mktempdir()
+        @test_throws Snapshot.InvalidFallbackBondSelection export_notebook(
+            TWO_GROUPS; output_dir=invalid_out, session,
+            force_fallback_bonds=[:stale_publisher_config])
+        @test_throws Snapshot.InvalidFallbackBondSelection export_notebook(
+            ERROR_OUTPUT; output_dir=invalid_out, session,
+            force_fallback_bonds=[:removed_last_bond])
+        @test isempty(readdir(invalid_out))
+
         html_path = export_notebook(DEMO; output_dir=out, session)
         @test isfile(html_path)
         html = read(html_path, String)
