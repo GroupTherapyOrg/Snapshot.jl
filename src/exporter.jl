@@ -681,6 +681,52 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
       // ── scroll-spy: PlutoUI's two-observer "topmost header in upper half" rule ──
       var highlighted = new Set();
       var lastClickTime = { current: 0 };
+      var pendingHash = location.hash ? location.hash.slice(1) : "";
+      var hashRestoreToken = 0;
+      var hashRestoreCancelled = false;
+      function decodedHash(raw) {
+        try { return decodeURIComponent(raw); } catch (_) { return raw; }
+      }
+      function scrollHeading(h, behavior) {
+        // Collections put the notebook inside `.sn-main`, its own scroll pane.
+        // `scrollIntoView()` also scrolls overflow:hidden ancestors such as
+        // `.sn-body`, which nudges the entire notebook/sidebar shell. Move only
+        // the real notebook scroller and restore the shell to its fixed origin.
+        var scroller = h.closest && h.closest(".sn-main");
+        if (scroller) {
+          var shell = scroller.closest && scroller.closest(".sn-body");
+          if (shell) shell.scrollTop = 0;
+          var hr = h.getBoundingClientRect();
+          var sr = scroller.getBoundingClientRect();
+          var inset = 24;
+          var top = scroller.scrollTop + hr.top - sr.top - inset;
+          scroller.scrollTo({ top: Math.max(0, top), behavior: behavior });
+        } else {
+          h.scrollIntoView({ behavior: behavior, block: "start" });
+        }
+      }
+      function restoreCollectionHash(heads) {
+        if (!pendingHash) return;
+        var hashId = decodedHash(pendingHash);
+        var target = heads.find(function (h) { return h.id === hashId; });
+        if (!target || !(target.closest && target.closest(".sn-main"))) return;
+        pendingHash = "";
+        var token = ++hashRestoreToken;
+        var apply = function () {
+          if (token !== hashRestoreToken || hashRestoreCancelled) return;
+          scrollHeading(target, "auto");
+        };
+        var afterLoad = function () {
+          // The first pass repairs the browser's deferred native hash scroll.
+          // Two bounded rechecks absorb late font/island layout without
+          // continuing to fight a visitor who starts scrolling.
+          [0, 150, 900].forEach(function (ms) {
+            setTimeout(function () { requestAnimationFrame(apply); }, ms);
+          });
+        };
+        if (document.readyState === "complete") afterLoad();
+        else window.addEventListener("load", afterLoad, { once: true });
+      }
       function intersectionCallback(ixs) {
         var onTop = ixs.filter(function (ix) {
           return ix.intersectionRatio > 0 && ix.intersectionRect.y < ix.rootBounds.height / 2;
@@ -722,7 +768,9 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
             e.preventDefault();
             try { history.replaceState(null, "", a.getAttribute("href")); } catch (_) {}
             lastClickTime.current = Date.now();
-            h.scrollIntoView({ behavior: "smooth", block: "start" });
+            var reduced = window.matchMedia &&
+              window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            scrollHeading(h, reduced ? "auto" : "smooth");
           });
           var row = document.createElement("div");
           row.className = "toc-row " + lvl + " after-" + last;
@@ -733,6 +781,11 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
           last = lvl;
         });
         section.replaceChildren(frag);
+        // A direct `.../#heading` load is handled natively before this script.
+        // In collections that can scroll `.sn-body`; route it back through the
+        // safe pane-only path. If an island creates the heading later,
+        // `pendingHash` deliberately survives until a later render finds it.
+        restoreCollectionHash(heads);
       }
 
       // toggle collapse on the header icons (PlutoUI: any click within a .toc-toggle)
@@ -754,6 +807,21 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         t.addEventListener("click", function () { nav.__pl_user_toggled = true; });
       });
       ["resize"].forEach(function (ev) { window.addEventListener(ev, matchListener); });
+      ["wheel", "touchstart"].forEach(function (ev) {
+        window.addEventListener(ev, function () {
+          hashRestoreCancelled = true; ++hashRestoreToken;
+        }, { passive: true });
+      });
+      window.addEventListener("keydown", function (e) {
+        if (["ArrowDown","ArrowUp","PageDown","PageUp","Home","End"," "].indexOf(e.key) >= 0) {
+          hashRestoreCancelled = true; ++hashRestoreToken;
+        }
+      });
+      window.addEventListener("hashchange", function () {
+        pendingHash = location.hash ? location.hash.slice(1) : "";
+        hashRestoreCancelled = false;
+        restoreCollectionHash(getHeaders());
+      });
 
       render();
       // reactive islands mount their output after first paint — rebuild a few times
