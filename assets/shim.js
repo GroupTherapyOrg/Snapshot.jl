@@ -780,8 +780,11 @@
     const decorate = async () => {
         const m = await load_manifest()
         if (!m.fallback_warnings) return
-        const report = await load_report()
-        if (!report) return
+        // Detailed reports are optional production review artifacts. The
+        // manifest carries a privacy-safe bond-only fallback index so static
+        // controls remain honest when report.json is deliberately not shipped.
+        const report = (await load_report()) ?? m.fallback_groups ?? []
+        if (!report.length) return
         for (const group of report) {
             // A fully-fallback group has no browser recomputation path. Leaving
             // its widgets enabled is deceptive: the native Pluto control moves,

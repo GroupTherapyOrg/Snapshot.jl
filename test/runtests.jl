@@ -229,6 +229,9 @@ end
     configured_manifest = JSON.parsefile(joinpath(
         configured_out, configured_assets, "islands.json"))
     @test isempty(configured_manifest["groups"])
+    @test configured_manifest["fallback_groups"] == [
+        Dict("bonds" => ["x"], "judgement" => "fallback",
+             "fallback_kind" => "configured")]
     @test occursin("configured by the publisher",
         read(joinpath(configured_out, configured_assets, "shim.js"), String))
 
@@ -346,6 +349,9 @@ end
     browser_out = mktempdir()
     cp(joinpath(required_out, "import_required.islands"),
        joinpath(browser_out, "import_required.islands"))
+    # Production publishers may omit detailed compiler reports. The manifest's
+    # privacy-safe fallback index must still make the control inert.
+    rm(joinpath(browser_out, "import_required.islands", "report.json"))
     cp(joinpath(partial_out, "import_partial.islands"),
        joinpath(browser_out, "import_partial.islands"))
     write(joinpath(browser_out, "import_required.html"),
