@@ -812,7 +812,10 @@
                             // the accessibility tree. This sibling is its complete
                             // accessible replacement; identify the Julia binding
                             // without echoing a possibly-sensitive input value.
-                            const statusText = `@bind ${name} — static in this export`
+                            const configured = group.fallback_kind === "configured"
+                            const statusText = configured
+                                ? `@bind ${name} — static in this published export (configured by the publisher)`
+                                : `@bind ${name} — static in this export`
                             status.setAttribute("aria-label", statusText)
                             status.textContent = statusText
                             bond.after(status)
