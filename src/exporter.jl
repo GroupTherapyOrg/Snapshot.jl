@@ -1055,6 +1055,14 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         # page (no card/box bg) so it reads as native content, not an embed.
         scoped = string(scoped, "\n:scope{background:transparent;max-width:none;padding:0;margin:0}")
         frag_css = string("@scope (.snap-notebook) {\n", scoped, "\n}")
+        # Custom Snapshot themes live in CLASSIC_THEMES_CSS rather than DaisyUI's
+        # CDN sheet. `@scope` intentionally cannot select the host <html>, so
+        # rewrite only those token blocks into narrow, unscoped host→fragment
+        # selectors. Variables then inherit into the scoped notebook without
+        # JavaScript observers, lifecycle cleanup, or a theme-switch flash.
+        frag_theme_css = replace(CLASSIC_THEMES_CSS,
+            r":root\[data-theme=\"([^\"]+)\"\],\s*\[data-theme=\"\1\"\]" =>
+                s":root[data-theme=\"\1\"] .snap-notebook,\n.snap-notebook[data-theme=\"\1\"]")
         frag_shim = islands_dirname === nothing ? "" :
             string("<script src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
         # Embedded fragments inherit the host's theme. Standalone notebook
@@ -1067,7 +1075,7 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5/themes.css\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
             "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
-            "<style>\n", frag_css, "\n</style>\n",
+            "<style>\n", frag_theme_css, "\n", frag_css, "\n</style>\n",
             toc_html(true), "\n",
             "<div class=\"snap-cells\">\n", cells_html, "</div>\n",
             frag_shim, "\n", wiring, "\n", katex_js, "\n", hl_js, "\n", tree_js, "\n",

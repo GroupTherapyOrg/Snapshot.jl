@@ -148,6 +148,9 @@ connections = bound_variable_connections_graph(session, notebook)
         "demo", nothing; fragment=true)
     @test occursin("class=\"snap-notebook\"", fragment_html)
     @test !occursin("localStorage.getItem('snap-theme')", fragment_html)
+    @test occursin(":root[data-theme=\"fun-dark\"] .snap-notebook", fragment_html)
+    @test occursin(".snap-notebook[data-theme=\"classic-light\"]", fragment_html)
+    @test !occursin("__snapshotThemeObserver", fragment_html)
 end
 
 @testset "extraction" begin
