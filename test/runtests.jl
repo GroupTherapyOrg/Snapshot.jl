@@ -72,9 +72,23 @@ end
 
 const DEMO = joinpath(@__DIR__, "notebooks", "demo.jl")          # slider → x^2 → md
 const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island group + fallback group
+const ERROR_OUTPUT = joinpath(@__DIR__, "notebooks", "error_output.jl")
 
 session = Pluto.ServerSession()
 session.options.evaluation.workspace_use_distributed = false
+
+@testset "lean error output is concise" begin
+    errored = Pluto.SessionActions.open(session, ERROR_OUTPUT; run_async=false)
+    html = Snapshot.generate_therapy_html(errored, mktempdir(), "error_output", nothing)
+    @test occursin("Notebook cell failed", html)
+    @test occursin("short public message", html)
+    @test occursin("&lt;script&gt;alert(1)&lt;/script&gt;&amp;", html)
+    @test !occursin("<script>alert(1)</script>", html)
+    @test !occursin(":stacktrace", lowercase(html))
+    @test !occursin("Base_compiler.jl", html)
+    @test !occursin("error_output.jl#", html)
+    Pluto.SessionActions.shutdown(session, errored; async=false)
+end
 
 @testset "import binding syntax" begin
     explicit_names(src) = Snapshot._import_names(session, nothing, Meta.parse(src))

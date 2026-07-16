@@ -438,6 +438,26 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         end
         return _esc(first(string(b), 4000))
     end
+    # Pluto's stacktrace output is a structured Dict. Treating it as an ordinary
+    # tree exposes internal paths and thousands of characters of implementation
+    # detail in the exported document. Keep the failure honest and visible, but
+    # render the concise user-facing message; the full trace remains reproducible
+    # in the original notebook without publishing machine-specific details.
+    function _error_html(body)
+        getkey(d, key, default=nothing) = try
+            haskey(d, key) ? d[key] : haskey(d, string(key)) ? d[string(key)] : default
+        catch
+            default
+        end
+        msg = body isa AbstractDict ?
+              something(getkey(body, :msg), getkey(body, :plain_error), Some("Notebook cell failed")) :
+              string(body)
+        # Pluto messages sometimes arrive with a complete stack trace appended.
+        # Stop at that boundary while retaining multiline exception details above it.
+        summary = first(split(string(msg), "\nStacktrace:"; limit=2))
+        return string("<jlerror><header>Notebook cell failed</header><pre>",
+                      _esc(first(summary, 2000)), "</pre></jlerror>")
+    end
     has_toc = false
     cells_io = IOBuffer()
     for id in notebook.cell_order
@@ -447,6 +467,7 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         code = cell.code
         folded = cell.code_folded
         body = cell.output.body
+        mime = string(cell.output.mime)
         bodystr = body isa AbstractString ? body : ""
         # Pluto runs each cell <script> in an ISOLATED scope with `currentScript` (the
         # script element) and `invalidation` (a cleanup promise) bound as locals. Our
@@ -505,7 +526,8 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         # island REPLACES this on a successful wasm render; if that render throws, the
         # shim drops a loud !!! warning here — the captured value is ALWAYS shown, never
         # a blank. Empty body = Pluto suppressed it (trailing `;`) → no output div.
-        baked = body isa AbstractString ? bodystr : _tree_html(body)
+        baked = mime == "application/vnd.pluto.stacktrace+object" ? _error_html(body) :
+                body isa AbstractString ? bodystr : _tree_html(body)
         # an island RE-RENDERS its output, so baking a LARGE captured body (a big
         # array tree, a base64 image) would only bloat the page as a redundant
         # fallback — keep the base layer only when it's small (tuples, numbers,
