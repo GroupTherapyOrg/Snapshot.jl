@@ -291,6 +291,28 @@ end
         required_out, "import_required.islands", "report.json")))
     @test required_report["judgement"] == "fallback"
     @test all(c -> !c["ok"], required_report["cells"])
+
+    # Browser contract: a fully-fallback group is truly inert and has a real,
+    # accessible status node; the partial sibling remains operable. Re-running
+    # decoration after a DOM mutation must not duplicate the status.
+    browser_out = mktempdir()
+    cp(joinpath(required_out, "import_required.islands"),
+       joinpath(browser_out, "import_required.islands"))
+    cp(joinpath(partial_out, "import_partial.islands"),
+       joinpath(browser_out, "import_partial.islands"))
+    write(joinpath(browser_out, "import_required.html"),
+          Snapshot.generate_therapy_html(required_nb, browser_out,
+              "import_required", "import_required.islands"))
+    write(joinpath(browser_out, "import_partial.html"),
+          Snapshot.generate_therapy_html(partial_nb, browser_out,
+              "import_partial", "import_partial.islands"))
+    fallback_e2e = joinpath(@__DIR__, "e2e_fallback.mjs")
+    fallback_proc = run(ignorestatus(`node $fallback_e2e $browser_out`))
+    if fallback_proc.exitcode == 2
+        @test_skip "playwright unavailable"
+    else
+        @test fallback_proc.exitcode == 0
+    end
     Pluto.SessionActions.shutdown(session, required_nb)
     Pluto.SessionActions.shutdown(session, poison)
 
@@ -689,6 +711,11 @@ if HAS_NODE
         shim = read(joinpath(assets, "shim.js"), String)
         @test occursin("cell.present_frame(front, cell.frame, cell.w, cell.h, seq)", shim)
         @test occursin("Number(front.dataset.wasmmakiePresentation || 0) + 1", shim)
+        # Fully-fallback groups must not leave a native Pluto widget looking
+        # live while every dependent output is frozen at export time.
+        @test occursin("group.judgement === \"fallback\"", shim)
+        @test occursin("control.disabled = true", shim)
+        @test occursin("static in this export", shim)
         @test isfile(joinpath(assets, manifest["groups"][1]["wasm"]))
 
         Pluto.SessionActions.shutdown(session, nb2; async=false)

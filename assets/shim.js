@@ -581,6 +581,7 @@
     // (hybrid setups with a live/precompute backend disable it — those cells
     // ARE interactive, just not via wasm).
     const WARN_CLASS = "pss-island-fallback-warning"
+    const DISABLED_BOND_CLASS = "pss-island-fallback-bond"
 
     // Token-themed card styles: DaisyUI --color-* variables (shipped by the export
     // head) with plain fallbacks so the classic Pluto export renders fine too.
@@ -605,11 +606,22 @@
     .${WARN_CLASS} details{margin-top:.4rem}
     .${WARN_CLASS} summary{cursor:pointer;font-size:.9em;opacity:.8}
     .${WARN_CLASS} pre{font-size:.78em;white-space:pre-wrap;overflow-x:auto;opacity:.9;margin:.3rem 0 0}`
+    const BOND_CSS = `
+    bond.${DISABLED_BOND_CLASS}{opacity:.72;pointer-events:none;user-select:none}
+    bond.${DISABLED_BOND_CLASS} input,
+    bond.${DISABLED_BOND_CLASS} select,
+    bond.${DISABLED_BOND_CLASS} textarea,
+    bond.${DISABLED_BOND_CLASS} button{cursor:not-allowed}
+    .pss-island-fallback-bond-status{display:inline-block;
+      margin-left:.55rem;padding:.12rem .45rem;border-radius:999px;font-size:.72rem;font-weight:700;
+      letter-spacing:.02em;color:var(--color-base-content,#1f2937);
+      background:color-mix(in srgb,var(--color-warning,#f59e0b) 14%,var(--color-base-100,#fff));
+      border:1px solid color-mix(in srgb,var(--color-warning,#f59e0b) 38%,transparent)}`
     let card_css_injected = false
     const ensure_card_css = () => {
         if (card_css_injected) return
         const st = document.createElement("style")
-        st.textContent = CARD_CSS
+        st.textContent = CARD_CSS + BOND_CSS
         document.head.append(st)
         card_css_injected = true
     }
@@ -771,6 +783,43 @@
         const report = await load_report()
         if (!report) return
         for (const group of report) {
+            // A fully-fallback group has no browser recomputation path. Leaving
+            // its widgets enabled is deceptive: the native Pluto control moves,
+            // but every dependent output stays frozen at export time. Disable
+            // the complete group while keeping partial groups usable for the
+            // cells that did compile.
+            if (group.judgement === "fallback") {
+                ensure_card_css()
+                for (const name of group.bonds ?? []) {
+                    for (const bond of document.querySelectorAll("bond[def]")) {
+                        if (bond.getAttribute("def") !== name) continue
+                        const statusId = `pss-fallback-bond-${group.id ?? "group"}-${name}`
+                        bond.classList.add(DISABLED_BOND_CLASS)
+                        bond.inert = true
+                        bond.setAttribute("aria-disabled", "true")
+                        bond.setAttribute("aria-describedby", statusId)
+                        for (const control of bond.querySelectorAll("input,select,textarea,button")) {
+                            control.disabled = true
+                            control.setAttribute("aria-disabled", "true")
+                            control.setAttribute("aria-describedby", statusId)
+                        }
+                        if (!document.getElementById(statusId)) {
+                            const status = document.createElement("span")
+                            status.id = statusId
+                            status.className = "pss-island-fallback-bond-status"
+                            status.setAttribute("role", "status")
+                            // The bond itself is inert and therefore absent from
+                            // the accessibility tree. This sibling is its complete
+                            // accessible replacement; identify the Julia binding
+                            // without echoing a possibly-sensitive input value.
+                            const statusText = `@bind ${name} — static in this export`
+                            status.setAttribute("aria-label", statusText)
+                            status.textContent = statusText
+                            bond.after(status)
+                        }
+                    }
+                }
+            }
             for (const cell of group.cells ?? []) {
                 if (cell.ok) continue
                 // lean export mount (#out-<id>) first, classic Pluto DOM as fallback —
