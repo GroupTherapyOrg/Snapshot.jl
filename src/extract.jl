@@ -26,6 +26,8 @@ import PlutoDependencyExplorer
 import UUIDs: UUID
 import WasmTarget
 import Dates
+import Markdown
+import InteractiveUtils
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -324,6 +326,210 @@ function _parse_cell(cell::Cell)
         return nothing
     end
     ex
+end
+
+_import_leaf(x) = x isa Symbol ? x :
+    x isa QuoteNode && x.value isa Symbol ? x.value :
+    x isa Expr && x.head === :. && !isempty(x.args) ? _import_leaf(last(x.args)) :
+    x isa Expr && x.head === :as && length(x.args) == 2 ? _import_leaf(x.args[2]) : nothing
+
+"The module path in one using/import spec, without selectors or an alias."
+function _import_module_spec(spec)
+    spec isa Expr && spec.head === :(:) && return first(spec.args)
+    spec isa Expr && spec.head === :as && return first(spec.args)
+    spec
+end
+
+"Turn a parsed module path into an expression resolvable inside the notebook
+workspace. Julia parses `.Local` as `Expr(:., :., :Local)`; once the using-cell
+has run, the notebook module owns an ordinary `Local` binding."
+function _workspace_module_expr(spec)
+    modspec = _import_module_spec(spec)
+    if modspec isa Expr && modspec.head === :.
+        parts = Any[p isa QuoteNode ? p.value : p for p in modspec.args]
+        while !isempty(parts) && first(parts) === :.
+            popfirst!(parts)
+        end
+        isempty(parts) && return nothing
+        # A one-component path parses as Expr(:., :Foo), which Core.eval reads
+        # as the dot/broadcast operator. Resolve it as the ordinary Foo binding.
+        return length(parts) == 1 ? first(parts) : Expr(:., parts...)
+    end
+    modspec
+end
+
+"Names made available by an import expression. Explicit names are determined
+syntactically. For plain `using Foo`, exported names are read from the already
+running Pluto workspace: this neither loads Foo in Snapshot's process nor
+assumes that Pluto and the compiler share a module table."
+function _import_names(session, notebook, ex; analysis_status=nothing,
+                       direct_names=nothing, module_names=nothing)::Set{Symbol}
+    names_out = Set{Symbol}()
+    ex isa Expr && ex.head in (:using, :import) || return names_out
+    for spec in ex.args
+        # `using Foo: x, y` parses as `Expr(:(:), Foo, x, y)`.
+        if spec isa Expr && spec.head === :(:)
+            for name in spec.args[2:end]
+                exposed = _import_leaf(name)
+                if exposed !== nothing
+                    push!(names_out, exposed)
+                    direct_names === nothing || push!(direct_names, exposed)
+                end
+            end
+            continue
+        end
+        if spec isa Expr && spec.head === :as
+            exposed = _import_leaf(spec)
+            if exposed !== nothing
+                push!(names_out, exposed)
+                direct_names === nothing || push!(direct_names, exposed)
+            end
+            continue
+        end
+        parts = spec isa Expr && spec.head === :. ? spec.args : Any[spec]
+        leaf = last(parts)
+        leaf = leaf isa QuoteNode ? leaf.value : leaf
+        if leaf isa Symbol
+            push!(names_out, leaf)
+            direct_names === nothing || push!(direct_names, leaf)
+            module_names === nothing || push!(module_names, leaf)
+        end
+
+        # `using Foo` (unlike `import Foo`) also introduces exported names. Ask
+        # the notebook workspace that successfully evaluated the using-cell;
+        # the exporter may use an isolated process/environment where Foo is not
+        # loaded (or even loadable).
+        ex.head === :using || continue
+        modexpr = _workspace_module_expr(spec)
+        modexpr === nothing && continue
+        here_expr = Expr(:macrocall, Symbol("@__MODULE__"), LineNumberNode(0))
+        query = :(let m = $modexpr, here = $here_expr
+                      Tuple{Symbol,Bool}[(n, Base.binding_module(m, n) === m)
+                          for n in names(m; all=false, imported=false)
+                          if Base.isexported(m, n) && isdefined(m, n) &&
+                             isdefined(here, n) &&
+                             Base.binding_module(here, n) === Base.binding_module(m, n)]
+                  end)
+        exported = try
+            Pluto.WorkspaceManager.eval_fetch_in_workspace((session, notebook),
+                query)
+        catch
+            analysis_status === nothing || (analysis_status[] = false)
+            nothing
+        end
+        if exported isa AbstractVector
+            for item in exported
+                item isa Tuple && length(item) == 2 || continue
+                name, direct = item
+                name isa Symbol || continue
+                push!(names_out, name)
+                direct === true && direct_names !== nothing &&
+                    push!(direct_names, name)
+            end
+        end
+    end
+    names_out
+end
+
+"Whether one indexed import can supply a reference unresolved by Pluto."
+function _import_relevant(entry, unresolved::Set{Symbol}, direct_providers=Set{Symbol}())
+    # A failed import may have installed some bindings before throwing. Do not
+    # let those leftovers poison another island through an exported-name
+    # collision. A direct `Pkg.name` reference still selects the module itself.
+    if !entry.cell_succeeded
+        return !isdisjoint(entry.module_names, unresolved)
+    end
+    matched = intersect(entry.names, unresolved)
+    for name in collect(matched)
+        name in direct_providers && !(name in entry.direct_names) &&
+            !entry.compiler_available && delete!(matched, name)
+    end
+    !isempty(matched) && return true
+    # If a successfully-evaluated plain using could not be introspected, retain
+    # the old conservative behavior for compatibility. Never broaden an errored
+    # import: that recreates the unrelated-package poisoning this index avoids.
+    !entry.analysis_ok && entry.cell_succeeded &&
+        entry.expr.head === :using && !isempty(unresolved)
+end
+
+"References in a cell and its upstream closure which Pluto cannot associate
+with an assigning cell. These are the only names for which import fallback is
+needed (Base/Core names harmlessly remain unmatched)."
+function _unresolved_references(topology, cell::Cell)::Set{Symbol}
+    refs = Set{Symbol}()
+    for c in vcat(_upstream_closure(topology, cell), [cell])
+        union!(refs, topology.nodes[c].references)
+    end
+    unresolved = Set{Symbol}()
+    for name in refs
+        isempty(PlutoDependencyExplorer.where_assigned(topology, Set([name]))) &&
+            push!(unresolved, name)
+    end
+    # These bindings are installed in every compile sandbox. Leaving them in
+    # the candidate set can falsely select a package that merely re-exports a
+    # Base/Core/Markdown/InteractiveUtils name such as `show` or `length`.
+    for mod in (Base, Core, Markdown, InteractiveUtils)
+        supplied = Symbol[n for n in names(mod; all=false, imported=false)
+                          if Base.isexported(mod, n)]
+        push!(supplied, nameof(mod))
+        setdiff!(unresolved, supplied)
+    end
+    unresolved
+end
+
+"Analyze each notebook import once. Workspace queries cross Pluto's execution
+boundary, so indexing avoids O(target cells × import cells) remote evaluations."
+function _notebook_import_index(session, notebook, original_state=nothing;
+                                env_dir=nothing)
+    _sget(d, k, default) = try d[k] catch; default end
+    function cell_succeeded(cell)
+        original_state === nothing && return true
+        results = _sget(original_state, "cell_results", Dict())
+        result = something(_sget(results, cell.cell_id, nothing),
+                           _sget(results, string(cell.cell_id), nothing), Some(nothing))
+        result === nothing && return false
+        mime = string(_sget(_sget(result, "output", Dict()), "mime", ""))
+        mime != "application/vnd.pluto.stacktrace+object"
+    end
+    entries = NamedTuple[]
+    prev_load_path = copy(LOAD_PATH)
+    env_dir !== nothing && pushfirst!(LOAD_PATH, env_dir)
+    import_available(ex) = all(ex.args) do spec
+        modspec = _import_module_spec(spec)
+        # Relative modules are notebook-local rather than packages. Retain them
+        # and let the normal compiler/reporting path decide their support.
+        modspec isa Expr && modspec.head === :. && !isempty(modspec.args) &&
+            first(modspec.args) === :. && return true
+        root = modspec isa Expr && modspec.head === :. ? first(modspec.args) : modspec
+        root = root isa QuoteNode ? root.value : root
+        root in (:Base, :Core, :Main) && return true
+        root isa Symbol && Base.find_package(string(root)) !== nothing
+    end
+    try
+    for cell in notebook.cells
+        ex = _parse_cell(cell)
+        ex === nothing && continue
+        preamble, _ = _split_preamble(ex)
+        for import_expr in preamble
+            import_expr isa Expr && import_expr.head in (:using, :import) || continue
+            status = Ref(true)
+            direct = Set{Symbol}()
+            modules = Set{Symbol}()
+            push!(entries, (cell=cell, expr=import_expr,
+                            names=_import_names(session, notebook, import_expr;
+                                                analysis_status=status,
+                                                direct_names=direct,
+                                                module_names=modules),
+                            direct_names=direct, module_names=modules,
+                            analysis_ok=status[], cell_succeeded=cell_succeeded(cell),
+                            compiler_available=import_available(import_expr)))
+        end
+    end
+    finally
+        empty!(LOAD_PATH)
+        append!(LOAD_PATH, prev_load_path)
+    end
+    entries
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -684,6 +890,7 @@ function _plan_cell(
     arg_types::Vector{DataType},
     original_state::Dict,
     bakes::Vector=Any[nothing for _ in bond_names],
+    import_index=_notebook_import_index(session, notebook, original_state),
 )::Tuple{CellPlan,Vector{Expr}}
     id = cell.cell_id
     # Full UUID (dashes stripped) — a 12-char prefix can COLLIDE between cells
@@ -751,14 +958,20 @@ function _plan_cell(
     # provides (e.g. Collatz's hailstone_sequence), so cells whose only
     # non-bond upstream is a using-cell got an EMPTY preamble and the
     # sandbox lacked the packages. Package loading is idempotent: hoist
-    # every using/import expr in the notebook; extract_groups dedups.
-    for nc in notebook.cells
-        ncex = _parse_cell(nc)
-        ncex === nothing && continue
-        pre_all, _ = _split_preamble(ncex)
-        for pe in pre_all
-            (pe isa Expr && pe.head in (:using, :import)) && push!(preamble, pe)
-        end
+    # import expressions that can supply an unresolved name in this cell's
+    # upstream closure. This avoids making an unrelated unavailable package a
+    # group-level preamble failure. Plain `using` retains a safe fallback via
+    # exports of modules already loaded by the successfully-run notebook.
+    unresolved = _unresolved_references(topology, cell)
+    direct_providers = Set{Symbol}()
+    for entry in import_index
+        entry.cell_succeeded && union!(direct_providers, entry.direct_names)
+    end
+    for entry in import_index
+            nc, pe = entry.cell, entry.expr
+            _import_relevant(entry, unresolved, direct_providers) || continue
+
+            push!(preamble, pe)
     end
 
     # The target cell itself → value capture + body strategy
@@ -1019,9 +1232,15 @@ function extract_groups(
     notebook::Notebook;
     connections::Dict{Symbol,Vector{Symbol}}=bound_variable_connections_graph(session, notebook),
     original_state::Dict=Pluto.notebook_to_js(notebook),
+    env_dir::Union{Nothing,String}=nothing,
 )::Vector{ExtractedGroup}
     topology = notebook.topology
     groups = sort(_bond_components(connections); by=g -> string(sort(g)))
+    inferred_env = env_dir !== nothing ? env_dir :
+        notebook.nbpkg_ctx === nothing ? nothing :
+        try Pluto.PkgCompat.env_dir(notebook.nbpkg_ctx) catch; nothing end
+    import_index = _notebook_import_index(session, notebook, original_state;
+        env_dir=inferred_env)
 
     map(filter(!isempty, groups)) do group
         bond_names = sort(group)
@@ -1154,7 +1373,8 @@ function extract_groups(
         preamble = Expr[]
         if isempty(reasons)
             for cell in _dependent_cells(topology, bond_names)
-                plan, pre = _plan_cell(session, notebook, topology, cell, bond_names, arg_types, original_state, bakes)
+                plan, pre = _plan_cell(session, notebook, topology, cell, bond_names,
+                    arg_types, original_state, bakes, import_index)
                 push!(plans, plan)
                 append!(preamble, pre)
             end
