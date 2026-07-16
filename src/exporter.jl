@@ -980,10 +980,9 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         frag_css = string("@scope (.snap-notebook) {\n", scoped, "\n}")
         frag_shim = islands_dirname === nothing ? "" :
             string("<script src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
-        # apply the host picker's saved theme to THIS notebook on load
-        theme_apply = string("<script>(function(){try{var t=localStorage.getItem('snap-theme');",
-            "if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.snap-notebook'):null;",
-            "if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>")
+        # Embedded fragments inherit the host's theme. Standalone notebook
+        # preference belongs to the standalone document only; restoring it on
+        # this nearer scope would override a Therapy/Astro/etc. host theme.
         # the EMBEDDED ToC lives INSIDE .snap-notebook so the @scope'd Pluto ToC CSS
         # styles it; data-embedded makes it position sensibly + start collapsed.
         return string(
@@ -992,7 +991,6 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
             "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
             "<style>\n", frag_css, "\n</style>\n",
-            theme_apply, "\n",
             toc_html(true), "\n",
             "<div class=\"snap-cells\">\n", cells_html, "</div>\n",
             frag_shim, "\n", wiring, "\n", katex_js, "\n", hl_js, "\n", tree_js, "\n",
