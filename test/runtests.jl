@@ -28,6 +28,15 @@ end
     @test occursin("fun-light", exporter)
     @test occursin("<option value=\"fun-light\">", exporter)
     @test occursin("<option value=\"fun-dark\">", exporter)
+    @test occursin("function scrollHeading(h, behavior)", exporter)
+    @test occursin("h.closest && h.closest(\".sn-main\")", exporter)
+    @test occursin("scroller.scrollTo", exporter)
+    @test occursin("hr.top - sr.top - inset", exporter)
+    @test occursin("if (shell) shell.scrollTop = 0", exporter)
+    @test occursin("var pendingHash", exporter)
+    @test occursin("restoreCollectionHash", exporter)
+    @test occursin("window.addEventListener(\"hashchange\"", exporter)
+    @test occursin("prefers-reduced-motion: reduce", exporter)
 end
 
 @testset "featured notebook coverage gate" begin
@@ -73,6 +82,7 @@ end
 const DEMO = joinpath(@__DIR__, "notebooks", "demo.jl")          # slider → x^2 → md
 const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island group + fallback group
 const ERROR_OUTPUT = joinpath(@__DIR__, "notebooks", "error_output.jl")
+const TOC_SCROLL = joinpath(@__DIR__, "notebooks", "toc_scroll.jl")
 
 session = Pluto.ServerSession()
 session.options.evaluation.workspace_use_distributed = false
@@ -151,6 +161,21 @@ connections = bound_variable_connections_graph(session, notebook)
     @test occursin(":root[data-theme=\"fun-dark\"] .snap-notebook", fragment_html)
     @test occursin(".snap-notebook[data-theme=\"classic-light\"]", fragment_html)
     @test !occursin("__snapshotThemeObserver", fragment_html)
+end
+
+@testset "embedded ToC scrolls only the collection pane" begin
+    toc_notebook = Pluto.SessionActions.open(session, TOC_SCROLL; run_async=false)
+    toc_fragment = Snapshot.generate_therapy_html(toc_notebook, mktempdir(),
+        "toc_scroll", nothing; fragment=true)
+    @test occursin("class=\"plutoui-toc aside indent toc-embedded\"", toc_fragment)
+    @test occursin("h.closest && h.closest(\".sn-main\")", toc_fragment)
+    @test occursin("scroller.scrollTo", toc_fragment)
+    @test occursin("hr.top - sr.top - inset", toc_fragment)
+    @test occursin("if (shell) shell.scrollTop = 0", toc_fragment)
+    @test occursin("var pendingHash", toc_fragment)
+    @test occursin("restoreCollectionHash", toc_fragment)
+    @test occursin("history.replaceState", toc_fragment)
+    Pluto.SessionActions.shutdown(session, toc_notebook; async=false)
 end
 
 @testset "extraction" begin
