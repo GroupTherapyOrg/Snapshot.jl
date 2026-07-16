@@ -1,8 +1,161 @@
-<div class="snap-notebook">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>
+<div class="snap-notebook" data-snapshot-requires="daisyui-themes@5.6.2 katex@0.11.1">
 <style>
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:root[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:root { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:root[data-theme="fun-light"] .snap-notebook,
+.snap-notebook[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:root[data-theme="fun-dark"] .snap-notebook,
+.snap-notebook[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:root[data-theme="classic-light"] .snap-notebook,
+.snap-notebook[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:root[data-theme="classic-dark"] .snap-notebook,
+.snap-notebook[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 @scope (.snap-notebook) {
 :scope{--pl-muted:color-mix(in oklab,var(--color-base-content) 60%,transparent)}
 :scope{font-family:var(--system-ui-font-stack,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif);max-width:768px;margin:0 auto;padding:2rem 1rem;line-height:1.65;color:var(--color-base-content);background:var(--color-base-100)}
@@ -12,7 +165,7 @@
    how Pluto's own cell output behaves. */
 pluto-output{display:block;overflow-x:auto;overflow-y:visible}
 .cell{margin:1.1rem 0}
-img.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
+.wasmmakie-island,.snap-reactive canvas{max-width:100%;height:auto}
 input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:middle}
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
@@ -54,14 +207,15 @@ pre,table,bond,.markdown,img{max-width:100%}
 /* safety net: anything STILL wider than the column scrolls within the notebook column
    rather than pushing the page layout out (e.g. a stray fixed-width figure). */
 .snap-cells,main{overflow-x:auto}
-/* Lezer-Julia token highlight (classHighlighter tok-* classes), DaisyUI-aware */
-.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:#8b5cf6}
+/* Lezer-Julia token highlight. These consume the same shared syntax tokens as
+   Pluto/CodeMirror in PLUTO_VAR_MAP, so upstream and exported code cannot drift. */
+.tok-keyword,.tok-controlKeyword,.tok-definitionKeyword,.tok-moduleKeyword,.tok-operatorKeyword{color:var(--snapshot-syntax-keyword)}
 .tok-comment,.tok-lineComment,.tok-blockComment{color:var(--pl-muted);font-style:italic}
-.tok-string,.tok-character,.tok-special{color:#16a34a}
-.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:#d97706}
-.tok-typeName{color:#0891b2}
-.tok-macroName{color:#db2777}
-.tok-function,.tok-definition{color:#2563eb}
+.tok-string,.tok-character,.tok-special{color:var(--snapshot-syntax-string)}
+.tok-number,.tok-integer,.tok-float,.tok-bool,.tok-atom,.tok-constant{color:var(--snapshot-syntax-number)}
+.tok-typeName{color:var(--snapshot-syntax-type)}
+.tok-macroName{color:var(--snapshot-syntax-macro)}
+.tok-function,.tok-definition{color:var(--snapshot-syntax-function)}
 .tok-operator,.tok-arithmeticOperator,.tok-compareOperator,.tok-logicOperator,.tok-derefOperator,.tok-typeOperator{color:var(--color-base-content);opacity:.8}
 /* ── EMBEDDED ToC (docs): keep Pluto's floating aside, but make it respect the docs
    chrome. It stays a fixed top-right panel (like Pluto) so it never disturbs the
@@ -70,13 +224,175 @@ pre,table,bond,.markdown,img{max-width:100%}
    right viewport edge (translateX to right:0) instead of PAST it, so it can never
    add a horizontal scrollbar. It starts collapsed (the JS adds .hide) so it reads
    as a tidy tab the reader opens, never floating over docs text at rest. */
-.plutoui-toc.toc-embedded.aside{z-index:30;top:4.5rem;right:0;max-height:calc(100vh - 6rem);box-shadow:0 2px 14px rgba(0,0,0,.10)}
+.plutoui-toc.toc-embedded.aside{
+  z-index:var(--snapshot-toc-z,30);
+  top:var(--snapshot-toc-top,4.5rem);
+  right:var(--snapshot-toc-right,0);
+  max-height:var(--snapshot-toc-max-height,calc(100vh - 6rem));
+  box-shadow:0 2px 14px color-mix(in oklab,var(--color-base-content) 10%,transparent)
+}
 .plutoui-toc.toc-embedded.aside.hide{transform:translateX(calc(100% - 28px))}
+
+/* classic-light / classic-dark — 1:1 ports of Pluto's own palettes (Pluto
+   frontend/themes/light.css and dark.css, v0.20.28) onto the standard DaisyUI
+   tokens that src/pluto_css.jl's PLUTO_VAR_MAP consumes — so a notebook under
+   these themes renders with native Pluto colours, while DaisyUI site chrome
+   uses the same palette. Token ← Pluto var derivations noted inline.
+
+   SINGLE SOURCE OF TRUTH, used twice:
+     - src/pluto_css.jl reads it at precompile time → CLASSIC_THEMES_CSS, inlined
+       into every export (standalone + fragment), because the CDN
+       pinned DaisyUI themes sheet only ships the built-in themes.
+     - docs/input.css @imports it into the site stylesheet.
+
+   Selector shape matters: `:scope[data-theme=…]` is specificity (0,2,0) so the
+   html-level attribute beats the bare `:scope { …light tokens… }` block that the
+   host's DaisyUI themes sheet declares at (0,1,0). The bare
+   `[data-theme=…]` alternative
+   matches theme swatches / .snap-notebook divs, where inheritance proximity
+   already wins. */
+
+/* fun-light / fun-dark — Snapshot's playful export palettes. These are kept in
+   the same token sheet as the classic themes so standalone exports and scoped
+   collection fragments share one source of truth. */
+:scope[data-theme="fun-light"],
+[data-theme="fun-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f7f7fa;
+  --color-base-300: #e5e4ed;
+  --color-base-content: #28293b;
+  --color-primary: #747bd8;
+  --color-primary-content: #ffffff;
+  --color-secondary: #73bd88;
+  --color-secondary-content: #172a1e;
+  --color-accent: #d9a947;
+  --color-accent-content: #2b220e;
+  --color-neutral: #35364a;
+  --color-neutral-content: #ffffff;
+  --color-info: #8ba9df;
+  --color-info-content: #14213a;
+  --color-success: #73bd88;
+  --color-success-content: #172a1e;
+  --color-warning: #e2c66f;
+  --color-warning-content: #32270d;
+  --color-error: #d77970;
+  --color-error-content: #331713;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+:scope[data-theme="fun-dark"],
+[data-theme="fun-dark"] {
+  color-scheme: dark;
+  --color-base-100: #20212b;
+  --color-base-200: #181922;
+  --color-base-300: #30313f;
+  --color-base-content: #eeedf5;
+  --color-primary: #989df2;
+  --color-primary-content: #171821;
+  --color-secondary: #78c795;
+  --color-secondary-content: #12241a;
+  --color-accent: #d6b960;
+  --color-accent-content: #29220f;
+  --color-neutral: #3a3b4c;
+  --color-neutral-content: #f4f3fb;
+  --color-info: #86a8e5;
+  --color-info-content: #101827;
+  --color-success: #78c795;
+  --color-success-content: #102219;
+  --color-warning: #dcc26d;
+  --color-warning-content: #29220f;
+  --color-error: #dc8178;
+  --color-error-content: #2b1310;
+  --radius-selector: 1rem;
+  --radius-field: .65rem;
+  --radius-box: 1.5rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* classic-light — Pluto frontend/themes/light.css → DaisyUI tokens */
+:scope[data-theme="classic-light"],
+[data-theme="classic-light"] {
+  color-scheme: light;
+  --color-base-100: #ffffff;              /* --main-bg-color / --pluto-output-bg-color */
+  --color-base-200: hsl(46 90% 98%);      /* --code-background (Pluto's cream code bg) */
+  --color-base-300: #d9d9d9;              /* --rule-color rgba(0,0,0,.15) on white */
+  --color-base-content: hsl(0 0% 25%);    /* --pluto-output-color */
+  --color-primary: #284ebd;               /* --selected-cell-color rgba(40,78,189) */
+  --color-primary-content: #ffffff;       /* --admonition-title-color */
+  --color-secondary: #6432b3;             /* --pluto-logs-debug-accent-color */
+  --color-secondary-content: #ffffff;
+  --color-accent: #177377;                /* --footnote-border-color teal rgba(23,115,119) */
+  --color-accent-content: #ffffff;
+  --color-neutral: #2a2a2b;               /* --ui-button-color */
+  --color-neutral-content: #ffffff;
+  --color-info: #94b6e2;                  /* --jl-info-accent-color rgb(148,182,226) */
+  --color-info-content: #16324e;
+  --color-success: #9ec889;               /* --jl-message-accent-color rgb(158,200,137) */
+  --color-success-content: #1e3a1a;
+  --color-warning: #cfc78a;               /* --jl-warn-accent-color rgb(207,199,138) */
+  --color-warning-content: #443e15;
+  --color-error: #ac4234;                 /* --pluto-logs-danger-accent-color rgb(172,66,52) */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* classic-dark — Pluto frontend/themes/dark.css → DaisyUI tokens */
+:scope[data-theme="classic-dark"],
+[data-theme="classic-dark"] {
+  color-scheme: dark;
+  --color-base-100: hsl(0 0% 12%);        /* --main-bg-color */
+  --color-base-200: hsl(222 16% 19%);     /* --code-background (blue-gray code bg) */
+  --color-base-300: #414141;              /* --rule-color rgba(255,255,255,.15) on base-100 */
+  --color-base-content: hsl(0 0% 77%);    /* --pluto-output-color */
+  --color-primary: #2893bd;               /* --selected-cell-color rgb(40,147,189) */
+  --color-primary-content: #000000;       /* --admonition-title-color */
+  --color-secondary: #c087dd;             /* --jl-debug-accent-color hsl(283,59%,69%) */
+  --color-secondary-content: #1a0a24;
+  --color-accent: #00ab85;                /* --cm-color-html */
+  --color-accent-content: #00190f;
+  --color-neutral: #2c2c2c;               /* --overlay-button-bg */
+  --color-neutral-content: #c7c7c7;
+  --color-info: #5c8ccd;                  /* --jl-info-accent-color rgb(92,140,205) */
+  --color-info-content: #000000;
+  --color-success: #83bf8a;               /* --jl-message-accent-color rgb(131,191,138) */
+  --color-success-content: #000000;
+  --color-warning: #ddd464;               /* --jl-warn-accent-color rgb(221,212,100) */
+  --color-warning-content: #000000;
+  --color-error: #ff7562;                 /* --jl-danger-accent-color rgb(255,117,98) */
+  --color-error-content: #000000;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
 
 /* AUTO-GENERATED by src/pluto_css.jl — Pluto's output CSS re-themed to DaisyUI.
    Every Pluto colour var below → a DaisyUI --color-* token. Do not hand-edit;
    edit PLUTO_VAR_MAP / pluto-base.css and regenerate (write_pluto_css()). */
-:root {
+:scope {
   --a-underline: color-mix(in oklab, var(--color-primary) 45%, transparent);
   --admonition-title-color: var(--color-primary-content);
   --ansi-black: var(--color-base-content);
@@ -101,17 +417,17 @@ pre,table,bond,.markdown,img{max-width:100%}
   --blockquote-bg: var(--color-base-200);
   --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   --br: 0.4rem;
-  --cm-color-builtin: var(--color-info, #0891b2);
+  --cm-color-builtin: var(--snapshot-syntax-type);
   --cm-color-clickable-underline: var(--color-primary);
   --cm-color-comment: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   --cm-color-editor-text: var(--color-base-content);
-  --cm-color-keyword: #8b5cf6;
+  --cm-color-keyword: var(--snapshot-syntax-keyword);
   --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
-  --cm-color-literal: #d97706;
-  --cm-color-macro: #db2777;
-  --cm-color-string: #16a34a;
-  --cm-color-symbol: #d97706;
-  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-literal: var(--snapshot-syntax-number);
+  --cm-color-macro: var(--snapshot-syntax-macro);
+  --cm-color-string: var(--snapshot-syntax-string);
+  --cm-color-symbol: var(--snapshot-syntax-number);
+  --cm-color-type: var(--snapshot-syntax-type);
   --cm-color-variable: var(--color-base-content);
   --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
   --cm-var-color: var(--color-base-content);
@@ -158,6 +474,12 @@ pre,table,bond,.markdown,img{max-width:100%}
   --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
   --rule-color: var(--color-base-300);
   --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --snapshot-syntax-function: #2563eb;
+  --snapshot-syntax-keyword: #8b5cf6;
+  --snapshot-syntax-macro: #db2777;
+  --snapshot-syntax-number: #d97706;
+  --snapshot-syntax-string: #16a34a;
+  --snapshot-syntax-type: #0891b2;
   --system-fonts-mono: var(--julia-mono-font-stack);
   --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --table-bg-hover-color: var(--color-base-200);
@@ -939,7 +1261,7 @@ jlerror > section > ol > li:not(.important)::marker {
     font-weight: 100;
 }
 jlerror > section > ol > li.from_this_notebook {
-    --bg: var(--jl-info-acccolor);
+    --bg: var(--color-base-100);
     background: var(--bg);
     outline: 3px solid var(--bg);
     padding: 0.4em 0em;
@@ -1010,9 +1332,9 @@ jlerror li a.frame-line-preview {
     display: block;
     text-decoration: none;
     border: 3px solid var(--cm-color-clickable-underline);
-    --br: 0.6em;
+    --br: 0.4rem;
     border-radius: var(--br);
-    --crop: -0.5em;
+    --crop: 0;
 }
 jlerror li .frame-line-preview pre:not(.asdfdsaf) {
     background-color: var(--code-background);
@@ -1184,20 +1506,20 @@ pluto-tree.collapsed p-v > pre {
 .plutoui-toc {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
 		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
-	--main-bg-color: #fafafa;
-	--pluto-output-color: hsl(0, 0%, 36%);
-	--pluto-output-h-color: hsl(0, 0%, 21%);
-	--sidebar-li-active-bg: rgb(235, 235, 235);
-	--icon-filter: unset;
+	--main-bg-color: var(--color-base-100);
+	--pluto-output-color: var(--color-base-content);
+	--pluto-output-h-color: var(--color-base-content);
+	--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+	--icon-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
 	.plutoui-toc {
-		--main-bg-color: #303030;
-		--pluto-output-color: hsl(0, 0%, 90%);
-		--pluto-output-h-color: hsl(0, 0%, 97%);
-		--sidebar-li-active-bg: rgb(82, 82, 82);
-		--icon-filter: invert(1);
+		--main-bg-color: var(--color-base-100);
+		--pluto-output-color: var(--color-base-content);
+		--pluto-output-h-color: var(--color-base-content);
+		--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+		--icon-filter: none;
 	}
 }
 
@@ -1219,7 +1541,7 @@ pluto-tree.collapsed p-v > pre {
 }
 
 .plutoui-toc.smallscreen:not(.hide) {
-	box-shadow: 0 0 11px 0px #00000010;
+	box-shadow: 0 0 11px 0px color-mix(in oklab, var(--color-base-content) 6%, transparent);
 }
 
 .plutoui-toc.aside.hide {
@@ -1323,7 +1645,7 @@ pluto-tree.collapsed p-v > pre {
 
 	
 .highlight-pluto-cell-shoulder {
-	background: rgba(0, 0, 0, 0.05);
+	background: color-mix(in oklab, var(--color-primary) 7%, transparent);
 	background-clip: padding-box;
 }
 
@@ -1375,37 +1697,37 @@ pluto-tree.collapsed p-v > pre {
 /* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
 .plutoui-toc {
   --main-bg-color: var(--color-base-100);
-  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-color: var(--color-base-content);
   --pluto-output-h-color: var(--color-base-content);
-  --sidebar-li-active-bg: var(--color-base-200);
+  --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
   --icon-filter: none;
-  --cm-var-color: var(--color-primary);
+  --cm-var-color: var(--color-base-content);
   border: 1px solid var(--color-base-300);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: invert(1); } }
+@media (prefers-color-scheme: dark) { :scope:not([data-theme]) .plutoui-toc { --icon-filter: none; } }
 
 
 /* ── ansi-colors.css (stdout colour) ── */
 
 /* ANSI color classes */
 
-:root {
-    --ansi-black: rgb(0, 0, 0);
-    --ansi-red: rgb(187, 0, 0);
-    --ansi-green: rgb(0, 187, 0);
-    --ansi-yellow: rgb(187, 187, 0);
-    --ansi-blue: rgb(0, 0, 187);
-    --ansi-magenta: rgb(187, 0, 187);
-    --ansi-cyan: rgb(0, 187, 187);
-    --ansi-white: rgb(255, 255, 255);
-    --ansi-bright-black: rgb(85, 85, 85);
-    --ansi-bright-red: rgb(255, 85, 85);
-    --ansi-bright-green: rgb(0, 255, 0);
-    --ansi-bright-yellow: rgb(255, 255, 85);
-    --ansi-bright-blue: rgb(85, 85, 255);
-    --ansi-bright-magenta: rgb(255, 85, 255);
-    --ansi-bright-cyan: rgb(85, 255, 255);
-    --ansi-bright-white: rgb(255, 255, 255);
+:scope {
+    --ansi-black: var(--color-base-content);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-green: var(--color-success, #16a34a);
+    --ansi-yellow: var(--color-warning, #d97706);
+    --ansi-blue: var(--color-info, #3b82f6);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-cyan: var(--color-accent, #0891b2);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-red: var(--color-error, #ef4444);
+    --ansi-bright-green: var(--color-success, #22c55e);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-magenta: var(--color-secondary, #a855f7);
+    --ansi-bright-cyan: var(--color-accent, #22d3ee);
+    --ansi-bright-white: var(--color-base-content);
 }
 
 /* Foreground colors */
@@ -1512,14 +1834,14 @@ pluto-tree.collapsed p-v > pre {
 
 /* Some custom styles for stdout to improve contrast and readability */
 pluto-log-dot.Stdout {
-    --ansi-red: rgb(220, 0, 0);
-    --ansi-magenta: rgb(200, 0, 200);
-    --ansi-white: rgb(220, 220, 220);
-    --ansi-bright-black: rgb(50, 50, 50);
-    --ansi-bright-yellow: rgb(240, 240, 50);
-    --ansi-bright-blue: rgb(110, 110, 255);
-    --ansi-bright-white: rgb(240, 240, 240);
-    --ansi-bright-black: rgb(183 183 183);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-white: var(--color-base-content);
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 }
 
 pluto-log-dot.Stdout .ansi-bright-black-fg:is(.ansi-white-bg, .ansi-bright-white-bg) {
@@ -1597,30 +1919,28 @@ code.hljs {
     box-sizing: border-box;
 }
 
-:root {
-    --inter-ui-font-stack:
-        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        system-ui, sans-serif;
-    --system-fonts-mono: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+:scope {
+    --inter-ui-font-stack: var(--system-ui-font-stack);
+    --system-fonts-mono: var(--julia-mono-font-stack);
 
     color-scheme: light dark;
     font-family: var(--inter-ui-font-stack);
     font-size: 17px;
 
-    --black: black;
-    --gray1: gray;
-    --white: white;
+    --black: var(--color-base-content);
+    --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --white: var(--color-base-100);
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
-        --black: white;
-        --gray1: color-mix(in oklab, var(--color-base-content) 22%, transparent);
-        --white: black;
+    :scope {
+        --black: var(--color-base-content);
+        --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+        --white: var(--color-base-100);
     }
 }
 
-body {
+:scope {
     max-width: 700px;
     margin: 0 auto;
     margin-top: 3rem;
@@ -1669,7 +1989,6 @@ a:visited {
 :scope{background:transparent;max-width:none;padding:0;margin:0}
 }
 </style>
-<script>(function(){try{var t=localStorage.getItem('snap-theme');if(t){var s=document.currentScript;var n=s&&s.closest?s.closest('.snap-notebook'):null;if(n)n.setAttribute('data-theme',t);}}catch(e){}})();</script>
 <nav class="plutoui-toc aside indent toc-embedded" data-embedded="1">  <header>
     <span class="toc-toggle open-toc"></span>
     <span class="toc-toggle closed-toc"></span>
@@ -1705,6 +2024,52 @@ a:visited {
       // ── scroll-spy: PlutoUI's two-observer "topmost header in upper half" rule ──
       var highlighted = new Set();
       var lastClickTime = { current: 0 };
+      var pendingHash = location.hash ? location.hash.slice(1) : "";
+      var hashRestoreToken = 0;
+      var hashRestoreCancelled = false;
+      function decodedHash(raw) {
+        try { return decodeURIComponent(raw); } catch (_) { return raw; }
+      }
+      function scrollHeading(h, behavior) {
+        // Collections put the notebook inside `.sn-main`, its own scroll pane.
+        // `scrollIntoView()` also scrolls overflow:hidden ancestors such as
+        // `.sn-body`, which nudges the entire notebook/sidebar shell. Move only
+        // the real notebook scroller and restore the shell to its fixed origin.
+        var scroller = h.closest && h.closest(".sn-main");
+        if (scroller) {
+          var shell = scroller.closest && scroller.closest(".sn-body");
+          if (shell) shell.scrollTop = 0;
+          var hr = h.getBoundingClientRect();
+          var sr = scroller.getBoundingClientRect();
+          var inset = 24;
+          var top = scroller.scrollTop + hr.top - sr.top - inset;
+          scroller.scrollTo({ top: Math.max(0, top), behavior: behavior });
+        } else {
+          h.scrollIntoView({ behavior: behavior, block: "start" });
+        }
+      }
+      function restoreCollectionHash(heads) {
+        if (!pendingHash) return;
+        var hashId = decodedHash(pendingHash);
+        var target = heads.find(function (h) { return h.id === hashId; });
+        if (!target || !(target.closest && target.closest(".sn-main"))) return;
+        pendingHash = "";
+        var token = ++hashRestoreToken;
+        var apply = function () {
+          if (token !== hashRestoreToken || hashRestoreCancelled) return;
+          scrollHeading(target, "auto");
+        };
+        var afterLoad = function () {
+          // The first pass repairs the browser's deferred native hash scroll.
+          // Two bounded rechecks absorb late font/island layout without
+          // continuing to fight a visitor who starts scrolling.
+          [0, 150, 900].forEach(function (ms) {
+            setTimeout(function () { requestAnimationFrame(apply); }, ms);
+          });
+        };
+        if (document.readyState === "complete") afterLoad();
+        else window.addEventListener("load", afterLoad, { once: true });
+      }
       function intersectionCallback(ixs) {
         var onTop = ixs.filter(function (ix) {
           return ix.intersectionRatio > 0 && ix.intersectionRect.y < ix.rootBounds.height / 2;
@@ -1746,7 +2111,9 @@ a:visited {
             e.preventDefault();
             try { history.replaceState(null, "", a.getAttribute("href")); } catch (_) {}
             lastClickTime.current = Date.now();
-            h.scrollIntoView({ behavior: "smooth", block: "start" });
+            var reduced = window.matchMedia &&
+              window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            scrollHeading(h, reduced ? "auto" : "smooth");
           });
           var row = document.createElement("div");
           row.className = "toc-row " + lvl + " after-" + last;
@@ -1757,6 +2124,11 @@ a:visited {
           last = lvl;
         });
         section.replaceChildren(frag);
+        // A direct `.../#heading` load is handled natively before this script.
+        // In collections that can scroll `.sn-body`; route it back through the
+        // safe pane-only path. If an island creates the heading later,
+        // `pendingHash` deliberately survives until a later render finds it.
+        restoreCollectionHash(heads);
       }
 
       // toggle collapse on the header icons (PlutoUI: any click within a .toc-toggle)
@@ -1778,6 +2150,21 @@ a:visited {
         t.addEventListener("click", function () { nav.__pl_user_toggled = true; });
       });
       ["resize"].forEach(function (ev) { window.addEventListener(ev, matchListener); });
+      ["wheel", "touchstart"].forEach(function (ev) {
+        window.addEventListener(ev, function () {
+          hashRestoreCancelled = true; ++hashRestoreToken;
+        }, { passive: true });
+      });
+      window.addEventListener("keydown", function (e) {
+        if (["ArrowDown","ArrowUp","PageDown","PageUp","Home","End"," "].indexOf(e.key) >= 0) {
+          hashRestoreCancelled = true; ++hashRestoreToken;
+        }
+      });
+      window.addEventListener("hashchange", function () {
+        pendingHash = location.hash ? location.hash.slice(1) : "";
+        hashRestoreCancelled = false;
+        restoreCollectionHash(getHeaders());
+      });
 
       render();
       // reactive islands mount their output after first paint — rebuild a few times
@@ -1805,16 +2192,16 @@ a:visited {
 </script>
 
 <div class="snap-cells">
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><img controls='' src='https://static.wixstatic.com/media/a27d24_08a39705c99d40c6b764c9b8d699b71a~mv2.jpg/v1/fit/w_900%2Ch_1000%2Cal_c%2Cq_80/file.jpg' type='image/jpeg' height='500'></img>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5328c6f3-2ae7-4449-a2a2-b6803cec0dcc"><div class="markdown"><img controls='' src='https://static.wixstatic.com/media/a27d24_08a39705c99d40c6b764c9b8d699b71a~mv2.jpg/v1/fit/w_900%2Ch_1000%2Cal_c%2Cq_80/file.jpg' type='image/jpeg' height='500'></img>
 <p>Visualization of the Collatz Conjecture by <a href="https://maxwelldemon.com/">Edmund Harris</a></p>
 <h1 id="The-Collatz-Conjecture">The Collatz Conjecture</h1>
 <blockquote>
 <p>&quot;Mathematics may not be ready for such problems.&quot; - Paul Erdos</p>
 </blockquote>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Introduction">Introduction</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-822a3646-be9d-4b1c-a189-550bd8b56ab7"><div class="markdown"><h1 id="Introduction">Introduction</h1>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>The <a href="https://en.wikipedia.org/wiki/Collatz_conjecture">Collatz Conjecture</a>, also known as the 3x&#43;1 problem, is a fascinating mathematical puzzle that has been named after the German mathematician <a href="https://en.wikipedia.org/wiki/Lothar_Collatz">Lothar Collatz</a>. This conjecture arises from an iterative process where you start with any positive integer and alternate between two simple rules: </p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-0bc0ea95-585d-43be-b7ac-c33a2a7417b4"><div class="markdown"><p>The <a href="https://en.wikipedia.org/wiki/Collatz_conjecture">Collatz Conjecture</a>, also known as the 3x&#43;1 problem, is a fascinating mathematical puzzle that has been named after the German mathematician <a href="https://en.wikipedia.org/wiki/Lothar_Collatz">Lothar Collatz</a>. This conjecture arises from an iterative process where you start with any positive integer and alternate between two simple rules: </p>
 <ul>
 <li><p>if the number is <em>even</em>, you divide it by 2,</p>
 </li>
@@ -1830,13 +2217,13 @@ a:visited {
 <p>The conjecture is that no matter what starting number you choose, <strong>regardless</strong> of its size, you will <strong>always</strong> reach the number 1. </p>
 <p>However, despite being relatively simple to understand and easy to test for small numbers, it has so far proven difficult to prove definitively for all cases. This conjecture is an unsolved problem in mathematics that continues to intrigue both mathematicians and enthusiasts alike.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><hr />
+<div class="pl-cell"><pluto-output class="rich_output" id="out-bdd54208-1f66-45da-9e67-9479cc460863"><div class="markdown"><hr />
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="The-Hailstone-Sequence">The Hailstone Sequence</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-81db5594-75c0-4bfb-8908-ef8084559123"><div class="markdown"><h2 id="The-Hailstone-Sequence">The Hailstone Sequence</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>The sequence of values that you go through when iterating a number is often called the hailstone sequence, as the numbers go up and down through the sequence. </p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-b3c9453e-3198-4697-966f-ade21f2255ce"><div class="markdown"><p>The sequence of values that you go through when iterating a number is often called the hailstone sequence, as the numbers go up and down through the sequence. </p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Starting value &#61; <bond def="hailstone_start_value" unique_id="paqdxhvgbllb"><input type='range' min='1' max='1000' value='15'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-e57da7e5-32bb-48a2-af27-5ac671cabdae"><div class="markdown"><p>Starting value &#61; <bond def="hailstone_start_value" unique_id="piytmbuqgapg"><input type='range' min='1' max='1000' value='15'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1854,7 +2241,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1863,12 +2250,12 @@ a:visited {
     					display: inline-block;'>15</output></bond></p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-66fe673a-7679-4c55-bf59-146a8dd1241c"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="All-Paths-Lead-to-One">All Paths Lead to One</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-75b9294e-43a4-48c4-b493-5d40027f3cd6"><div class="markdown"><h2 id="All-Paths-Lead-to-One">All Paths Lead to One</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>We can visualize the path that <em>every</em> number takes by overlaying many hailstone sequences at once. Each line is one starting value; watch how, no matter where they begin, they all tumble down into the same <span class="tex">$4 \rightarrow 2 \rightarrow 1$</span> cycle.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-12d218ee-9a43-4647-a96b-c9252c665fa0"><div class="markdown"><p>We can visualize the path that <em>every</em> number takes by overlaying many hailstone sequences at once. Each line is one starting value; watch how, no matter where they begin, they all tumble down into the same <span class="tex">$4 \rightarrow 2 \rightarrow 1$</span> cycle.</p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-3550fe19-261e-4069-9bf6-6417dcaac102"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Overlay paths for 1 … N &#61; <bond def="graph_start_value" unique_id="upkiphuuuecx"><input type='range' min='1' max='60' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-43c4fd8d-bb44-43cd-91dd-d221629d1fd9"><div class="markdown"><p>Overlay paths for 1 … N &#61; <bond def="graph_start_value" unique_id="jpxyhgjhdolf"><input type='range' min='1' max='60' value='12'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1886,7 +2273,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1894,15 +2281,15 @@ a:visited {
     					transform: translateY(-4px);
     					display: inline-block;'>12</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="The-stopping-time-of-a-number">The stopping time of a number</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-6f68b20d-67e5-4872-a23b-1840bbbb06ec"><div class="markdown"><h2 id="The-stopping-time-of-a-number">The stopping time of a number</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>At first it might seem that the fact that it <em>always</em> reaches 1 could appear strange, as some numbers get caught in a repeating pattern of multiplying by 3 and adding one, when dividing by 2, give a another odd number. Since:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-6a45247d-25db-445f-a687-191c0952c6c4"><div class="markdown"><p>At first it might seem that the fact that it <em>always</em> reaches 1 could appear strange, as some numbers get caught in a repeating pattern of multiplying by 3 and adding one, when dividing by 2, give a another odd number. Since:</p>
 <p><span class="tex">$\begin&#123;aligned&#125; x &lt; \frac&#123;3x &#43; 1&#125;&#123;2&#125; \end&#123;aligned&#125;$</span></p>
 <p>Thus, it&#39;s possible &#40;and quite frequent&#41; that we end going up in numbers, and looks like we are getting further away from the pit of doom that is the number 1. </p>
 <p>However, this is unfortunately not the case, but we quantify this by calculating how long it takes for a number to reach a another number that is lower than the starting point: the stopping time. </p>
 <p>Here is a plot to show the total stopping times of the numbers for up to 1000. </p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Upper bound &#61; <bond def="stopping_ub" unique_id="huxfgwdvmtvu"><input type='range' min='1' max='30' value='10'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-0fd7242c-46a1-4929-9c53-3c45768893b4"><div class="markdown"><p>Upper bound &#61; <bond def="stopping_ub" unique_id="lafoftptteuv"><input type='range' min='1' max='30' value='10'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1920,7 +2307,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -1929,14 +2316,14 @@ a:visited {
     					display: inline-block;'>1000</output></bond></p>
 </div></pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-45ca6e2a-6a58-475e-9c02-4925e71625bd"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Interactive-Visualization">Interactive Visualization</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d0672735-8007-4a69-9fa5-0f40ac0685ea"><div class="markdown"><h1 id="Interactive-Visualization">Interactive Visualization</h1>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="slider_group sidebar-left">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-50a423ad-ca90-4015-9ef6-577f60e4efe7"><div class="slider_group sidebar-left">
 	<div class="on_big_show">
 		<div class="slider_group_inner">
 			<div class="slider_group_inner">
 	<div><p>Visualization Options:</p></div>
-	<div>Numbers of trajectories: <bond def="num_traject" unique_id="grnhlriptllf"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Numbers of trajectories: <bond def="num_traject" unique_id="thexdntgerwz"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1954,14 +2341,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>80</output></bond></div>
-	<div>Step: <bond def="line_length" unique_id="ruwvksiaqnmh"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Step: <bond def="line_length" unique_id="vkycknpmvfvl"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -1979,14 +2366,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>20</output></bond></div>
-	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="defojimnvlxm"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="ibgckesadmcv"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2004,7 +2391,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2023,7 +2410,7 @@ a:visited {
 		<div class="slider_group_inner ">
 			<div class="slider_group_inner">
 	<div><p>Visualization Options:</p></div>
-	<div>Numbers of trajectories: <bond def="num_traject" unique_id="grnhlriptllf"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Numbers of trajectories: <bond def="num_traject" unique_id="thexdntgerwz"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2041,14 +2428,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>80</output></bond></div>
-	<div>Step: <bond def="line_length" unique_id="ruwvksiaqnmh"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Step: <bond def="line_length" unique_id="vkycknpmvfvl"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2066,14 +2453,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>20</output></bond></div>
-	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="defojimnvlxm"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="ibgckesadmcv"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2091,7 +2478,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2106,7 +2493,7 @@ a:visited {
 	<div class="slider_group_inner">
 		<div class="slider_group_inner">
 	<div><p>Image Options:</p></div>
-	<div>Image Rotation (in degrees): <bond def="init_angle" unique_id="zlipnedflswc"><input type='range' min='1' max='361' value='21'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Image Rotation (in degrees): <bond def="init_angle" unique_id="bapdxefhljoz"><input type='range' min='1' max='361' value='21'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2124,14 +2511,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>20</output></bond></div>
-	<div>Starting point (X): <bond def="x_start" unique_id="bzbcrhdxttqd"><input type='range' min='1' max='1000' value='251'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Starting point (X): <bond def="x_start" unique_id="vebhmxmybkwg"><input type='range' min='1' max='1000' value='251'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2149,14 +2536,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>250</output></bond></div>
-	<div>Starting point (Y): <bond def="y_start" unique_id="vxqoetsirgpw"><input type='range' min='1' max='1000' value='700'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Starting point (Y): <bond def="y_start" unique_id="wmkylnozpeik"><input type='range' min='1' max='1000' value='700'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2174,14 +2561,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>700</output></bond></div>
-	<div>Stroke Width: <bond def="stroke_width" unique_id="rnzbdswzzidh"><input type='range' min='1' max='50' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke Width: <bond def="stroke_width" unique_id="krfowpogfila"><input type='range' min='1' max='50' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2199,7 +2586,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2213,7 +2600,7 @@ a:visited {
 	<div class="slider_group_inner">
 		<div class="slider_group_inner">
 	<div><p>Color Options:</p></div>
-	<div>Stroke (R): <bond def="stroke_r" unique_id="lvyjkgxxbses"><input type='range' min='1' max='256' value='231'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke (R): <bond def="stroke_r" unique_id="mvzlooefdbqt"><input type='range' min='1' max='256' value='231'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2231,14 +2618,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>230</output></bond></div>
-	<div>Stroke (G): <bond def="stroke_g" unique_id="xmqqcazuiaoz"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke (G): <bond def="stroke_g" unique_id="bcbhtjmjmwlv"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2256,14 +2643,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>130</output></bond></div>
-	<div>Stroke (B): <bond def="stroke_b" unique_id="muospvfwjqxn"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke (B): <bond def="stroke_b" unique_id="brzmpholeiht"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2281,7 +2668,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2295,10 +2682,10 @@ a:visited {
 	<div class="slider_group_inner">
 		<div class="slider_group_inner">
 	<div><p>Extra Options:</p></div>
-	<div>Random Color: <bond def="random_shade" unique_id="abpetnkeokou"><input type="checkbox"></bond></div>
-	<div>Vary Shade: <bond def="vary_shade" unique_id="krkotqhqqxib"><input type="checkbox"></bond></div>
-	<div>In Edmund Harris's style: <bond def="edmund_style" unique_id="niamgtxdxtxo"><input type="checkbox"></bond></div>
-	<div>In Chris's style: <bond def="chris_style" unique_id="nlrmduqkpprg"><input type="checkbox"></bond></div>
+	<div>Random Color: <bond def="random_shade" unique_id="gtthxfkpnhth"><input type="checkbox"></bond></div>
+	<div>Vary Shade: <bond def="vary_shade" unique_id="dbpcqazjlzse"><input type="checkbox"></bond></div>
+	<div>In Edmund Harris's style: <bond def="edmund_style" unique_id="dmwolypucoal"><input type="checkbox"></bond></div>
+	<div>In Chris's style: <bond def="chris_style" unique_id="jwkpgekuixvs"><input type="checkbox"></bond></div>
 </div>
 
 	</div>
@@ -2309,7 +2696,7 @@ a:visited {
 			<div class="slider_group_inner">
 				<div class="slider_group_inner">
 	<div><p>Visualization Options:</p></div>
-	<div>Numbers of trajectories: <bond def="num_traject" unique_id="grnhlriptllf"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Numbers of trajectories: <bond def="num_traject" unique_id="thexdntgerwz"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2327,14 +2714,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>80</output></bond></div>
-	<div>Step: <bond def="line_length" unique_id="ruwvksiaqnmh"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Step: <bond def="line_length" unique_id="vkycknpmvfvl"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2352,14 +2739,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>20</output></bond></div>
-	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="defojimnvlxm"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="ibgckesadmcv"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2377,7 +2764,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2391,7 +2778,7 @@ a:visited {
 			<div class="slider_group_inner ">
 				<div class="slider_group_inner">
 	<div><p>Visualization Options:</p></div>
-	<div>Numbers of trajectories: <bond def="num_traject" unique_id="grnhlriptllf"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Numbers of trajectories: <bond def="num_traject" unique_id="thexdntgerwz"><input type='range' min='1' max='30' value='8'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2409,14 +2796,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>80</output></bond></div>
-	<div>Step: <bond def="line_length" unique_id="ruwvksiaqnmh"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Step: <bond def="line_length" unique_id="vkycknpmvfvl"><input type='range' min='1' max='150' value='20'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2434,14 +2821,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>20</output></bond></div>
-	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="defojimnvlxm"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Rotation Angle (in degrees): <bond def="turn_scale" unique_id="ibgckesadmcv"><input type='range' min='1' max='181' value='11'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2459,7 +2846,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2475,7 +2862,7 @@ a:visited {
 			<div class="slider_group_inner">
 				<div class="slider_group_inner">
 	<div><p>Image Options:</p></div>
-	<div>Image Rotation (in degrees): <bond def="init_angle" unique_id="zlipnedflswc"><input type='range' min='1' max='361' value='21'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Image Rotation (in degrees): <bond def="init_angle" unique_id="bapdxefhljoz"><input type='range' min='1' max='361' value='21'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2493,14 +2880,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>20</output></bond></div>
-	<div>Starting point (X): <bond def="x_start" unique_id="bzbcrhdxttqd"><input type='range' min='1' max='1000' value='251'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Starting point (X): <bond def="x_start" unique_id="vebhmxmybkwg"><input type='range' min='1' max='1000' value='251'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2518,14 +2905,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>250</output></bond></div>
-	<div>Starting point (Y): <bond def="y_start" unique_id="vxqoetsirgpw"><input type='range' min='1' max='1000' value='700'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Starting point (Y): <bond def="y_start" unique_id="wmkylnozpeik"><input type='range' min='1' max='1000' value='700'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2543,14 +2930,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>700</output></bond></div>
-	<div>Stroke Width: <bond def="stroke_width" unique_id="rnzbdswzzidh"><input type='range' min='1' max='50' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke Width: <bond def="stroke_width" unique_id="krfowpogfila"><input type='range' min='1' max='50' value='5'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2568,7 +2955,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2582,7 +2969,7 @@ a:visited {
 			<div class="slider_group_inner">
 				<div class="slider_group_inner">
 	<div><p>Color Options:</p></div>
-	<div>Stroke (R): <bond def="stroke_r" unique_id="lvyjkgxxbses"><input type='range' min='1' max='256' value='231'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke (R): <bond def="stroke_r" unique_id="mvzlooefdbqt"><input type='range' min='1' max='256' value='231'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2600,14 +2987,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>230</output></bond></div>
-	<div>Stroke (G): <bond def="stroke_g" unique_id="xmqqcazuiaoz"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke (G): <bond def="stroke_g" unique_id="bcbhtjmjmwlv"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2625,14 +3012,14 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>130</output></bond></div>
-	<div>Stroke (B): <bond def="stroke_b" unique_id="muospvfwjqxn"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+	<div>Stroke (B): <bond def="stroke_b" unique_id="brzmpholeiht"><input type='range' min='1' max='256' value='131'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2650,7 +3037,7 @@ a:visited {
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2663,10 +3050,10 @@ a:visited {
 			<div class="slider_group_inner">
 				<div class="slider_group_inner">
 	<div><p>Extra Options:</p></div>
-	<div>Random Color: <bond def="random_shade" unique_id="abpetnkeokou"><input type="checkbox"></bond></div>
-	<div>Vary Shade: <bond def="vary_shade" unique_id="krkotqhqqxib"><input type="checkbox"></bond></div>
-	<div>In Edmund Harris's style: <bond def="edmund_style" unique_id="niamgtxdxtxo"><input type="checkbox"></bond></div>
-	<div>In Chris's style: <bond def="chris_style" unique_id="nlrmduqkpprg"><input type="checkbox"></bond></div>
+	<div>Random Color: <bond def="random_shade" unique_id="gtthxfkpnhth"><input type="checkbox"></bond></div>
+	<div>Vary Shade: <bond def="vary_shade" unique_id="dbpcqazjlzse"><input type="checkbox"></bond></div>
+	<div>In Edmund Harris's style: <bond def="edmund_style" unique_id="dmwolypucoal"><input type="checkbox"></bond></div>
+	<div>In Chris's style: <bond def="chris_style" unique_id="jwkpgekuixvs"><input type="checkbox"></bond></div>
 </div>
 
 			</div>
@@ -2678,36 +3065,36 @@ a:visited {
 </div>
 </pluto-output></div>
 <div class="pl-cell"><pluto-output class="rich_output" id="out-6d225dce-3362-4f5d-bba9-0b5312f6be5a"></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="slider_group_inner">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-aef6cb43-61c7-4436-ad66-7e7f0459610d"><div class="slider_group_inner">
 Filename: 
-				<bond def="filename" unique_id="nxkmstjjvdmk"><input type='text' dir='auto' value='MyCoolVisualization'></bond>
+				<bond def="filename" unique_id="bagjehvwwpbh"><input type='text' dir='auto' value='MyCoolVisualization'></bond>
 				
 			</div>
 </pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>The interactive visualization above runs live in your browser as a WebAssembly island — drag the sliders to explore. &#40;Exporting the rendered image to a standalone HTML file is only available when running this notebook in a full Pluto session.&#41;</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-1b48b435-e959-477f-a8d2-3507da73fc28"><div class="markdown"><p>The interactive visualization above runs live in your browser as a WebAssembly island — drag the sliders to explore. &#40;Exporting the rendered image to a standalone HTML file is only available when running this notebook in a full Pluto session.&#41;</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>The window size controls feed the interactive visualization below.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-8a64e9e3-477e-4a7e-97f7-61cf5e428731"><div class="markdown"><p>The window size controls feed the interactive visualization below.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><hr />
+<div class="pl-cell"><pluto-output class="rich_output" id="out-b56a1328-194c-4e1c-a033-9ca6e0ab3eeb"><div class="markdown"><hr />
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><blockquote>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-6e359db6-581f-4a5a-a0a7-6924faf19653"><div class="markdown"><blockquote>
 <p>Of course, we are not limited to the 3x &#43; 1 problem, what happens if we change up those values?</p>
 </blockquote>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Generalizing-the-Collatz-function">Generalizing the Collatz function</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-dc1dba7c-8c0d-4609-882a-e5703c467fef"><div class="markdown"><h1 id="Generalizing-the-Collatz-function">Generalizing the Collatz function</h1>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>A generalization of the collatz function is the following:</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-b9277abb-7a14-4479-8bcb-6a50df27182b"><div class="markdown"><p>A generalization of the collatz function is the following:</p>
 <p><span class="tex">$g&#40;n&#41; &#61; n/P \ \ \ \ \ \ \ \text&#123;when&#125;\ \ \ n \ \text&#123;mod&#125;\ P &#61; 0$</span></p>
 <p><span class="tex">$g&#40;n&#41; &#61; an&#43;b \ \ \ \text&#123;otherwise&#125;$</span></p>
 <p>This formulation makes sure that we always deal with integers.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>The sliders below let you change the three numbers <span class="tex">$P$</span>, <span class="tex">$a$</span> and <span class="tex">$b$</span> directly. Every plot above — the hailstone sequence, the convergence view and the stopping-time plot — reacts live to these values, so you can explore the generalized family without leaving the page.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-0e85d872-ef01-463e-b395-b0797c96317e"><div class="markdown"><p>The sliders below let you change the three numbers <span class="tex">$P$</span>, <span class="tex">$a$</span> and <span class="tex">$b$</span> directly. Every plot above — the hailstone sequence, the convergence view and the stopping-time plot — reacts live to these values, so you can explore the generalized family without leaving the page.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition info"><p class="admonition-title">Try it</p><p>The classic Collatz problem is <span class="tex">$P &#61; 2$</span>, <span class="tex">$a &#61; 3$</span>, <span class="tex">$b &#61; 1$</span>. Move the sliders to pick a different <span class="tex">$&#40;P, a, b&#41;$</span> and watch how the trajectories change.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-1c3f1bea-f1ba-4d64-90ad-584391c01da5"><div class="markdown"><div class="admonition info"><p class="admonition-title">Try it</p><p>The classic Collatz problem is <span class="tex">$P &#61; 2$</span>, <span class="tex">$a &#61; 3$</span>, <span class="tex">$b &#61; 1$</span>. Move the sliders to pick a different <span class="tex">$&#40;P, a, b&#41;$</span> and watch how the trajectories change.</p>
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Collatz Parameters &#40;P, a, b&#41;:</p>
-<p>P &#61; <bond def="collatz_P" unique_id="osltlqkyfqca"><input type='range' min='1' max='9' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f21f1e3e-a3ab-458e-a101-ce824731f0b6"><div class="markdown"><p>Collatz Parameters &#40;P, a, b&#41;:</p>
+<p>P &#61; <bond def="collatz_P" unique_id="lsdctxbzwqte"><input type='range' min='1' max='9' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2725,14 +3112,14 @@ Filename:
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>2</output></bond></p>
-<p>a &#61; <bond def="collatz_a" unique_id="qsgreozqidvk"><input type='range' min='1' max='10' value='3'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>a &#61; <bond def="collatz_a" unique_id="ptssvggkodwv"><input type='range' min='1' max='10' value='3'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2750,14 +3137,14 @@ Filename:
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
     					margin-left: 3px;
     					transform: translateY(-4px);
     					display: inline-block;'>3</output></bond></p>
-<p>b &#61; <bond def="collatz_b" unique_id="dhgizyrthmdb"><input type='range' min='1' max='10' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const __run=function(){
+<p>b &#61; <bond def="collatz_b" unique_id="qhvjceavcwrb"><input type='range' min='1' max='10' value='1'><script>(function(){const currentScript=document.currentScript;const invalidation=new Promise(function(){});const html=function(strings,...values){const t=document.createElement('template');t.innerHTML=String.raw({raw:strings},...values);return t.content.childNodes.length===1?t.content.firstChild:t.content;};const Generators=window.Generators||(window.Generators={input:function(el){let first=true,waiter=null;const read=function(){if(el.type==='checkbox')return el.checked;if(el.type==='range'||el.type==='number')return Number(el.value);return el.value;};el.addEventListener('input',function(){if(waiter){const w=waiter;waiter=null;w(read());}});return{next:function(){return{value:first?(first=false,Promise.resolve(read())):new Promise(function(r){waiter=r;})};}};}});const __run=async function(){
 
 					const input_el = currentScript.previousElementSibling
 					const output_el = currentScript.nextElementSibling
@@ -2775,7 +3162,7 @@ Filename:
 						input_el.removeEventListener("input", update_output)
 					})
 					
-};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__run):__run();})();</script><output style='
+};const __mount=function(v){if(v instanceof Node&&currentScript.isConnected)currentScript.replaceWith(v);};const __go=function(){Promise.resolve(__run()).then(__mount).catch(function(e){console.error(e);});};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",__go):__go();})();</script><output style='
 						font-family: system-ui;
 						font-variant-numeric: tabular-nums;
     					font-size: 15px;
@@ -2783,21 +3170,21 @@ Filename:
     					transform: translateY(-4px);
     					display: inline-block;'>1</output></bond></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition warning"><p class="admonition-title">Divergence</p><p>Some parameter choices do not behave like the traditional problem and can send the numbers climbing without ever reaching 1. To keep everything fast and finite, the computations stop after at most 1000 steps.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-af0c36ee-0534-4143-b59b-4ee041ef0f04"><div class="markdown"><div class="admonition warning"><p class="admonition-title">Divergence</p><p>Some parameter choices do not behave like the traditional problem and can send the numbers climbing without ever reaching 1. To keep everything fast and finite, the computations stop after at most 1000 steps.</p>
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Gallery">Gallery</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-16d57341-6c55-4440-bdeb-492b4d0c4427"><div class="markdown"><h1 id="Gallery">Gallery</h1>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>While playing around with the <strong>interactive visualization</strong> above, you can stumble into some lovely patterns. Try a few <code>&#40;P, a, b&#41;</code> combinations together with different rotation angles, step lengths and starting points — for example <code>P &#61; 5, a &#61; 5, b &#61; 5</code> or <code>P &#61; 2, a &#61; 3, b &#61; 7</code> — and watch the trajectories bloom into flowers, hexagonal grids and little creatures. Enjoy :&#41;</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5655a706-2c53-4763-b8c5-e21aa3e72371"><div class="markdown"><p>While playing around with the <strong>interactive visualization</strong> above, you can stumble into some lovely patterns. Try a few <code>&#40;P, a, b&#41;</code> combinations together with different rotation angles, step lengths and starting points — for example <code>P &#61; 5, a &#61; 5, b &#61; 5</code> or <code>P &#61; 2, a &#61; 3, b &#61; 7</code> — and watch the trajectories bloom into flowers, hexagonal grids and little creatures. Enjoy :&#41;</p>
 <p><em>&#40;Note that the patterns are highly dependent on the canvas size, so the exact look will shift as you resize the window.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><hr />
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3e9a6e74-a0ab-4c47-b493-4670fa828c45"><div class="markdown"><hr />
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><hr />
+<div class="pl-cell"><pluto-output class="rich_output" id="out-546a2cf6-f54a-4482-9da5-af9d966b22eb"><div class="markdown"><hr />
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h1 id="Appendix">Appendix</h1>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-cdfb638b-a04c-482c-9206-47f7dfd63766"><div class="markdown"><h1 id="Appendix">Appendix</h1>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>Here a list of extra ressources in case you want to learn more. They inspired me a lot through this notebook so hope you find them usefull&#33;</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-3e6323cb-4b09-4fe9-a223-8c66cb0d3efc"><div class="markdown"><p>Here a list of extra ressources in case you want to learn more. They inspired me a lot through this notebook so hope you find them usefull&#33;</p>
 <ul>
 <li><p><a href="https://en.wikipedia.org/wiki/Collatz_conjecture">Wikipedia page</a></p>
 </li>
@@ -2811,16 +3198,16 @@ Filename:
 </li>
 </ul>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Packages">Packages</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-0fdafbdc-a6aa-42a6-a899-41b351b5e7e8"><div class="markdown"><h2 id="Packages">Packages</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition info"><p class="admonition-title">Numerical kernels</p><p>The Collatz / hailstone / stopping-time computations in this notebook are written as plain integer loops &#40;<code>collatz_hailstone</code>, <code>collatz_stopping_time</code>&#41; so the interactive plots compile to WebAssembly — no external numerical packages needed.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-c5673bfa-d2b0-4893-ad88-42a5b81f27b4"><div class="markdown"><div class="admonition info"><p class="admonition-title">Numerical kernels</p><p>The Collatz / hailstone / stopping-time computations in this notebook are written as plain integer loops &#40;<code>collatz_hailstone</code>, <code>collatz_stopping_time</code>&#41; so the interactive plots compile to WebAssembly — no external numerical packages needed.</p>
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition info"><p class="admonition-title">Notebook Packages</p><p><a href="https://www.juliapackages.com/p/PlutoUI">PlutoUI</a>: Extension for Pluto to handle interactivity, provides the Sliders and Checkboxes.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-e4a76493-9aea-4379-9a56-6a9b9e8d6b54"><div class="markdown"><div class="admonition info"><p class="admonition-title">Notebook Packages</p><p><a href="https://www.juliapackages.com/p/PlutoUI">PlutoUI</a>: Extension for Pluto to handle interactivity, provides the Sliders and Checkboxes.</p>
 <p><a href="https://www.juliapackages.com/p/HypertextLiteral">HypertextLiteral</a>: Used to lay out the interactive control panels.</p>
 </div>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><div class="admonition info"><p class="admonition-title">Plotting Package</p><p><a href="https://github.com/GroupTherapyOrg/WasmMakie.jl">WasmMakie</a>: Plotting library for the several plots and trajectory visualizations in the notebook — Makie&#39;s API, rendered through HTML Canvas2D, WebAssembly-compilable.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-13f52ec2-16b9-41a5-9560-177ca827a72e"><div class="markdown"><div class="admonition info"><p class="admonition-title">Plotting Package</p><p><a href="https://github.com/GroupTherapyOrg/WasmMakie.jl">WasmMakie</a>: Plotting library for the several plots and trajectory visualizations in the notebook — Makie&#39;s API, rendered through HTML Canvas2D, WebAssembly-compilable.</p>
 </div>
 </div></pluto-output><pre class="pl-code"><code class="pl-jl">begin
 	using WasmMakie
@@ -2829,13 +3216,13 @@ Filename:
 		[WasmMakie](https://github.com/GroupTherapyOrg/WasmMakie.jl): Plotting library for the several plots and trajectory visualizations in the notebook — Makie's API, rendered through HTML Canvas2D, WebAssembly-compilable.
 	"""
 end</code></pre></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Custom-Types">Custom Types</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-091d8f63-d02a-48fa-be0c-e9e027409279"><div class="markdown"><h2 id="Custom-Types">Custom Types</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="Functions">Functions</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-9803f163-0027-4577-af8f-c66de195d182"><div class="markdown"><h2 id="Functions">Functions</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Collatz">Collatz</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f02affaa-534b-4c72-81ae-c42ca3b455fd"><div class="markdown"><h3 id="Collatz">Collatz</h3>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a3b1c2d4-0001-4001-8001-000000000001"><div class="pluto-docs-binding">
 <span id="collatz_hailstone">collatz_hailstone</span>
 <div class="markdown"><pre><code class="language-julia">collatz_hailstone&#40;n0, P, a, b, maxlen&#41;</code></pre>
 <p>The generalized hailstone sequence as a flat <code>Vector&#123;Int64&#125;</code>, computed with a plain integer loop so it compiles to WebAssembly. <code>g&#40;n&#41; &#61; n ÷ P</code> when <code>n &#37; P &#61;&#61; 0</code>, otherwise <code>g&#40;n&#41; &#61; a*n &#43; b</code>. Iteration stops at 1 or after <code>maxlen</code> steps.</p>
@@ -2844,7 +3231,7 @@ end</code></pre></div>
 </div>
 </div>
 </pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="pluto-docs-binding">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a3b1c2d4-0002-4001-8001-000000000002"><div class="pluto-docs-binding">
 <span id="collatz_stopping_time">collatz_stopping_time</span>
 <div class="markdown"><pre><code class="language-julia">collatz_stopping_time&#40;n0, P, a, b, maxlen&#41;</code></pre>
 <p>Number of steps the generalized Collatz map takes to first reach 1 &#40;the <em>total stopping time</em>&#41;, as a plain <code>Int64</code>. Capped at <code>maxlen</code> steps so divergent parameters stay finite.</p>
@@ -2853,35 +3240,35 @@ end</code></pre></div>
 </div>
 </div>
 </pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Drawing">Drawing</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-cf545d05-7846-4881-a532-33cb2c1972a4"><div class="markdown"><h3 id="Drawing">Drawing</h3>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="HTML-Functions">HTML Functions</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-ae8c02c0-2944-42dc-8a19-a45fbdc16134"><div class="markdown"><h3 id="HTML-Functions">HTML Functions</h3>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Interactivity-extensions">Interactivity extensions</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-f47eb656-67ec-4760-8906-713fa480cb47"><div class="markdown"><h3 id="Interactivity-extensions">Interactivity extensions</h3>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p>All interactive controls now use plain PlutoUI bonds &#40;<code>@bind x Slider&#40;...&#41;</code>&#41;, which serialize correctly as WebAssembly island bonds.</p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-43479204-cd12-40b4-a65f-16bf54aaddfe"><div class="markdown"><p>All interactive controls now use plain PlutoUI bonds &#40;<code>@bind x Slider&#40;...&#41;</code>&#41;, which serialize correctly as WebAssembly island bonds.</p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;NumberField controls use plain <code>@bind x NumberField&#40;...&#41;</code> bonds.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-31a7994d-13e0-440a-8279-5f19d7d0933f"><div class="markdown"><p><em>&#40;NumberField controls use plain <code>@bind x NumberField&#40;...&#41;</code> bonds.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;CheckBox controls use plain <code>@bind x CheckBox&#40;...&#41;</code> bonds.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-25d2291f-f422-41e4-aa61-9000e13d34ad"><div class="markdown"><p><em>&#40;CheckBox controls use plain <code>@bind x CheckBox&#40;...&#41;</code> bonds.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;Stroke colour now uses three integer <code>@bind x Slider&#40;0:255, ...&#41;</code> channel bonds.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-1255f4cc-7448-40f6-83ba-0cca1637d1cf"><div class="markdown"><p><em>&#40;Stroke colour now uses three integer <code>@bind x Slider&#40;0:255, ...&#41;</code> channel bonds.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;slider layout is built inline in each control cell.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-7dac4da8-0877-4d07-b4d2-2164faeccfde"><div class="markdown"><p><em>&#40;slider layout is built inline in each control cell.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;slider layout is built inline in each control cell.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-4dd44fbd-f26a-4b72-a580-842209b44f27"><div class="markdown"><p><em>&#40;slider layout is built inline in each control cell.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;NumberField layout is built inline in each control cell.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-5977a13d-93b8-4e51-8484-5b1882100c49"><div class="markdown"><p><em>&#40;NumberField layout is built inline in each control cell.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;CheckBox layout is built inline in each control cell.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-a7885279-3f73-4c5d-aeef-061dea1ce930"><div class="markdown"><p><em>&#40;CheckBox layout is built inline in each control cell.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><p><em>&#40;Stroke colour slider layout is built inline in the control cell.&#41;</em></p>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-2d98aed3-9a51-4225-b914-a20b19f43908"><div class="markdown"><p><em>&#40;Stroke colour slider layout is built inline in the control cell.&#41;</em></p>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h3 id="Extras">Extras</h3>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-d9aaaadc-7d94-4e85-a1cb-c137e869ad2f"><div class="markdown"><h3 id="Extras">Extras</h3>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output"><div class="markdown"><h2 id="CSS-Styles">CSS Styles</h2>
+<div class="pl-cell"><pluto-output class="rich_output" id="out-90dc6dd4-c4f3-4e4d-8e91-0fecafd258e1"><div class="markdown"><h2 id="CSS-Styles">CSS Styles</h2>
 </div></pluto-output></div>
-<div class="pl-cell"><pluto-output class="rich_output">
+<div class="pl-cell"><pluto-output class="rich_output" id="out-7baab6e9-31bb-4da5-8ab9-938546cc863e">
 <style>
 
 input[type="button" i] {
@@ -2988,21 +3375,46 @@ input[type="button" i] {
   function collectBonds() {
     const vals = {};
     document.querySelectorAll("bond[def]").forEach(function (b) {
-      const inp = b.querySelector("input,select,textarea");
-      if (!inp) return;
+      const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
+      const valueInputs = inputs.filter(function (inp) {
+        return inp.type !== "submit" && inp.type !== "reset";
+      });
+      const holder = b.firstElementChild;
+      if (!inputs.length) {
+        if (holder && holder.value !== undefined) vals[b.getAttribute("def")] = holder.value;
+        return;
+      }
+      function inputValue(inp) {
       const t = inp.type;
       // Match the shim's value_tree contract per input type: numbers as Number,
       // checkbox as Boolean, and date/time inputs as the {__pluto_date_ms: epochMs}
       // marker the shim decodes into a Julia DateTime (the staterequest path sends
       // valueAsDate → msgpack Date ext → the same marker). Passing the raw string
       // here would make value_tree treat the DateTime struct's value as undefined.
-      let v;
-      if (t === "range" || t === "number") v = Number(inp.value);
-      else if (t === "checkbox") v = inp.checked;
+      if (t === "range" || t === "number") return Number(inp.value);
+      else if (t === "button") {
+        // Pluto's Button displays a label on the <input>, but stores its
+        // integer click count on the wrapper element that dispatches `input`.
+        const holder = b.firstElementChild;
+        return holder && holder.value !== undefined ? holder.value : 0;
+      }
+      else if (t === "checkbox") return inp.checked;
       else if (t === "date" || t === "datetime-local" || t === "month" || t === "week" || t === "time")
-        v = Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
-      else v = inp.value;
-      vals[b.getAttribute("def")] = v;
+        return Number.isNaN(inp.valueAsNumber) ? undefined : { __pluto_date_ms: inp.valueAsNumber };
+      else if (inp instanceof HTMLSelectElement && inp.multiple)
+        return Array.from(inp.selectedOptions, function (o) { return o.value; });
+      return inp.value;
+      }
+      // Wrapper widgets such as PlutoUI.confirm expose their logical value on
+      // the wrapper.  Their descendant submit button is UI chrome, not a second
+      // field; flattening both controls produced [1, ""] and eventually tried
+      // to decode "1," as a Julia integer.  Prefer the wrapper contract whenever
+      // it exists.  Otherwise PlutoUI.combine is represented by its ordered
+      // child inputs and the bridge maps that array to the struct fields.
+      const holderIsInput = holder && holder.matches("input,select,textarea");
+      vals[b.getAttribute("def")] = holder && !holderIsInput && holder.value !== undefined
+        ? holder.value
+        : (valueInputs.length === 1 ? inputValue(valueInputs[0]) : valueInputs.map(inputValue));
     });
     return vals;
   }
@@ -3011,7 +3423,14 @@ input[type="button" i] {
   }
   document.addEventListener("input", function (e) {
     if (e.target.closest && e.target.closest("bond[def]")) rerender();
-  });
+  }, true);
+  // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
+  // stops the click at the button. Capture the click, then rerender after the
+  // widget's target-phase handler increments the wrapper's numeric value.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest('bond[def] input[type="button"]'))
+      setTimeout(rerender, 0);
+  }, true);
   (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
 })();
 </script>
@@ -3031,8 +3450,8 @@ input[type="button" i] {
 </script>
 
 <script type="module">
-import { parser } from "https://esm.sh/@plutojl/lezer-julia@1";
-import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1";
+import { parser } from "https://esm.sh/@plutojl/lezer-julia@1.2.0";
+import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1.2.3";
 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 function hl(code) {
   const tree = parser.parse(code); let out = "", pos = 0;

@@ -26,17 +26,17 @@
   --blockquote-bg: var(--color-base-200);
   --blockquote-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
   --br: 0.4rem;
-  --cm-color-builtin: var(--color-info, #0891b2);
+  --cm-color-builtin: var(--snapshot-syntax-type);
   --cm-color-clickable-underline: var(--color-primary);
   --cm-color-comment: color-mix(in oklab, var(--color-base-content) 50%, transparent);
   --cm-color-editor-text: var(--color-base-content);
-  --cm-color-keyword: #8b5cf6;
+  --cm-color-keyword: var(--snapshot-syntax-keyword);
   --cm-color-line-numbers: color-mix(in oklab, var(--color-base-content) 50%, transparent);
-  --cm-color-literal: #d97706;
-  --cm-color-macro: #db2777;
-  --cm-color-string: #16a34a;
-  --cm-color-symbol: #d97706;
-  --cm-color-type: var(--color-info, #0891b2);
+  --cm-color-literal: var(--snapshot-syntax-number);
+  --cm-color-macro: var(--snapshot-syntax-macro);
+  --cm-color-string: var(--snapshot-syntax-string);
+  --cm-color-symbol: var(--snapshot-syntax-number);
+  --cm-color-type: var(--snapshot-syntax-type);
   --cm-color-variable: var(--color-base-content);
   --cm-highlighted: color-mix(in oklab, var(--color-primary) 15%, transparent);
   --cm-var-color: var(--color-base-content);
@@ -83,6 +83,12 @@
   --roboto-mono-font-stack: "Roboto Mono", ui-monospace, Menlo, monospace;
   --rule-color: var(--color-base-300);
   --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --snapshot-syntax-function: #2563eb;
+  --snapshot-syntax-keyword: #8b5cf6;
+  --snapshot-syntax-macro: #db2777;
+  --snapshot-syntax-number: #d97706;
+  --snapshot-syntax-string: #16a34a;
+  --snapshot-syntax-type: #0891b2;
   --system-fonts-mono: var(--julia-mono-font-stack);
   --system-ui-font-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --table-bg-hover-color: var(--color-base-200);
@@ -864,7 +870,7 @@ jlerror > section > ol > li:not(.important)::marker {
     font-weight: 100;
 }
 jlerror > section > ol > li.from_this_notebook {
-    --bg: var(--jl-info-acccolor);
+    --bg: var(--color-base-100);
     background: var(--bg);
     outline: 3px solid var(--bg);
     padding: 0.4em 0em;
@@ -935,9 +941,9 @@ jlerror li a.frame-line-preview {
     display: block;
     text-decoration: none;
     border: 3px solid var(--cm-color-clickable-underline);
-    --br: 0.6em;
+    --br: 0.4rem;
     border-radius: var(--br);
-    --crop: -0.5em;
+    --crop: 0;
 }
 jlerror li .frame-line-preview pre:not(.asdfdsaf) {
     background-color: var(--code-background);
@@ -1109,20 +1115,20 @@ pluto-tree.collapsed p-v > pre {
 .plutoui-toc {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji",
 		"Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
-	--main-bg-color: #fafafa;
-	--pluto-output-color: hsl(0, 0%, 36%);
-	--pluto-output-h-color: hsl(0, 0%, 21%);
-	--sidebar-li-active-bg: rgb(235, 235, 235);
-	--icon-filter: unset;
+	--main-bg-color: var(--color-base-100);
+	--pluto-output-color: var(--color-base-content);
+	--pluto-output-h-color: var(--color-base-content);
+	--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+	--icon-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
 	.plutoui-toc {
-		--main-bg-color: #303030;
-		--pluto-output-color: hsl(0, 0%, 90%);
-		--pluto-output-h-color: hsl(0, 0%, 97%);
-		--sidebar-li-active-bg: rgb(82, 82, 82);
-		--icon-filter: invert(1);
+		--main-bg-color: var(--color-base-100);
+		--pluto-output-color: var(--color-base-content);
+		--pluto-output-h-color: var(--color-base-content);
+		--sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
+		--icon-filter: none;
 	}
 }
 
@@ -1144,7 +1150,7 @@ pluto-tree.collapsed p-v > pre {
 }
 
 .plutoui-toc.smallscreen:not(.hide) {
-	box-shadow: 0 0 11px 0px #00000010;
+	box-shadow: 0 0 11px 0px color-mix(in oklab, var(--color-base-content) 6%, transparent);
 }
 
 .plutoui-toc.aside.hide {
@@ -1248,7 +1254,7 @@ pluto-tree.collapsed p-v > pre {
 
 	
 .highlight-pluto-cell-shoulder {
-	background: rgba(0, 0, 0, 0.05);
+	background: color-mix(in oklab, var(--color-primary) 7%, transparent);
 	background-clip: padding-box;
 }
 
@@ -1300,14 +1306,14 @@ pluto-tree.collapsed p-v > pre {
 /* ─── ToC local vars → DaisyUI (after, so it wins over Pluto's prefers-dark) ─── */
 .plutoui-toc {
   --main-bg-color: var(--color-base-100);
-  --pluto-output-color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
+  --pluto-output-color: var(--color-base-content);
   --pluto-output-h-color: var(--color-base-content);
-  --sidebar-li-active-bg: var(--color-base-200);
+  --sidebar-li-active-bg: color-mix(in oklab, var(--color-primary) 12%, transparent);
   --icon-filter: none;
-  --cm-var-color: var(--color-primary);
+  --cm-var-color: var(--color-base-content);
   border: 1px solid var(--color-base-300);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: invert(1); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) .plutoui-toc { --icon-filter: none; } }
 
 
 /* ── ansi-colors.css (stdout colour) ── */
@@ -1315,22 +1321,22 @@ pluto-tree.collapsed p-v > pre {
 /* ANSI color classes */
 
 :root {
-    --ansi-black: rgb(0, 0, 0);
-    --ansi-red: rgb(187, 0, 0);
-    --ansi-green: rgb(0, 187, 0);
-    --ansi-yellow: rgb(187, 187, 0);
-    --ansi-blue: rgb(0, 0, 187);
-    --ansi-magenta: rgb(187, 0, 187);
-    --ansi-cyan: rgb(0, 187, 187);
-    --ansi-white: rgb(255, 255, 255);
-    --ansi-bright-black: rgb(85, 85, 85);
-    --ansi-bright-red: rgb(255, 85, 85);
-    --ansi-bright-green: rgb(0, 255, 0);
-    --ansi-bright-yellow: rgb(255, 255, 85);
-    --ansi-bright-blue: rgb(85, 85, 255);
-    --ansi-bright-magenta: rgb(255, 85, 255);
-    --ansi-bright-cyan: rgb(85, 255, 255);
-    --ansi-bright-white: rgb(255, 255, 255);
+    --ansi-black: var(--color-base-content);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-green: var(--color-success, #16a34a);
+    --ansi-yellow: var(--color-warning, #d97706);
+    --ansi-blue: var(--color-info, #3b82f6);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-cyan: var(--color-accent, #0891b2);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-red: var(--color-error, #ef4444);
+    --ansi-bright-green: var(--color-success, #22c55e);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-magenta: var(--color-secondary, #a855f7);
+    --ansi-bright-cyan: var(--color-accent, #22d3ee);
+    --ansi-bright-white: var(--color-base-content);
 }
 
 /* Foreground colors */
@@ -1437,14 +1443,14 @@ pluto-tree.collapsed p-v > pre {
 
 /* Some custom styles for stdout to improve contrast and readability */
 pluto-log-dot.Stdout {
-    --ansi-red: rgb(220, 0, 0);
-    --ansi-magenta: rgb(200, 0, 200);
-    --ansi-white: rgb(220, 220, 220);
-    --ansi-bright-black: rgb(50, 50, 50);
-    --ansi-bright-yellow: rgb(240, 240, 50);
-    --ansi-bright-blue: rgb(110, 110, 255);
-    --ansi-bright-white: rgb(240, 240, 240);
-    --ansi-bright-black: rgb(183 183 183);
+    --ansi-red: var(--color-error, #dc2626);
+    --ansi-magenta: var(--color-secondary, #7c3aed);
+    --ansi-white: color-mix(in oklab, var(--color-base-content) 35%, var(--color-base-100));
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+    --ansi-bright-yellow: var(--color-warning, #eab308);
+    --ansi-bright-blue: var(--color-info, #60a5fa);
+    --ansi-bright-white: var(--color-base-content);
+    --ansi-bright-black: color-mix(in oklab, var(--color-base-content) 60%, transparent);
 }
 
 pluto-log-dot.Stdout .ansi-bright-black-fg:is(.ansi-white-bg, .ansi-bright-white-bg) {
@@ -1515,7 +1521,7 @@ code.hljs {
 /* .hljs-deletion {} */
 
 
-/* ── error.css (jlerror / error cell) ── */
+/* ── error.css (jlerror / error cell, bare pre/code scoped) ── */
 
 
 * {
@@ -1523,25 +1529,23 @@ code.hljs {
 }
 
 :root {
-    --inter-ui-font-stack:
-        "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Cantarell, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-        system-ui, sans-serif;
-    --system-fonts-mono: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --inter-ui-font-stack: var(--system-ui-font-stack);
+    --system-fonts-mono: var(--julia-mono-font-stack);
 
     color-scheme: light dark;
     font-family: var(--inter-ui-font-stack);
     font-size: 17px;
 
-    --black: black;
-    --gray1: gray;
-    --white: white;
+    --black: var(--color-base-content);
+    --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+    --white: var(--color-base-100);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --black: white;
-        --gray1: #c7c7c7;
-        --white: black;
+        --black: var(--color-base-content);
+        --gray1: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+        --white: var(--color-base-100);
     }
 }
 
@@ -1552,27 +1556,27 @@ body {
     padding: 1rem;
 }
 
-code,
-pre {
+jlerror code,
+jlerror pre {
     font-family: var(--system-fonts-mono);
     color: var(--gray1);
 }
-pre code {
+jlerror pre code {
     color: inherit;
 }
-code {
+jlerror code {
     font-size: 0.9rem;
 }
 
-pre {
+jlerror pre {
     /* white-space: pre-wrap; */
     overflow: auto;
 
-    border-left: 8px solid #ff002d42;
+    border-left: 8px solid color-mix(in oklab, var(--color-error) 26%, transparent);
     padding-left: 1rem;
 }
 
-pre:first-line {
+jlerror pre:first-line {
     font-weight: bolder;
     line-height: 2em;
     /* font-style: italic; */

@@ -1,1 +1,1 @@
-[{"bonds":["n"],"cells":[{"id":"e80986c6-d509-11ea-12e3-f79a54b5ab31","ok":true}],"judgement":"island","oracle_samples":5,"oracle_skipped":null,"reasons":[]}]
+[{"arg_types":["Int64"],"bonds":["n"],"cells":[{"id":"e80986c6-d509-11ea-12e3-f79a54b5ab31","ok":true}],"fallback_kind":null,"judgement":"island","oracle_samples":5,"oracle_skipped":null,"reasons":[]}]

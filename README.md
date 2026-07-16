@@ -13,12 +13,9 @@ A **snapshot** of a running notebook: a static export whose interactive cells st
 
 ## Installation
 
-Snapshot.jl is currently in a small-community, pre-registration test phase. Until
-its first General registry release, install the audited `main` branch explicitly:
-
 ```julia
 import Pkg
-Pkg.add(url="https://github.com/GroupTherapyOrg/Snapshot.jl")
+Pkg.add("Snapshot")
 ```
 
 After installation, use `using Snapshot` as shown below. Do not treat notebooks

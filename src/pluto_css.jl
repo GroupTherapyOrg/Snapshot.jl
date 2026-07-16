@@ -15,9 +15,10 @@
 #     - ansi-colors.css   (stdout / terminal colour)        ← Pluto frontend
 #     - highlightjs.css   (code syntax highlight in output)  ← Pluto frontend
 #     - error.css         (jlerror / error cell display)     ← Pluto frontend
-#     - assets/pluto-base.css = editor.css pluto-output rules + treeview.css
-#       (array/dict/tree) + PlutoUI TableOfContents — snapshot of Pluto's output
-#       rules (regenerate via write_pluto_base() on a Pluto bump).
+#     - assets/pluto-base.css = a reviewed, pinned snapshot of editor.css
+#       pluto-output rules + treeview.css (array/dict/tree) + PlutoUI
+#       TableOfContents. Refresh that source snapshot deliberately on a Pluto bump,
+#       then run write_pluto_css() to regenerate the committed assembled artifact.
 #   Editor-chrome files (binder/hide-ui/welcome/featured-card/index/all-styles) are
 #   intentionally excluded — they style the editor, not cell output.
 
@@ -79,17 +80,25 @@ const PLUTO_VAR_MAP = Dict{String,String}(
     "--jlerror-mark-color" => "var(--color-base-content)",
     "--jlerror-a-bg-color" => "color-mix(in oklab, var(--color-warning, #d97706) 14%, var(--color-base-100))",
     "--jlerror-a-border-left-color" => "var(--color-error, #dc2626)",
-    # code-token colours (highlightjs / CodeMirror) — match the Lezer tok-* palette
+    # Shared syntax palette. Pluto/CodeMirror variables and our Lezer `.tok-*`
+    # classes both consume these tokens so their colors cannot drift apart.
+    "--snapshot-syntax-keyword" => "#8b5cf6",
+    "--snapshot-syntax-string" => "#16a34a",
+    "--snapshot-syntax-number" => "#d97706",
+    "--snapshot-syntax-type" => "#0891b2",
+    "--snapshot-syntax-macro" => "#db2777",
+    "--snapshot-syntax-function" => "#2563eb",
+    # code-token colours (highlightjs / CodeMirror)
     "--cm-color-variable" => "var(--color-base-content)",
     "--cm-color-editor-text" => "var(--color-base-content)",
-    "--cm-color-type" => "var(--color-info, #0891b2)",
-    "--cm-color-builtin" => "var(--color-info, #0891b2)",
-    "--cm-color-keyword" => "#8b5cf6",
+    "--cm-color-type" => "var(--snapshot-syntax-type)",
+    "--cm-color-builtin" => "var(--snapshot-syntax-type)",
+    "--cm-color-keyword" => "var(--snapshot-syntax-keyword)",
     "--cm-color-comment" => "color-mix(in oklab, var(--color-base-content) 50%, transparent)",
-    "--cm-color-string" => "#16a34a",
-    "--cm-color-literal" => "#d97706",
-    "--cm-color-symbol" => "#d97706",
-    "--cm-color-macro" => "#db2777",
+    "--cm-color-string" => "var(--snapshot-syntax-string)",
+    "--cm-color-literal" => "var(--snapshot-syntax-number)",
+    "--cm-color-symbol" => "var(--snapshot-syntax-number)",
+    "--cm-color-macro" => "var(--snapshot-syntax-macro)",
     "--cm-color-line-numbers" => "color-mix(in oklab, var(--color-base-content) 50%, transparent)",
     "--cm-highlighted" => "color-mix(in oklab, var(--color-primary) 15%, transparent)",
     "--cm-color-clickable-underline" => "var(--color-primary)",
@@ -125,7 +134,7 @@ const PLUTO_VAR_MAP = Dict{String,String}(
 own palettes onto the standard DaisyUI tokens PLUTO_VAR_MAP consumes (see the header
 comment in assets/classic-themes.css, the single source of truth — docs/input.css
 @imports the same file). Inlined into every export (standalone + fragment) because
-the CDN daisyui@5/themes.css only ships the built-in themes."""
+the pinned DaisyUI themes sheet only ships the built-in themes."""
 const CLASSIC_THEMES_CSS = read(joinpath(@__DIR__, "..", "assets", "classic-themes.css"), String)
 
 """Literal colours Pluto baked into the included CSS as hex/rgb (NOT via a var, so the
@@ -133,6 +142,8 @@ var-map can't catch them) → DaisyUI tokens, so they stay theme-aware."""
 const HARDCODED_COLOR_MAP = Dict{String,String}(
     "#ff002d42" => "color-mix(in oklab, var(--color-error) 26%, transparent)",       # error.css stacktrace left bar
     "#c7c7c7" => "color-mix(in oklab, var(--color-base-content) 22%, transparent)",   # error.css gray
+    "#00000010" => "color-mix(in oklab, var(--color-base-content) 6%, transparent)",  # PlutoUI ToC small-screen shadow
+    "rgba(0, 0, 0, 0.05)" => "color-mix(in oklab, var(--color-primary) 7%, transparent)", # PlutoUI ToC shoulder
 )
 
 "Strip @charset / @import lines (invalid inside an inlined <style>)."
@@ -188,13 +199,34 @@ function generate_pluto_output_css()
     end
     isempty(defaulted) ||
         @warn "Pluto→DaisyUI: $(length(defaulted)) var(s) defaulted — add to PLUTO_VAR_MAP" defaulted
-    @info "Pluto→DaisyUI CSS: $(length(varmap) - length(defaulted))/$(length(used)) Pluto vars mapped, $(length(defaulted)) defaulted"
+    upstream_used = filter(v -> !(startswith(v, "--color-") || startswith(v, "--radius")), used)
+    mapped_used = count(v -> haskey(varmap, v), upstream_used)
+    @info "Pluto→DaisyUI CSS: $mapped_used/$(length(upstream_used)) upstream vars mapped, $(length(defaulted)) defaulted; $(length(varmap) - mapped_used) shared/support tokens"
+
+    # Pluto and PlutoUI define some variables again inside component/media scopes
+    # (for example error.css's `--white` and TableOfContents' light/dark palette).
+    # A root-level token map alone loses to those later, nearer declarations.
+    # Normalize every upstream declaration of a mapped variable so semantic
+    # components remain theme-driven at every cascade level.
+    remapped_declarations = 0
+    for (name, value) in varmap
+        declaration = Regex("([;{]\\s*|^\\s*)" * name * "\\s*:[^;}]*;", "m")
+        matches = length(collect(eachmatch(declaration, body)))
+        matches == 0 && continue
+        replacement = SubstitutionString(raw"\1" * name * ": " * value * ";")
+        body = replace(body, declaration => replacement)
+        remapped_declarations += matches
+    end
+    @info "Pluto→DaisyUI cascade: $remapped_declarations upstream variable declaration(s) normalized"
 
     # surface any HARDCODED colours remaining in property VALUES (var-definition lines
     # like `--ansi-red: rgb(...)` are overridden by the :root map above → skip them).
     # This class of issue was previously silent (the var-only mapper missed literal hex/rgb).
     hc_remaining = String[]
-    for line in eachsplit(body, '\n')
+    # Ignore commented examples when auditing visible declarations. Keeping them
+    # in the vendored source is useful provenance, but they are not rendered CSS.
+    audit_body = replace(body, r"/\*.*?\*/"s => "")
+    for line in eachsplit(audit_body, '\n')
         startswith(strip(line), "--") && continue
         for m in eachmatch(r"#[0-9a-fA-F]{6,8}\b|rgba?\([0-9 ,.%]+\)", line)
             push!(hc_remaining, m.match)
