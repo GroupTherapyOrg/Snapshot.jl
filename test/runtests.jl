@@ -86,7 +86,7 @@ end
     @test occursin("inp.type !== \"submit\" && inp.type !== \"reset\"", exporter)
     @test occursin("valueInputs.map(inputValue)", exporter)
     @test occursin("addEventListener(\"input\"", exporter)
-    @test occursin("}, true);", exporter)
+    @test occursin("capture: true, signal: lifecycle.signal", exporter)
 end
 
 @testset "single final wasm assembly path" begin
@@ -228,6 +228,18 @@ end
     @test occursin("var pendingHash", toc_fragment)
     @test occursin("restoreCollectionHash", toc_fragment)
     @test occursin("history.replaceState", toc_fragment)
+    @test occursin("<script data-therapy-rerun>", toc_fragment)
+    @test occursin("import(\"https://esm.sh/@plutojl/lezer-julia", toc_fragment)
+    @test occursin("code.pl-jl:not([data-snapshot-highlighted])", toc_fragment)
+    @test occursin("therapy:router:before-swap", toc_fragment)
+    @test occursin("lifecycle.abort()", toc_fragment)
+    @test occursin("mutationObserver.disconnect()", toc_fragment)
+    exporter_source = read(joinpath(dirname(@__DIR__), "src", "exporter.jl"), String)
+    @test occursin("data-therapy-rerun=\\\"blocking\\\"", exporter_source)
+    @test occursin("const invalidation=new Promise(function(resolve){__invalidate=resolve;})", exporter_source)
+    @test occursin("root.querySelectorAll(\"bond[def]\")", toc_fragment)
+    @test occursin("signal: lifecycle.signal", toc_fragment)
+    @test count("data-therapy-rerun", toc_fragment) >= 5
     Pluto.SessionActions.shutdown(session, toc_notebook; async=false)
 end
 
@@ -895,6 +907,10 @@ if HAS_NODE
         @test occursin("group.judgement === \"fallback\"", shim)
         @test occursin("control.disabled = true", shim)
         @test occursin("static in this export", shim)
+        @test occursin("window.__snapshotIslandRuntime?.dispose?.()", shim)
+        @test occursin("runtime.dispose = () =>", shim)
+        @test occursin("if (window.fetch === fetch_wrapper) window.fetch = orig_fetch", shim)
+        @test occursin("decorate_observer.disconnect()", shim)
         @test isfile(joinpath(assets, manifest["groups"][1]["wasm"]))
 
         Pluto.SessionActions.shutdown(session, nb2; async=false)
