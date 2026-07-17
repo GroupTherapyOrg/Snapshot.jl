@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.2.0](https://github.com/GroupTherapyOrg/Snapshot.jl/compare/v0.1.1...v0.2.0) (2026-07-17)
+
+
+### Features
+
+* add fun notebook themes ([#38](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/38)) ([cc7acb0](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/cc7acb0e9c5a8fb8cc7ca3c1f02ae3be326cefc2))
+* configure honest island fallbacks ([#43](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/43)) ([ded0065](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/ded0065860893731991eee45990c9cca187ecf99))
+* make lean exports default and theme raw controls ([#50](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/50)) ([cd5c6db](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/cd5c6dbe7b93c371d5f5a6061ed4bec3fae3c922))
+* schedule persistent notebook canvas frames ([#33](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/33)) ([e95cfe6](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/e95cfe682d6c379c37f5f83d5fa2e9a4a3716868))
+
+
+### Bug Fixes
+
+* **ci:** allow prealigned release versions ([#55](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/55)) ([83f25de](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/83f25de1036873dc6b35961b066ad48b3793a8e8))
+* **ci:** authorize release pull request checks ([#56](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/56)) ([bd489be](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/bd489be3291e113700f6a123bf667d6801dad0d0))
+* deploy committed notebook bundles ([#27](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/27)) ([5c80345](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/5c80345dac4dc22c34658ac9a35d9c77cb5a7ba8))
+* disable controls for static fallback groups ([#42](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/42)) ([407ee98](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/407ee983c4121ecaac48da812389f1e229c6aa8e))
+* inherit host theme in fragments ([#45](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/45)) ([316c5ac](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/316c5acb1f768fc6a839788e73d9c91fd04fb581))
+* initialize notebook fragments after navigation ([#48](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/48)) ([f0932cb](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/f0932cb2cd23781fe6d63fa488b65a16fa968e2d))
+* isolate wasm island imports ([ee40f2a](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/ee40f2ad05fd6a84a44537297d35e153f0b29719))
+* isolate wasm island imports ([a170a60](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/a170a607777edd51dc47764aedd31fe7e8a03428))
+* keep embedded ToC scrolling inside collection ([#46](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/46)) ([cf1fcdb](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/cf1fcdb02f5fa039f3be5b91fc01d26ae1fb01a5))
+* marshal Pluto button click counts ([#28](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/28)) ([4193ec2](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/4193ec2a0289c76ba4b6a2043cb6268802b5fde3))
+* parse complete notebook cells ([#41](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/41)) ([aaa36aa](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/aaa36aad20bcb7a7b7f26618916bb58de1702f0d))
+* preserve fallback controls without reports ([#44](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/44)) ([fa4e95c](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/fa4e95ca8b77bec0e5351138608a6038896cea12))
+* preserve Pluto semantics in notebook exports ([#47](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/47)) ([5ebf817](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/5ebf81702934267806d213376f4a769fa898f791))
+* preserve unreleased snapshot frame contracts ([#35](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/35)) ([e344b69](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/e344b691de69a021d10f025a13f0b257028fddc5))
+* serialize wrapped PlutoUI bonds by logical value ([#30](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/30)) ([348c318](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/348c3187a9ad5ef21dda6a3bed1e5533a022d59f))
+* summarize notebook cell errors ([#40](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/40)) ([b500f4e](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/b500f4eed474256da21a898867951819f2b251c0))
+* theme wrapped notebook controls ([#52](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/52)) ([ab3b596](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/ab3b5960cbe8806692de9a1d198d91b4d17b91ac))
+
+
+### Miscellaneous Chores
+
+* harden release automation ([#53](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/53)) ([46bc600](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/46bc6008f970c636b7945acbfea1ce15a692a461))
+
 ## [0.1.1](https://github.com/GroupTherapyOrg/Snapshot.jl/releases/tag/v0.1.1) (2026-07-13)
 
 
