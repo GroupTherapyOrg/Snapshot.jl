@@ -581,9 +581,10 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
             # DOMContentLoaded — at parse time the script's following siblings (e.g. the
             # Slider's <output>) aren't in the DOM yet, so currentScript.nextElementSibling
             # would be null. Wrapping the body in __run() also makes top-level `return`s legal.
-            string("<script", attrs, ">(function(){",
+            string("<script data-therapy-rerun", attrs, ">(function(){",
                 "const currentScript=document.currentScript;",
-                "const invalidation=new Promise(function(){});",
+                "let __invalidate;const invalidation=new Promise(function(resolve){__invalidate=resolve;});",
+                "window.addEventListener('therapy:router:before-swap',function(){__invalidate();},{once:true});",
                 # Observable's `html` helper is available inside Pluto's runner,
                 # but not in a lean static page. This covers the DOM-returning
                 # widget programs emitted by PlutoUI (for example Scrubbable).
@@ -676,7 +677,7 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
   </header>
   <section></section>
 </nav>
-<script>
+<script data-therapy-rerun>
 (function () {
   function init() {
     var navs = document.querySelectorAll(".plutoui-toc");
@@ -685,6 +686,16 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
       if (nav.__pl_toc_init) return; nav.__pl_toc_init = true;
       var section = nav.querySelector("section");
       var embedded = nav.hasAttribute("data-embedded");
+      var lifecycle = new AbortController();
+      var mutationObserver = null;
+      var timers = [];
+      function later(fn, ms) {
+        var id = setTimeout(function () {
+          timers = timers.filter(function (x) { return x !== id; });
+          if (!lifecycle.signal.aborted) fn();
+        }, ms);
+        timers.push(id); return id;
+      }
       // the notebook root this ToC belongs to (its nearest .snap-notebook, else <main>,
       // else the document) — keeps the heading scan scoped in BOTH contexts.
       var root = (nav.closest && nav.closest(".snap-notebook")) || document.querySelector("main") || document;
@@ -744,11 +755,11 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
           // Two bounded rechecks absorb late font/island layout without
           // continuing to fight a visitor who starts scrolling.
           [0, 150, 900].forEach(function (ms) {
-            setTimeout(function () { requestAnimationFrame(apply); }, ms);
+            later(function () { requestAnimationFrame(apply); }, ms);
           });
         };
         if (document.readyState === "complete") afterLoad();
-        else window.addEventListener("load", afterLoad, { once: true });
+        else window.addEventListener("load", afterLoad, { once: true, signal: lifecycle.signal });
       }
       function intersectionCallback(ixs) {
         var onTop = ixs.filter(function (ix) {
@@ -767,6 +778,14 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         ? new IntersectionObserver(intersectionCallback, { root: null, threshold: 1, rootMargin: "-15px" }) : null;
       var io2 = "IntersectionObserver" in window
         ? new IntersectionObserver(intersectionCallback, { root: null, threshold: 1, rootMargin: "15px" }) : null;
+      function cleanup() {
+        lifecycle.abort();
+        timers.forEach(clearTimeout); timers = [];
+        io1 && io1.disconnect(); io2 && io2.disconnect();
+        mutationObserver && mutationObserver.disconnect();
+      }
+      window.addEventListener("therapy:router:before-swap", cleanup,
+        { once: true, signal: lifecycle.signal });
 
       // skip rebuilds when the heading set hasn't changed (the heading texts as a
       // fingerprint) — without this the MutationObserver + island re-renders would
@@ -815,7 +834,7 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
       nav.addEventListener("click", function (e) {
         var t = e.target.closest && e.target.closest(".toc-toggle");
         if (t) { e.stopImmediatePropagation(); nav.classList.toggle("hide"); }
-      });
+      }, { signal: lifecycle.signal });
 
       // small-screen auto-hide (PlutoUI thresholds). Embedded ToCs ALSO start hidden
       // so they never float over docs content at rest — hover/click the edge strip.
@@ -827,28 +846,31 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         if (!nav.__pl_user_toggled) nav.classList.toggle("hide", small || embedded);
       }
       nav.querySelectorAll(".toc-toggle").forEach(function (t) {
-        t.addEventListener("click", function () { nav.__pl_user_toggled = true; });
+        t.addEventListener("click", function () { nav.__pl_user_toggled = true; },
+          { signal: lifecycle.signal });
       });
-      ["resize"].forEach(function (ev) { window.addEventListener(ev, matchListener); });
+      ["resize"].forEach(function (ev) {
+        window.addEventListener(ev, matchListener, { signal: lifecycle.signal });
+      });
       ["wheel", "touchstart"].forEach(function (ev) {
         window.addEventListener(ev, function () {
           hashRestoreCancelled = true; ++hashRestoreToken;
-        }, { passive: true });
+        }, { passive: true, signal: lifecycle.signal });
       });
       window.addEventListener("keydown", function (e) {
         if (["ArrowDown","ArrowUp","PageDown","PageUp","Home","End"," "].indexOf(e.key) >= 0) {
           hashRestoreCancelled = true; ++hashRestoreToken;
         }
-      });
+      }, { signal: lifecycle.signal });
       window.addEventListener("hashchange", function () {
         pendingHash = location.hash ? location.hash.slice(1) : "";
         hashRestoreCancelled = false;
         restoreCollectionHash(getHeaders());
-      });
+      }, { signal: lifecycle.signal });
 
       render();
       // reactive islands mount their output after first paint — rebuild a few times
-      [100, 1000, 3000].forEach(function (ms) { setTimeout(render, ms); });
+      [100, 1000, 3000].forEach(function (ms) { later(render, ms); });
       // and watch the CELLS container for structural changes (island re-renders add
       // output). We observe the cells area, NOT the nav — observing the whole `root`
       // (which CONTAINS this nav) would let our own section.replaceChildren() retrigger
@@ -859,9 +881,10 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
                       (root === document ? null : root);
       if ("MutationObserver" in window && cellsArea && !cellsArea.contains(nav)) {
         var deb = null;
-        new MutationObserver(function () {
-          clearTimeout(deb); deb = setTimeout(render, 200);
-        }).observe(cellsArea, { childList: true, subtree: true });
+        mutationObserver = new MutationObserver(function () {
+          clearTimeout(deb); deb = later(render, 200);
+        });
+        mutationObserver.observe(cellsArea, { childList: true, subtree: true });
       }
       matchListener();
     });
@@ -872,13 +895,20 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
 </script>
 """)) : (_ -> "")
     shim_tag = islands_dirname === nothing ? "" :
-        string("<script src=\"", islands_dirname, "/shim.js\"></script>")
+        string("<script data-therapy-rerun=\"blocking\" src=\"", islands_dirname, "/shim.js\"></script>")
     wiring = raw"""
-<script>
+<script data-therapy-rerun>
 (function () {
+  const root = (document.currentScript && document.currentScript.closest(".snap-notebook")) || document;
+  const lifecycle = new AbortController();
+  let waitTimer = null;
+  window.addEventListener("therapy:router:before-swap", function () {
+    lifecycle.abort();
+    if (waitTimer !== null) clearTimeout(waitTimer);
+  }, { once: true, signal: lifecycle.signal });
   function collectBonds() {
     const vals = {};
-    document.querySelectorAll("bond[def]").forEach(function (b) {
+    root.querySelectorAll("bond[def]").forEach(function (b) {
       const inputs = Array.from(b.querySelectorAll("input,select,textarea"));
       const valueInputs = inputs.filter(function (inp) {
         return inp.type !== "submit" && inp.type !== "reset";
@@ -923,19 +953,25 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     return vals;
   }
   async function rerender() {
+    if (lifecycle.signal.aborted || !root.isConnected) return;
     if (window.__pi_renderAll) { try { await window.__pi_renderAll(collectBonds()); } catch (e) { console.warn(e); } }
   }
   document.addEventListener("input", function (e) {
-    if (e.target.closest && e.target.closest("bond[def]")) rerender();
-  }, true);
+    var bond = e.target.closest && e.target.closest("bond[def]");
+    if (bond && root.contains(bond)) rerender();
+  }, { capture: true, signal: lifecycle.signal });
   // Pluto's Button dispatches a non-bubbling `input` event on its wrapper and
   // stops the click at the button. Capture the click, then rerender after the
   // widget's target-phase handler increments the wrapper's numeric value.
   document.addEventListener("click", function (e) {
-    if (e.target.closest && e.target.closest('bond[def] input[type="button"]'))
+    var button = e.target.closest && e.target.closest('bond[def] input[type="button"]');
+    if (button && root.contains(button))
       setTimeout(rerender, 0);
-  }, true);
-  (function wait() { window.__pi_renderAll ? rerender() : setTimeout(wait, 50); })();
+  }, { capture: true, signal: lifecycle.signal });
+  (function wait() {
+    if (lifecycle.signal.aborted || !root.isConnected) return;
+    window.__pi_renderAll ? rerender() : (waitTimer = setTimeout(wait, 50));
+  })();
 })();
 </script>
 """
@@ -944,17 +980,30 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     # `<p class="tex">$$…$$</p>`. Re-runs after reactive re-renders via a
     # MutationObserver (the dataset.r guard prevents re-processing / loops).
     katex_js = raw"""
-<script>
+<script data-therapy-rerun>
 (function () {
-  function render(root) { (root || document).querySelectorAll(".tex").forEach(function (s) {
+  const root = (document.currentScript && document.currentScript.closest(".snap-notebook")) || document;
+  const lifecycle = new AbortController();
+  let waitTimer = null;
+  let observer = null;
+  window.addEventListener("therapy:router:before-swap", function () {
+    lifecycle.abort();
+    if (waitTimer !== null) clearTimeout(waitTimer);
+    if (observer) observer.disconnect();
+  }, { once: true, signal: lifecycle.signal });
+  function render() { root.querySelectorAll(".tex").forEach(function (s) {
     if (s.dataset.r) return;
     var t = s.textContent.trim();
     var disp = t.indexOf("$$") === 0;
     t = t.replace(/^\$\$?/, "").replace(/\$\$?$/, "");
     try { katex.render(t, s, { displayMode: disp, throwOnError: false }); s.dataset.r = "1"; } catch (e) {}
   }); }
-  (function wait() { window.katex ? render() : setTimeout(wait, 80); })();
-  new MutationObserver(function () { window.katex && render(); }).observe(document.body, { childList: true, subtree: true });
+  (function wait() {
+    if (lifecycle.signal.aborted || !root.isConnected) return;
+    window.katex ? render() : (waitTimer = setTimeout(wait, 80));
+  })();
+  observer = new MutationObserver(function () { window.katex && render(); });
+  observer.observe(root, { childList: true, subtree: true });
 })();
 </script>
 """
@@ -963,21 +1012,40 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     # as ES modules. Walks the parse tree, wraps tokens in tok-* spans (styled above).
     # Degrades gracefully to plain (escaped) code if the modules fail to load.
     hl_js = raw"""
-<script type="module">
-import { parser } from "https://esm.sh/@plutojl/lezer-julia@1.2.0";
-import { highlightTree, classHighlighter } from "https://esm.sh/@lezer/highlight@1.2.3";
-const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-function hl(code) {
-  const tree = parser.parse(code); let out = "", pos = 0;
-  highlightTree(tree, classHighlighter, (from, to, cls) => {
-    if (from > pos) out += esc(code.slice(pos, from));
-    out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
+<script data-therapy-rerun>
+(function () {
+  const script = document.currentScript;
+  const root = (script && script.closest(".snap-notebook")) || document;
+  const lifecycle = new AbortController();
+  window.addEventListener("therapy:router:before-swap", function () {
+    lifecycle.abort();
+  }, { once: true, signal: lifecycle.signal });
+  Promise.all([
+    import("https://esm.sh/@plutojl/lezer-julia@1.2.0"),
+    import("https://esm.sh/@lezer/highlight@1.2.3")
+  ]).then(function (modules) {
+    if (lifecycle.signal.aborted || !root.isConnected) return;
+    const parser = modules[0].parser;
+    const highlightTree = modules[1].highlightTree;
+    const classHighlighter = modules[1].classHighlighter;
+    const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    function hl(code) {
+      const tree = parser.parse(code); let out = "", pos = 0;
+      highlightTree(tree, classHighlighter, (from, to, cls) => {
+        if (from > pos) out += esc(code.slice(pos, from));
+        out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
+      });
+      out += esc(code.slice(pos)); return out;
+    }
+    root.querySelectorAll("code.pl-jl:not([data-snapshot-highlighted])").forEach(el => {
+      if (lifecycle.signal.aborted || !el.isConnected) return;
+      try { el.innerHTML = hl(el.textContent); el.dataset.snapshotHighlighted = "1"; }
+      catch (e) { console.warn("pl-hl", e); }
+    });
+  }).catch(function (e) {
+    if (!lifecycle.signal.aborted) console.warn("pl-hl", e);
   });
-  out += esc(code.slice(pos)); return out;
-}
-document.querySelectorAll("code.pl-jl").forEach(el => {
-  try { el.innerHTML = hl(el.textContent); } catch (e) { console.warn("pl-hl", e); }
-});
+})();
 </script>
 """
     # Layer-2 styling: DEFAULT to DaisyUI — the SAME design language as the snapshot
@@ -1072,12 +1140,18 @@ pre,table,bond,.markdown,img{max-width:100%}
     pluto_css = string(CLASSIC_THEMES_CSS, "\n", PLUTO_OUTPUT_CSS)
     # Pluto trees are click-to-expand/collapse — wire the same toggle on the caret.
     tree_js = raw"""
-<script>
+<script data-therapy-rerun>
+(function () {
+const root = (document.currentScript && document.currentScript.closest(".snap-notebook")) || document;
+const lifecycle = new AbortController();
+window.addEventListener("therapy:router:before-swap", function () { lifecycle.abort(); },
+  { once: true, signal: lifecycle.signal });
 document.addEventListener("click", function (e) {
   if (!e.target.closest) return;
   var pre = e.target.closest("pluto-tree > pluto-tree-prefix");
-  if (pre && pre.parentElement) pre.parentElement.classList.toggle("collapsed");
-});
+  if (pre && root.contains(pre) && pre.parentElement) pre.parentElement.classList.toggle("collapsed");
+}, { signal: lifecycle.signal });
+})();
 </script>
 """
     # Floating theme picker (TEST control). Sets <html data-theme>; the ported Pluto
@@ -1176,11 +1250,11 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         occursin(r"(^|[},])\s*(?:html|body|:root)\b"m, scoped_audit) &&
             error("fragment CSS contains an unscoped document selector")
         frag_shim = islands_dirname === nothing ? "" :
-            string("<script src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
+            string("<script data-therapy-rerun=\"blocking\" src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
         fragment_resources = fragment_dependencies === :inline ? string(
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5.6.2/themes.css\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",
-            "<script defer src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
+            "<script defer data-therapy-rerun src=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js\"></script>\n",
         ) : ""
         # Embedded fragments inherit the host's theme. Standalone notebook
         # preference belongs to the standalone document only; restoring it on

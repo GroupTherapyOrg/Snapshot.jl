@@ -20,6 +20,13 @@
 (() => {
     "use strict"
 
+    // A Therapy View-Transition can mount several notebook fragments during
+    // one document lifetime. Retire the previous notebook runtime before this
+    // one takes ownership of fetch/render globals.
+    window.__snapshotIslandRuntime?.dispose?.()
+    const runtime = { disposed: false, dispose: null }
+    window.__snapshotIslandRuntime = runtime
+
     // ─── minimal msgpack (subset: nil/bool/int/float/str/bin/array/map) ───
     const mp = {
         decode(u8) {
@@ -497,14 +504,14 @@
     }
 
     const schedule_lean_render = () => {
-        if (lean_scheduled || lean_running) return
+        if (runtime.disposed || lean_scheduled || lean_running) return
         lean_scheduled = true
         requestAnimationFrame(run_lean_render)
     }
 
     const run_lean_render = async () => {
         lean_scheduled = false
-        if (lean_running) return
+        if (runtime.disposed || lean_running) return
         lean_running = true
         const seq = lean_seq
         const values = lean_latest
@@ -552,7 +559,8 @@
     // The lean exported page calls this with a complete bond snapshot. The
     // returned promise resolves when that snapshot—or a newer superseding one—
     // has been presented, preserving the existing host contract.
-    window.__pi_renderAll = (bondValues) => {
+    const render_all = (bondValues) => {
+        if (runtime.disposed) return Promise.resolve()
         lean_latest = bondValues
         const seq = ++lean_seq
         const promise = new Promise((resolve, reject) => lean_waiters.push({ seq, resolve, reject }))
@@ -560,7 +568,9 @@
         return promise
     }
 
-    window.fetch = (resource, options) => {
+    window.__pi_renderAll = render_all
+
+    const fetch_wrapper = (resource, options) => {
         // resource may be a string, URL, or Request
         const url = typeof resource === "string" ? resource : (resource.href ?? resource.url ?? "")
         const passthrough = () => orig_fetch(resource, options)
@@ -572,6 +582,7 @@
         if (/bondconnections\/[^/]+\/?$/.test(url)) return wrap(handle_bondconnections(passthrough))
         return passthrough()
     }
+    window.fetch = fetch_wrapper
 
     // ─── fallback-warning chrome ───
     // Cells that are part of a @bind group but did NOT make it into a wasm
@@ -854,8 +865,21 @@
         clearTimeout(decorate_scheduled)
         decorate_scheduled = setTimeout(() => decorate().catch(() => {}), 400)
     }
-    new MutationObserver(schedule_decorate).observe(document.documentElement, { childList: true, subtree: true })
+    const decorate_observer = new MutationObserver(schedule_decorate)
+    decorate_observer.observe(document.documentElement, { childList: true, subtree: true })
     schedule_decorate()
+
+    runtime.dispose = () => {
+        if (runtime.disposed) return
+        runtime.disposed = true
+        decorate_observer.disconnect()
+        clearTimeout(decorate_scheduled)
+        if (window.fetch === fetch_wrapper) window.fetch = orig_fetch
+        if (window.__pi_renderAll === render_all) delete window.__pi_renderAll
+        lean_waiters.splice(0).forEach((w) => w.resolve())
+        if (window.__snapshotIslandRuntime === runtime) delete window.__snapshotIslandRuntime
+    }
+    window.addEventListener("therapy:router:before-swap", runtime.dispose, { once: true })
 
     console.log("🏝️ wasm islands shim installed (fetch interception active)")
 })()
