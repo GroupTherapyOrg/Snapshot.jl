@@ -2,9 +2,9 @@ name: release-please
 
 on:
   # A release may only be prepared or published after CI has passed for the
-  # exact main-branch commit. Release Please PRs dispatch the same CI workflow
-  # explicitly because GitHub suppresses recursive workflow events created by
-  # GITHUB_TOKEN.
+  # exact main-branch commit. Release Please PRs authorize only the CI run for
+  # their validated same-repository head when GitHub holds the bot-authored
+  # pull_request workflow for approval.
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -178,7 +178,7 @@ jobs:
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
   release-pr-ci:
-    name: Dispatch required release PR CI
+    name: Authorize required release PR CI
     needs: release-please
     if: needs.release-please.outputs.release_pr_head != ''
     runs-on: ubuntu-latest
@@ -189,7 +189,7 @@ jobs:
     env:
       RELEASE_BRANCH: release-please--branches--main--components--Snapshot
     steps:
-      - name: Verify the immutable release head and dispatch CI
+      - name: Verify and authorize the bot-created CI run
         env:
           EXPECTED_SHA: ${{ needs.release-please.outputs.release_pr_head }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -198,5 +198,48 @@ jobs:
           set -euo pipefail
           current_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)"
           test "$current_sha" = "$EXPECTED_SHA"
-          echo "Dispatching CI for $RELEASE_BRANCH at $EXPECTED_SHA."
-          gh workflow run ci.yml --repo "$REPOSITORY" --ref "$RELEASE_BRANCH"
+
+          # GitHub holds the first pull_request workflow created by
+          # github-actions[bot] for approval. Authorize only the CI run for the
+          # exact validated same-repository release head. A workflow_dispatch
+          # run would test the SHA, but GitHub would not attach that check to
+          # the PR for branch protection.
+          for _ in {1..12}; do
+            runs="$(gh api --method GET \
+              "repos/$REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f event=pull_request \
+              -f branch="$RELEASE_BRANCH" \
+              -f per_page=20)"
+            run="$(jq -c \
+              --arg sha "$EXPECTED_SHA" \
+              --arg repository "$REPOSITORY" \
+              '[.workflow_runs[] |
+                select(.head_sha == $sha and
+                       .actor.login == "github-actions[bot]" and
+                       .head_repository.full_name == $repository)] |
+               sort_by(.id) | last // empty' <<<"$runs")"
+
+            if [[ -z "$run" ]]; then
+              sleep 5
+              continue
+            fi
+
+            run_id="$(jq -r .id <<<"$run")"
+            status="$(jq -r .status <<<"$run")"
+            conclusion="$(jq -r '.conclusion // ""' <<<"$run")"
+            if [[ "$conclusion" == "action_required" ]]; then
+              echo "Authorizing CI run $run_id for $EXPECTED_SHA."
+              gh api --method POST "repos/$REPOSITORY/actions/runs/$run_id/approve"
+              exit 0
+            fi
+            if [[ "$status" == "queued" || "$status" == "in_progress" || "$conclusion" == "success" ]]; then
+              echo "CI run $run_id is already trusted ($status${conclusion:+/$conclusion})."
+              exit 0
+            fi
+
+            echo "The exact release-head CI run $run_id ended as $status/$conclusion." >&2
+            exit 1
+          done
+
+          echo "No exact bot-created pull_request CI run appeared for $EXPECTED_SHA." >&2
+          exit 1
