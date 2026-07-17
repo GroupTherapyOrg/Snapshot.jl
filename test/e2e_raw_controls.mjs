@@ -38,6 +38,15 @@ const computed = await raw.evaluate((el) => {
 if (computed.display === "inline" || computed.background === "rgba(0, 0, 0, 0)" || computed.color === "rgba(0, 0, 0, 0)" || computed.border === "0px" || computed.padding === "0px" || computed.cursor !== "pointer") {
   throw new Error(`raw button has no affordance: ${JSON.stringify(computed)}`)
 }
+for (const selector of ["#wrapped-raw-button", "#bond-wrapped-raw-button"]) {
+  const wrapped = await page.locator(selector).evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { display: s.display, background: s.backgroundColor, border: s.borderTopWidth, padding: s.paddingInlineStart, cursor: s.cursor }
+  })
+  if (wrapped.display === "inline" || wrapped.background === "rgba(0, 0, 0, 0)" || wrapped.border === "0px" || wrapped.padding === "0px" || wrapped.cursor !== "pointer") {
+    throw new Error(`${selector} has no themed affordance: ${JSON.stringify(wrapped)}`)
+  }
+}
 const picker = page.locator(".snap-theme-picker select")
 await picker.selectOption("fun-dark")
 await page.waitForFunction(() => document.documentElement.dataset.theme === "fun-dark")
@@ -63,7 +72,15 @@ if (Number(await disabled.evaluate((el) => getComputedStyle(el).opacity)) >= 1) 
 await raw.focus()
 const focus = await raw.evaluate((el) => { const s = getComputedStyle(el); return { width: s.outlineWidth, style: s.outlineStyle } })
 if (focus.width === "0px" || focus.style === "none") throw new Error(`raw button lacks a visible keyboard focus outline: ${JSON.stringify(focus)}`)
-const selectors = [".custom-button", ".custom-widget button", "button[style]", "button[data-snapshot-unstyled]"]
+const selectors = [
+  ".custom-button",
+  ".custom-widget button",
+  ".custom-widget-deep button",
+  "div[style] > button",
+  "div[data-snapshot-unstyled] > button",
+  "button[style]",
+  "button[data-snapshot-unstyled]",
+]
 for (const selector of selectors) {
   const padding = await page.locator(selector).evaluate((el) => getComputedStyle(el).paddingInlineStart)
   if (padding === computed.padding) throw new Error(`scoped fallback leaked into ${selector}`)

@@ -16,8 +16,13 @@ Base.HTML("""
 <input type="radio" name="raw-radio" checked> Raw radio
 <select><option>Raw select</option></select>
 <textarea>Raw textarea</textarea>
+<div><button id="wrapped-raw-button">Wrapped raw button</button></div>
+<bond><div><button id="bond-wrapped-raw-button">Bond-wrapped raw button</button></div></bond>
 <button class="custom-button">Authored class</button>
 <div class="custom-widget"><button>Nested widget button</button></div>
+<div><div class="custom-widget-deep"><button>Deep nested widget button</button></div></div>
+<div style="padding: 1px"><button>Styled wrapper button</button></div>
+<div data-snapshot-unstyled><button>Opt-out wrapper button</button></div>
 <button style="background: rgb(1, 2, 3)">Inline style</button>
 <button data-snapshot-unstyled>Explicitly unstyled</button>
 <span>$(interpolation_value)</span>
