@@ -1,42 +1,115 @@
 name: release-please
 
 on:
-  push:
-    branches: [main]
+  # A release may only be prepared or published after CI has passed for the
+  # exact main-branch commit. Release Please PRs dispatch the same CI workflow
+  # explicitly because GitHub suppresses recursive workflow events created by
+  # GITHUB_TOKEN.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
+
+concurrency:
+  group: release-please-main
+  cancel-in-progress: false
 
 jobs:
   release-please:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      release_pr_head: ${{ steps.release_pr.outputs.head_sha }}
+    env:
+      RELEASE_BRANCH: release-please--branches--main--components--Snapshot
     steps:
+      - name: Resolve the CI-certified main commit
+        id: certified
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            sha="$WORKFLOW_SHA"
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ steps.certified.outputs.sha }}
+
+      - name: Verify the release commit and CI gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          certified_sha="${{ steps.certified.outputs.sha }}"
+          test "$(git rev-parse HEAD)" = "$certified_sha"
+          test "$(git rev-parse origin/main)" = "$certified_sha"
+
+          # workflow_dispatch is a recovery path, not a CI bypass. Require the
+          # same successful `test` check on the exact commit before continuing.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            gh api "repos/$REPOSITORY/commits/$certified_sha/check-runs" \
+              --method GET \
+              -H 'Accept: application/vnd.github+json' \
+              -f per_page=100 \
+              --jq '[.check_runs[] | select(.name == "test" and .status == "completed" and .conclusion == "success" and .app.id == 15368)] | length > 0' \
+              | grep -qx true
+          fi
 
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           repository: MilesCranmerBot/release-please
           ref: 911ad18bdc3bb52bfef564cfbcb35f31aac01df3
           path: release-please-src
+          persist-credentials: false
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '22'
 
-      - name: Install release-please deps
+      - name: Install and build the pinned Julia-aware Release Please
         working-directory: release-please-src
-        run: npm ci
+        run: |
+          npm ci --ignore-scripts
+          npm run compile
 
-      - name: Build release-please
-        working-directory: release-please-src
-        run: npm run compile
+      # Publish first. A failure to prepare the *next* release PR must never
+      # prevent an already-reviewed release PR from becoming a tag/release or
+      # from reaching JuliaRegistrator.
+      - name: Create the GitHub release and register the Julia version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node release-please-src/build/src/bin/release-please.js github-release \
+            --token "$GITHUB_TOKEN" \
+            --repo-url "https://github.com/${{ github.repository }}" \
+            --target-branch main \
+            --config-file release-please-config.json \
+            --manifest-file .release-please-manifest.json
 
-      - name: Create or update release PR
+      - name: Create or update the next release PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -47,13 +120,64 @@ jobs:
             --config-file release-please-config.json \
             --manifest-file .release-please-manifest.json
 
-      - name: Create GitHub release
+      - name: Validate the bot-created release PR
+        id: release_pr
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          node release-please-src/build/src/bin/release-please.js github-release \
-            --token "$GITHUB_TOKEN" \
-            --repo-url "https://github.com/${{ github.repository }}" \
-            --target-branch main \
-            --config-file release-please-config.json \
-            --manifest-file .release-please-manifest.json
+          set -euo pipefail
+          pr_number="$(gh pr list \
+            --repo "$REPOSITORY" \
+            --state open \
+            --head "$RELEASE_BRANCH" \
+            --json number \
+            --jq '.[0].number // empty')"
+          if [[ -z "$pr_number" ]]; then
+            echo "No open release PR needs CI."
+            echo "head_sha=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          pr="$(gh pr view "$pr_number" \
+            --repo "$REPOSITORY" \
+            --json baseRefName,headRefName,headRefOid,headRepositoryOwner,isCrossRepository)"
+          test "$(jq -r .baseRefName <<<"$pr")" = main
+          test "$(jq -r .headRefName <<<"$pr")" = "$RELEASE_BRANCH"
+          test "$(jq -r .headRepositoryOwner.login <<<"$pr")" = "${REPOSITORY%%/*}"
+          test "$(jq -r .isCrossRepository <<<"$pr")" = false
+
+          allowed=$'.release-please-manifest.json\nCHANGELOG.md\nProject.toml'
+          actual="$(gh api --paginate "repos/$REPOSITORY/pulls/$pr_number/files" \
+            --jq '.[].filename' | LC_ALL=C sort -u)"
+          if [[ "$actual" != "$allowed" ]]; then
+            echo "Release PR #$pr_number changed files outside the release metadata contract:" >&2
+            comm -3 <(printf '%s\n' "$allowed") <(printf '%s\n' "$actual") >&2
+            exit 1
+          fi
+
+          echo "head_sha=$(jq -r .headRefOid <<<"$pr")" >> "$GITHUB_OUTPUT"
+
+  release-pr-ci:
+    name: Dispatch required release PR CI
+    needs: release-please
+    if: needs.release-please.outputs.release_pr_head != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    env:
+      RELEASE_BRANCH: release-please--branches--main--components--Snapshot
+    steps:
+      - name: Verify the immutable release head and dispatch CI
+        env:
+          EXPECTED_SHA: ${{ needs.release-please.outputs.release_pr_head }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)"
+          test "$current_sha" = "$EXPECTED_SHA"
+          echo "Dispatching CI for $RELEASE_BRANCH at $EXPECTED_SHA."
+          gh workflow run ci.yml --repo "$REPOSITORY" --ref "$RELEASE_BRANCH"
