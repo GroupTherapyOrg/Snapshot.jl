@@ -150,13 +150,32 @@ jobs:
           allowed=$'.release-please-manifest.json\nCHANGELOG.md\nProject.toml'
           actual="$(gh api --paginate "repos/$REPOSITORY/pulls/$pr_number/files" \
             --jq '.[].filename' | LC_ALL=C sort -u)"
-          if [[ "$actual" != "$allowed" ]]; then
+          unexpected="$(comm -13 \
+            <(printf '%s\n' "$allowed" | LC_ALL=C sort -u) \
+            <(printf '%s\n' "$actual" | LC_ALL=C sort -u))"
+          if [[ -n "$unexpected" ]]; then
             echo "Release PR #$pr_number changed files outside the release metadata contract:" >&2
-            comm -3 <(printf '%s\n' "$allowed") <(printf '%s\n' "$actual") >&2
+            printf '%s\n' "$unexpected" >&2
             exit 1
           fi
 
-          echo "head_sha=$(jq -r .headRefOid <<<"$pr")" >> "$GITHUB_OUTPUT"
+          # CHANGELOG and the manifest are mandatory. Project.toml is optional
+          # only when it already contains the release version (as in the
+          # one-time 0.2.0 bootstrap).
+          grep -Fxq .release-please-manifest.json <<<"$actual"
+          grep -Fxq CHANGELOG.md <<<"$actual"
+
+          head_sha="$(jq -r .headRefOid <<<"$pr")"
+          manifest="$(gh api "repos/$REPOSITORY/contents/.release-please-manifest.json?ref=$head_sha" \
+            --jq .content | base64 --decode)"
+          project="$(gh api "repos/$REPOSITORY/contents/Project.toml?ref=$head_sha" \
+            --jq .content | base64 --decode)"
+          release_version="$(jq -r '.["."]' <<<"$manifest")"
+          project_version="$(sed -nE 's/^version = "([^"]+)"$/\1/p' <<<"$project")"
+          test -n "$release_version"
+          test "$project_version" = "$release_version"
+
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
   release-pr-ci:
     name: Dispatch required release PR CI
