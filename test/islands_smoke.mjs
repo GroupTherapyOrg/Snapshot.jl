@@ -38,8 +38,9 @@ await new Promise((r) => server.listen(0, r))
 const browser = await chromium.launch()
 const page = await browser.newPage()
 const logs = []
+const consoleLogs = []
 const errors = []
-page.on("console", (m) => m.text().includes("🏝") && logs.push(m.text()))
+page.on("console", (m) => { consoleLogs.push(`${m.type()}: ${m.text()}`); if (m.text().includes("🏝")) logs.push(m.text()) })
 page.on("pageerror", (e) => errors.push(String(e)))
 
 await page.goto(`http://localhost:${server.address().port}/${encodeURIComponent(PAGE)}`, { waitUntil: "domcontentloaded" })
@@ -62,15 +63,39 @@ for (let waited = 0; waited < 60_000 && !logs.some((l) => l.includes("island loa
 
 const slider = page.locator("pluto-cell input[type=range], .pl-cell input[type=range]").first()
 if ((await slider.count()) > 0) {
+    const leanRenderer = await page.evaluate(() => {
+        if (typeof window.__pi_renderAll !== "function") return false
+        const original = window.__pi_renderAll
+        window.__snapshotSmokeRenderCalls = 0
+        window.__pi_renderAll = async function (...args) {
+            window.__snapshotSmokeRenderCalls += 1
+            return original.apply(this, args)
+        }
+        return true
+    })
     await slider.evaluate((el) => {
         el.value = el.max ? String(Math.ceil(Number(el.max) / 2)) : "2"
         el.dispatchEvent(new Event("input", { bubbles: true }))
     })
-    await page.waitForTimeout(4000)
+    for (let waited = 0; waited < 60_000; waited += 250) {
+        const leanRendered = leanRenderer && await page.evaluate(() => window.__snapshotSmokeRenderCalls > 0)
+        const classicRendered = logs.some((l) => l.includes("staterequest served by wasm island") || l.includes("staterequest passthrough"))
+        if (leanRendered || classicRendered) break
+        await page.waitForTimeout(250)
+    }
+    const leanRendered = leanRenderer && await page.evaluate(() => window.__snapshotSmokeRenderCalls > 0)
     const served = logs.some((l) => l.includes("staterequest served by wasm island"))
     const passed = logs.some((l) => l.includes("staterequest passthrough"))
-    if (!served && !passed) fail("slider move produced no island response")
-    console.log(served ? "slider → island wasm ✓" : "slider → fallback passthrough ✓")
+    if (!leanRendered && !served && !passed) {
+        const debug = await page.evaluate(() => ({
+            renderer: typeof window.__pi_renderAll,
+            bonds: document.querySelectorAll("bond[def]").length,
+            value: document.querySelector("bond[def] input")?.value,
+            documentConnected: document.isConnected,
+        }))
+        fail("slider move produced no island response; console: " + consoleLogs.join(" | ") + "; page errors: " + errors.join(" | ") + "; state: " + JSON.stringify(debug))
+    }
+    console.log(leanRendered ? "slider → lean island render ✓" : (served ? "slider → island wasm ✓" : "slider → fallback passthrough ✓"))
 }
 // text input (String bond) — type into it, expect an island-served response
 const textbox = page.locator("pluto-cell input[type=text], .pl-cell input[type=text]").first()

@@ -51,6 +51,11 @@ KaTeX, and Lezer syntax highlighting). Notebook content and interactive island
 assets are static; if a presentation CDN is unavailable, content and controls
 remain present but those enhancements may be absent.
 
+Direct native HTML controls without an authored class or inline style inherit the
+active DaisyUI theme, so plain notebook buttons and fields retain a visible,
+consistent affordance. Add a class, inline style, or `data-snapshot-unstyled` when
+the notebook should own a control's appearance instead.
+
 The shared pipeline is:
 
 1. **Export time** — the notebook runs once in Pluto. Each group of co-dependent
