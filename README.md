@@ -105,8 +105,8 @@ groups are interactive after all.
 
 ## Status
 
-Pre-1.0 alpha, currently open for small-community testing before its first
-General registry release. The featured-notebook gallery in the
+Pre-1.0 alpha, currently open for small-community testing. Snapshot is available
+from Julia's General registry. The featured-notebook gallery in the
 [docs](https://grouptherapyorg.github.io/Snapshot.jl/) shows which notebooks
 ship how many islands, and lists the reason for every cell that falls back to
 static. Coverage grows with

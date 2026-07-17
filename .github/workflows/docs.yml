@@ -210,7 +210,7 @@ jobs:
             deps = Pkg.dependencies()
             th = only(v for v in values(deps) if v.name == "Therapy")
             wt = only(v for v in values(deps) if v.name == "WasmTarget")
-            th.version >= v"0.2.3" || error("Snapshot docs require Therapy >= 0.2.3, resolved $(th.version)")
+            th.version >= v"0.2.6" || error("Snapshot docs require Therapy >= 0.2.6, resolved $(th.version)")
             wt.version >= v"0.5.2" || error("Snapshot docs require WasmTarget >= 0.5.2, resolved $(wt.version)")
             println("Snapshot docs stack: Therapy ", th.version, ", WasmTarget ", wt.version)
           '
