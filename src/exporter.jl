@@ -312,8 +312,8 @@ function inject_islands_script(html::String, islands_dirname::String)::String
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Self-contained notebook export (absorbed from PSS generate_static_export —
-# Pluto APIs only)
+# Notebook export (lean Therapy output by default; classic Pluto compatibility
+# mode remains available explicitly — Pluto APIs only)
 # ─────────────────────────────────────────────────────────────────────────────
 
 """
@@ -321,7 +321,7 @@ end
                     islands=true, verify=true, oracle_samples=5,
                     baked_state=true, baked_notebookfile=true,
                     disable_ui=true, pluto_cdn_root=nothing,
-                    session=nothing, therapy=false, fragment=false,
+                    session=nothing, therapy=true, fragment=false,
                     fragment_dependencies=:inline) -> output html path
 
 Run a Pluto notebook and write a static HTML export where every compilable
@@ -329,6 +329,12 @@ Run a Pluto notebook and write a static HTML export where every compilable
 server, no precomputed request files. Cells whose bond group could not
 compile keep their original content and are decorated with a Pluto-style
 warning explaining why.
+
+The default `therapy=true` writes lean HTML rendered at export time with a small
+island runtime. Pass `therapy=false` for the legacy full-Pluto static export.
+`baked_state`, `baked_notebookfile`, `disable_ui`, and `pluto_cdn_root` apply
+only to that classic mode; `theme_picker`, `fragment`,
+`fragment_dependencies`, and `assets_base` apply only to Therapy output.
 """
 function export_notebook(
     notebook_path::AbstractString;
@@ -347,9 +353,9 @@ function export_notebook(
     session::Union{Nothing,Pluto.ServerSession}=nothing,
     env_dir::Union{Nothing,String}=nothing,
     shared_fonts_path::Union{Nothing,AbstractString}=nothing,
-    # therapy=true → emit a LEAN standalone page (SSR cells + the wasm islands
-    # driven directly from HTML inputs), no Pluto frontend / no baked statefile.
-    therapy::Bool=false,
+    # Default: emit a LEAN standalone page (SSR cells + the wasm islands driven
+    # directly from HTML inputs), no Pluto frontend / no baked statefile.
+    therapy::Bool=true,
     # therapy-only: render the floating theme picker (true for standalone pages;
     # pass false when embedding in a host app that supplies its own picker).
     theme_picker::Bool=true,
@@ -357,7 +363,7 @@ function export_notebook(
     # (no <html>/<body>, @scope-isolated CSS, asset URLs left as the `assets_base`
     # placeholder) for embedding directly into a host app / collection shell.
     fragment::Bool=false,
-    # Fragment dependency contract. `:inline` preserves the public, self-contained
+    # Fragment dependency contract. `:inline` preserves the public, dependency-complete
     # fragment API. Snapshot-owned hosts may opt into `:host` to load the pinned
     # document-global DaisyUI/KaTeX resources once for an entire collection.
     fragment_dependencies::Symbol=:inline,
@@ -494,6 +500,7 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     #     `md"…"` source, regardless of fold state.
     #   • output SUPPRESSED (trailing `;`)             → empty body → no output div.
     _esc(s) = replace(replace(replace(s, "&" => "&amp;"), "<" => "&lt;"), ">" => "&gt;")
+    _esc_attr(s) = replace(replace(_esc(s), "\"" => "&quot;"), "'" => "&#39;")
     _is_md(c) = (cc = lstrip(c); startswith(cc, "md\"") || startswith(cc, "@md") || startswith(cc, "Markdown."))
     # Pluto tree+object body (a Dict) → the same <pluto-tree>/<p-r>/<p-k>/<p-v> DOM
     # the shim emits, so the ported treeview.css styles it 1-1. Mirrors shim.js
@@ -643,9 +650,11 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
         # re-render, and FALLBACK cells (bond group that couldn't compile) to receive
         # the loud !!! warning. (Was island-only, so fallback cells got no warning.)
         if is_island
-            print(cells_io, "<pluto-output class=\"rich_output\" id=\"out-", cid, "\">", baked, "</pluto-output>")
+            print(cells_io, "<pluto-output class=\"rich_output\" data-mime=\"", _esc_attr(mime),
+                "\" id=\"out-", cid, "\">", baked, "</pluto-output>")
         elseif !isempty(strip(baked))
-            print(cells_io, "<pluto-output class=\"rich_output\" id=\"out-", cid, "\">", baked, "</pluto-output>")
+            print(cells_io, "<pluto-output class=\"rich_output\" data-mime=\"", _esc_attr(mime),
+                "\" id=\"out-", cid, "\">", baked, "</pluto-output>")
         end
         show_code && print(cells_io,
             "<pre class=\"pl-code\"><code class=\"pl-jl\">", _esc(code), "</code></pre>")
@@ -1021,26 +1030,84 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
     lifecycle.abort();
   }, { once: true, signal: lifecycle.signal });
   Promise.all([
-    import("https://esm.sh/@plutojl/lezer-julia@1.2.0"),
-    import("https://esm.sh/@lezer/highlight@1.2.3")
+    import("https://esm.sh/@plutojl/lezer-julia@1.2.0?deps=@lezer/common@1.5.2,@lezer/highlight@1.2.3"),
+    import("https://esm.sh/@lezer/highlight@1.2.3?deps=@lezer/common@1.5.2"),
+    import("https://esm.sh/@lezer/common@1.5.2")
   ]).then(function (modules) {
     if (lifecycle.signal.aborted || !root.isConnected) return;
     const parser = modules[0].parser;
     const highlightTree = modules[1].highlightTree;
     const classHighlighter = modules[1].classHighlighter;
+    const parseMixed = modules[2].parseMixed;
     const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    function hl(code) {
-      const tree = parser.parse(code); let out = "", pos = 0;
-      highlightTree(tree, classHighlighter, (from, to, cls) => {
-        if (from > pos) out += esc(code.slice(pos, from));
-        out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
-      });
-      out += esc(code.slice(pos)); return out;
+// Pluto's editor uses parseMixed so a Julia tagged/call string can be parsed by
+// the language it contains. Keep that proven AST/range approach here: HTML tags,
+// <script> JavaScript, and <style> CSS are highlighted without ever executing the
+// source. Plain triple strings remain Julia strings.
+    function htmlTag(node, read) {
+  if (node.name !== "NsStringLiteral" && node.name !== "StringLiteral") return "";
+  if (node.name === "NsStringLiteral" && node.firstChild)
+    return read(node.firstChild.from, node.firstChild.to);
+  const args = node.parent;
+  const owner = args && args.name === "Arguments" ? args.parent : null;
+  if (owner && owner.name === "CallExpression" && owner.firstChild)
+    return read(owner.firstChild.from, owner.firstChild.to);
+  if (owner && owner.name === "MacrocallExpression") {
+    const macro = owner.getChild("MacroIdentifier");
+    if (macro) return read(macro.from, macro.to);
+  }
+  return "";
     }
-    root.querySelectorAll("code.pl-jl:not([data-snapshot-highlighted])").forEach(el => {
+    const isHtmlTag = tag => tag === "html" || tag === "@htl" || tag === "HTML" || tag === "Base.HTML";
+    function containsEmbeddedHtml(tree, code) {
+  const cursor = tree.cursor();
+  do {
+    if (isHtmlTag(htmlTag(cursor.node, (from, to) => code.slice(from, to)))) return true;
+  } while (cursor.next());
+  return false;
+    }
+    let mixedParserPromise;
+    function loadMixedParser() {
+  return mixedParserPromise ||= import("https://esm.sh/@codemirror/lang-html@6.4.11?deps=@lezer/common@1.5.2,@lezer/highlight@1.2.3").then(({ htmlLanguage }) =>
+    parser.configure({ wrap: parseMixed((cursor, input) => {
+  const node = cursor.node;
+  const tag = htmlTag(node, (from, to) => input.read(from, to));
+  if (!isHtmlTag(tag)) return null;
+  const firstDelimiter = node.getChild('"'.repeat(3)) || node.getChild('"');
+  const lastDelimiter = node.lastChild;
+  if (!firstDelimiter || !lastDelimiter) return null;
+  const from = firstDelimiter.to, to = Math.min(lastDelimiter.from, input.length);
+  if (from >= to) return null;
+  const overlay = [];
+  let start = from;
+  if (node.firstChild) {
+    const child = node.firstChild.cursor();
+    do {
+      if (start < child.from) overlay.push({ from: start, to: child.from });
+      start = child.to;
+    } while (child.nextSibling());
+  }
+  if (start < to) overlay.push({ from: start, to });
+  return { parser: htmlLanguage.parser, overlay };
+    }) })
+  );
+    }
+    async function hl(code) {
+  const juliaTree = parser.parse(code);
+  const tree = containsEmbeddedHtml(juliaTree, code) ? (await loadMixedParser()).parse(code) : juliaTree;
+  let out = "", pos = 0;
+  highlightTree(tree, classHighlighter, (from, to, cls) => {
+    if (from > pos) out += esc(code.slice(pos, from));
+    out += '<span class="' + cls + '">' + esc(code.slice(from, to)) + '</span>'; pos = to;
+  });
+  out += esc(code.slice(pos)); return out;
+    }
+    root.querySelectorAll("code.pl-jl:not([data-snapshot-highlighted])").forEach(async el => {
       if (lifecycle.signal.aborted || !el.isConnected) return;
-      try { el.innerHTML = hl(el.textContent); el.dataset.snapshotHighlighted = "1"; }
-      catch (e) { console.warn("pl-hl", e); }
+      try {
+        el.innerHTML = await hl(el.textContent);
+        if (!lifecycle.signal.aborted && el.isConnected) el.dataset.snapshotHighlighted = "1";
+      } catch (e) { if (!lifecycle.signal.aborted) console.warn("pl-hl", e); }
     });
   }).catch(function (e) {
     if (!lifecycle.signal.aborted) console.warn("pl-hl", e);
@@ -1068,6 +1135,21 @@ input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:m
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
 a{color:var(--color-primary)}
+/* Tailwind's preflight deliberately removes native button chrome. Restore a clear,
+   theme-aware affordance for direct HTML controls whose authors did not claim
+   styling ownership with a class or inline style. Nested controls keep their widget
+   styling; `data-snapshot-unstyled` is an explicit escape hatch. */
+:where(pluto-output[data-mime="text/html"]) > :where(button,input:not([type]),input[type="button"],input[type="submit"],input[type="reset"],input[type="text"],input[type="number"],input[type="email"],input[type="search"],input[type="url"],input[type="password"],select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]){
+  box-sizing:border-box;font:inherit;color:var(--color-base-content);background:var(--color-base-100);border:1px solid var(--color-base-300);border-radius:var(--radius-field,.5rem)
+}
+:where(pluto-output[data-mime="text/html"]) > :where(button,input[type="button"],input[type="submit"],input[type="reset"]):not([class]):not([style]):not([data-snapshot-unstyled]){
+  display:inline-flex;align-items:center;justify-content:center;min-height:2.5rem;padding:.55rem .9rem;font-weight:600;line-height:1.2;cursor:pointer;background:var(--color-primary);color:var(--color-primary-content);border-color:var(--color-primary)
+}
+:where(pluto-output[data-mime="text/html"]) > :where(input:not([type]),input[type="text"],input[type="number"],input[type="email"],input[type="search"],input[type="url"],input[type="password"],select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]){min-height:2.5rem;padding:.45rem .65rem}
+:where(pluto-output[data-mime="text/html"]) > :where(input[type="checkbox"],input[type="radio"]):not([class]):not([style]):not([data-snapshot-unstyled]){accent-color:var(--color-primary)}
+:where(pluto-output[data-mime="text/html"]) > :where(button,input[type="button"],input[type="submit"],input[type="reset"]):not([class]):not([style]):not([data-snapshot-unstyled]):hover:not(:disabled){background:color-mix(in oklab,var(--color-primary) 92%,var(--color-base-content));border-color:color-mix(in oklab,var(--color-primary) 92%,var(--color-base-content))}
+:where(pluto-output[data-mime="text/html"]) > :where(button,input,select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+:where(pluto-output[data-mime="text/html"]) > :where(button,input,select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):disabled{opacity:.5;cursor:not-allowed}
 /* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
    ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
 .snap-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
@@ -1216,8 +1298,8 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
 """ : ""
     if fragment
         # NATIVE INLINE COMPONENT: semantic notebook DOM + @scope-isolated CSS,
-        # SSR cells, and the island shim/wiring. Public fragments remain
-        # self-contained by default. Snapshot-owned collection/docs hosts opt into
+        # export-time-rendered cells, and the island shim/wiring. Public fragments
+        # include their dependency tags by default. Snapshot-owned collection/docs hosts opt into
         # `fragment_dependencies=:host` so document-global resources are loaded
         # once rather than duplicated for every notebook. The root advertises the
         # pinned contract in either mode for tooling and diagnostics.

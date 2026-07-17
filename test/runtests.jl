@@ -44,6 +44,10 @@ end
     @test occursin("daisyui@5.6.2/themes.css", exporter)
     @test occursin("@plutojl/lezer-julia@1.2.0", exporter)
     @test occursin("@lezer/highlight@1.2.3", exporter)
+    @test occursin("@lezer/common@1.5.2", exporter)
+    @test occursin("@codemirror/lang-html@6.4.11", exporter)
+    @test occursin("tag === \"HTML\" || tag === \"Base.HTML\"", exporter)
+    @test occursin("containsEmbeddedHtml(juliaTree, code) ? (await loadMixedParser()).parse(code)", exporter)
     @test !occursin("daisyui@5/themes.css", exporter)
     @test occursin("joinpath(@__DIR__, \"..\", \"Project.toml\")", docs_exporter)
     @test occursin("DIRECT_DEPENDENCY_FINGERPRINT", docs_exporter)
@@ -108,6 +112,7 @@ const DEMO = joinpath(@__DIR__, "notebooks", "demo.jl")          # slider → x^
 const TWO_GROUPS = joinpath(@__DIR__, "notebooks", "two_groups.jl")  # island group + fallback group
 const ERROR_OUTPUT = joinpath(@__DIR__, "notebooks", "error_output.jl")
 const TOC_SCROLL = joinpath(@__DIR__, "notebooks", "toc_scroll.jl")
+const RAW_CONTROLS = joinpath(@__DIR__, "notebooks", "raw_controls.jl")
 
 session = Pluto.ServerSession()
 session.options.evaluation.workspace_use_distributed = false
@@ -138,6 +143,21 @@ session.options.evaluation.workspace_use_distributed = false
         end
     end
     Pluto.SessionActions.shutdown(session, errored; async=false)
+end
+
+@testset "raw HTML controls preserve affordance" begin
+    notebook = Pluto.SessionActions.open(session, RAW_CONTROLS; run_async=false)
+    out = mktempdir()
+    html = Snapshot.generate_therapy_html(notebook, out, "raw_controls", nothing)
+    write(joinpath(out, "raw_controls.html"), html)
+    @test occursin("data-mime=\"text/html\"", html)
+    @test occursin("data-snapshot-unstyled", html)
+    @test occursin("cursor:pointer", html)
+    if HAS_NODE
+        proc = run(ignorestatus(`node $(joinpath(@__DIR__, "e2e_raw_controls.mjs")) $out`))
+        proc.exitcode == 2 ? (@test_skip "playwright unavailable") : (@test proc.exitcode == 0)
+    end
+    Pluto.SessionActions.shutdown(session, notebook; async=false)
 end
 
 @testset "import binding syntax" begin
@@ -916,7 +936,7 @@ if HAS_NODE
         Pluto.SessionActions.shutdown(session, nb2; async=false)
     end
 
-    @testset "export_notebook (self-contained)" begin
+    @testset "export_notebook (lean default + classic opt-in)" begin
         out = mktempdir()
         invalid_out = mktempdir()
         @test_throws Snapshot.InvalidFallbackBondSelection export_notebook(
@@ -927,20 +947,33 @@ if HAS_NODE
             force_fallback_bonds=[:removed_last_bond])
         @test isempty(readdir(invalid_out))
 
+        # The public default is the lean Therapy export.
         html_path = export_notebook(DEMO; output_dir=out, session)
         @test isfile(html_path)
         html = read(html_path, String)
         @test occursin("demo.islands/shim.js", html)
-        @test occursin("pluto_slider_server_url = \".\"", html)
+        @test !occursin("pluto_slider_server_url = \".\"", html)
+        @test occursin("<main>", html)
         @test isfile(joinpath(out, "demo.islands", "islands.json"))
 
-        # browser E2E (exit 2 = playwright unavailable → skip)
-        e2e = joinpath(@__DIR__, "e2e.mjs")
-        proc = run(ignorestatus(`node $e2e $out demo.html`))
-        if proc.exitcode == 2
+        # The legacy full-Pluto export remains available only by explicit opt-in.
+        classic_out = mktempdir()
+        classic_path = export_notebook(DEMO; output_dir=classic_out, session,
+                                       therapy=false)
+        classic_html = read(classic_path, String)
+        @test occursin("demo.islands/shim.js", classic_html)
+        @test occursin("pluto_slider_server_url = \".\"", classic_html)
+
+        # Browser E2E for both public formats (exit 2 = Playwright unavailable).
+        lean_e2e = joinpath(@__DIR__, "islands_smoke.mjs")
+        lean_proc = run(ignorestatus(`node $lean_e2e $out demo.html`))
+        classic_e2e = joinpath(@__DIR__, "e2e.mjs")
+        classic_proc = run(ignorestatus(`node $classic_e2e $classic_out demo.html`))
+        if lean_proc.exitcode == 2 || classic_proc.exitcode == 2
             @test_skip "playwright unavailable"
         else
-            @test proc.exitcode == 0
+            @test lean_proc.exitcode == 0
+            @test classic_proc.exitcode == 0
         end
     end
 end
