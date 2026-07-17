@@ -16,7 +16,7 @@ const HAS_NODE = Sys.which("node") !== nothing
     @test !haskey(project, "sources")
     @test project["compat"]["WasmTarget"] == "0.5.2"
     @test !haskey(docs_project, "sources")
-    @test docs_project["compat"]["Therapy"] == "0.2.3"
+    @test docs_project["compat"]["Therapy"] == "0.2.6"
 end
 
 @testset "fun export theme contract" begin
