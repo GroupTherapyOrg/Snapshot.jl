@@ -1,4 +1,5 @@
 {
+  "bootstrap-sha": "e7b793f1aaf7035c929834f2b86ce0de7ac1dbdc",
   "packages": {
     ".": {
       "release-type": "julia",
