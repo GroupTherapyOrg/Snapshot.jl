@@ -1135,21 +1135,23 @@ input[type=range]{accent-color:var(--color-primary);width:15rem;vertical-align:m
 select,input[type=number]{accent-color:var(--color-primary)}
 bond{display:inline-block}
 a{color:var(--color-primary)}
-/* Tailwind's preflight deliberately removes native button chrome. Restore a clear,
-   theme-aware affordance for direct HTML controls whose authors did not claim
-   styling ownership with a class or inline style. Nested controls keep their widget
-   styling; `data-snapshot-unstyled` is an explicit escape hatch. */
-:where(pluto-output[data-mime="text/html"]) > :where(button,input:not([type]),input[type="button"],input[type="submit"],input[type="reset"],input[type="text"],input[type="number"],input[type="email"],input[type="search"],input[type="url"],input[type="password"],select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]){
+/* Tailwind's preflight deliberately removes native control chrome. Restore a clear,
+   theme-aware affordance for raw HTML controls whose authors did not claim styling
+   ownership with a class, inline style, or data-snapshot-unstyled. Pluto commonly
+   places HTML-literal controls below transparent <div> / <bond> wrappers, so this is
+   intentionally descendant-scoped rather than direct-child-scoped. The final :not()
+   prevents the fallback from crossing into an authored component wrapper. */
+:where(pluto-output[data-mime="text/html"]) :where(button,input:not([type]),input[type="button"],input[type="submit"],input[type="reset"],input[type="text"],input[type="number"],input[type="email"],input[type="search"],input[type="url"],input[type="password"],select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)){
   box-sizing:border-box;font:inherit;color:var(--color-base-content);background:var(--color-base-100);border:1px solid var(--color-base-300);border-radius:var(--radius-field,.5rem)
 }
-:where(pluto-output[data-mime="text/html"]) > :where(button,input[type="button"],input[type="submit"],input[type="reset"]):not([class]):not([style]):not([data-snapshot-unstyled]){
+:where(pluto-output[data-mime="text/html"]) :where(button,input[type="button"],input[type="submit"],input[type="reset"]):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)){
   display:inline-flex;align-items:center;justify-content:center;min-height:2.5rem;padding:.55rem .9rem;font-weight:600;line-height:1.2;cursor:pointer;background:var(--color-primary);color:var(--color-primary-content);border-color:var(--color-primary)
 }
-:where(pluto-output[data-mime="text/html"]) > :where(input:not([type]),input[type="text"],input[type="number"],input[type="email"],input[type="search"],input[type="url"],input[type="password"],select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]){min-height:2.5rem;padding:.45rem .65rem}
-:where(pluto-output[data-mime="text/html"]) > :where(input[type="checkbox"],input[type="radio"]):not([class]):not([style]):not([data-snapshot-unstyled]){accent-color:var(--color-primary)}
-:where(pluto-output[data-mime="text/html"]) > :where(button,input[type="button"],input[type="submit"],input[type="reset"]):not([class]):not([style]):not([data-snapshot-unstyled]):hover:not(:disabled){background:color-mix(in oklab,var(--color-primary) 92%,var(--color-base-content));border-color:color-mix(in oklab,var(--color-primary) 92%,var(--color-base-content))}
-:where(pluto-output[data-mime="text/html"]) > :where(button,input,select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
-:where(pluto-output[data-mime="text/html"]) > :where(button,input,select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):disabled{opacity:.5;cursor:not-allowed}
+:where(pluto-output[data-mime="text/html"]) :where(input:not([type]),input[type="text"],input[type="number"],input[type="email"],input[type="search"],input[type="url"],input[type="password"],select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)){min-height:2.5rem;padding:.45rem .65rem}
+:where(pluto-output[data-mime="text/html"]) :where(input[type="checkbox"],input[type="radio"]):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)){accent-color:var(--color-primary)}
+:where(pluto-output[data-mime="text/html"]) :where(button,input[type="button"],input[type="submit"],input[type="reset"]):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)):hover:not(:disabled){background:color-mix(in oklab,var(--color-primary) 92%,var(--color-base-content));border-color:color-mix(in oklab,var(--color-primary) 92%,var(--color-base-content))}
+:where(pluto-output[data-mime="text/html"]) :where(button,input,select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)):focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+:where(pluto-output[data-mime="text/html"]) :where(button,input,select,textarea):not([class]):not([style]):not([data-snapshot-unstyled]):not(:where(pluto-output[data-mime="text/html"] :is([class],[style],[data-snapshot-unstyled]) *)):disabled{opacity:.5;cursor:not-allowed}
 /* floating DaisyUI theme picker (test control): swaps <html data-theme>; because the
    ported Pluto output CSS reads DaisyUI --color-* tokens, ONE swap restyles every cell */
 .snap-theme-picker{position:fixed;top:.75rem;left:.75rem;z-index:50;display:flex;align-items:center;gap:.4rem;background:var(--color-base-200);color:var(--color-base-content);border:1px solid var(--color-base-300);border-radius:.6rem;padding:.35rem .55rem;box-shadow:0 1px 4px rgba(0,0,0,.14);font-size:.8rem;line-height:1}
