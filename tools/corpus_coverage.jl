@@ -28,7 +28,8 @@ function corpus_coverage(pattern = "")
         out = mktempdir()
         rec = Dict{String,Any}()
         try
-            export_notebook(joinpath(CORPUS, nb); output_dir = out, verify = true, oracle_samples = 3)
+            export_notebook(joinpath(CORPUS, nb); output_dir = out, verify = true,
+                            oracle_samples = 3, therapy = true)
             cov = nothing
             for (root, _, files) in walkdir(out), f in files
                 f == "coverage.json" && (cov = JSON.parsefile(joinpath(root, f)))

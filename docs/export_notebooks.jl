@@ -147,12 +147,12 @@ for (i, (path, slug)) in enumerate(jobs)
         "image" => something(frontmatter_field(src, "image"), "island-demo.svg"),
     )
     try
-        # therapy=true → LEAN Therapy-component export (SSR cells + wasm islands,
+        # Default lean Therapy-component export (SSR cells + wasm islands,
         # no Pluto frontend / 2.6 MB statefile). theme_picker=false: the docs
         # NotebookPage supplies one shared DaisyUI picker that drives every notebook.
         # fragment=true → also write <slug>.fragment.html (native-inline component);
         # assets_base placeholder is rewritten to "<base>/notebooks-static" at serve.
-        Snapshot.export_notebook(path; output_dir=OUT, therapy=true, theme_picker=false,
+        Snapshot.export_notebook(path; output_dir=OUT, theme_picker=false,
             fragment=true, fragment_dependencies=:host,
             assets_base="__PI_ASSETS_BASE__")
         isfile(joinpath(OUT, html_name)) || error("export produced no HTML (notebook failed to run?)")

@@ -8,7 +8,7 @@ using Snapshot
 
 # lean, themeable Therapy-component export — every compilable bond group
 # ships as a WasmGC island, verified against the real notebook first
-export_notebook("notebook.jl"; therapy=true)
+export_notebook("notebook.jl")
 
 # → notebook.html + notebook.islands/   (serve anywhere static)"""
     quickstart_html = sprint(

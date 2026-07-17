@@ -4,7 +4,7 @@
 
 ### Pluto notebooks, interactive as Therapy components. No Julia server.
 
-A **snapshot** of a running notebook: a static export whose interactive cells still run. `@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean, self-contained [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
+A **snapshot** of a running notebook: a static export whose interactive cells still run. `@bind`-dependent cells compile to WebAssembly via [WasmTarget.jl](https://github.com/GroupTherapyOrg/WasmTarget.jl). Export a notebook as a **lean [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl) component** (recommended) or as the classic Pluto static HTML — either way the interactive **islands** run entirely in the browser on any static host, with no slider server and no precomputed request files.
 
 [![Docs](https://img.shields.io/badge/docs-live-blue.svg)](https://grouptherapyorg.github.io/Snapshot.jl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
@@ -27,24 +27,31 @@ the current process. See [Security and trust boundary](#security-and-trust-bound
 ```julia
 using Snapshot
 
-# recommended: a lean, self-contained Therapy component — SSR'd cells + wasm
+# default: a lean Therapy component — cells rendered to HTML at export time + wasm
 # islands, no Pluto frontend / baked statefile. Drops into any static host or
 # Therapy.jl app, themeable, with or without reactivity.
-export_notebook("notebook.jl"; therapy=true)
+export_notebook("notebook.jl")
 
 # classic: the full Pluto static export with interactive islands
-export_notebook("notebook.jl")
+export_notebook("notebook.jl"; therapy=false)
 # → notebook.html + notebook.islands/   (serve anywhere static)
 ```
 
 ## How it works
 
-`therapy=true` (recommended) emits a lean **Therapy component** — server-rendered
-cells plus the same wasm islands, no Pluto frontend or baked statefile — themeable
+The default, `therapy=true`, emits a lean **Therapy component** — cells rendered
+to HTML at export time plus the same wasm islands, no Pluto frontend or baked statefile — themeable
 and droppable into any [Therapy.jl](https://github.com/GroupTherapyOrg/Therapy.jl)
 app; it's what the [docs gallery](https://grouptherapyorg.github.io/Snapshot.jl/)
-serves. The default `export_notebook(...)` produces the classic full-Pluto static
-export, which works the same way under the hood:
+serves. Pass `therapy=false` explicitly for the legacy full-Pluto static export.
+Both modes use the same island extraction and compilation pipeline.
+
+The exported page uses pinned CDN resources for presentation (DaisyUI themes,
+KaTeX, and Lezer syntax highlighting). Notebook content and interactive island
+assets are static; if a presentation CDN is unavailable, content and controls
+remain present but those enhancements may be absent.
+
+The shared pipeline is:
 
 1. **Export time** — the notebook runs once in Pluto. Each group of co-dependent
    `@bind` variables is extracted into pure Julia functions (one per dependent

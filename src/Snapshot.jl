@@ -3,9 +3,8 @@
 
 Interactive Pluto notebook exports with **no Julia server**: `@bind`-dependent
 cells compile to WebAssembly (via WasmTarget.jl) and ship as *islands* inside
-the classic static HTML export. In the browser, a small shim answers Pluto's
-slider-server protocol locally from the wasm — the stock Pluto frontend is
-untouched.
+a lean Therapy component by default. In the browser, a small runtime connects
+the exported inputs directly to the wasm islands.
 
 Every island is verified before it ships: original output bodies must
 reproduce byte-exactly under Node, and a differential oracle compares the
@@ -17,6 +16,9 @@ with a Pluto-native warning explaining exactly why.
 
     export_notebook("notebook.jl")
     # → notebook.html + notebook.islands/   (serve anywhere static)
+
+    # Legacy full-Pluto static export:
+    export_notebook("notebook.jl"; therapy=false)
 
     # integrators (e.g. a PlutoSliderServer-style exporter) with their own
     # run/export pipeline call the hook on a RUNNING notebook instead:
