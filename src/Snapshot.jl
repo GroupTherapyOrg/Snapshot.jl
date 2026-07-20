@@ -14,11 +14,13 @@ with a Pluto-native warning explaining exactly why.
 
 # The two-level API
 
-    export_notebook("notebook.jl")
-    # → notebook.html + notebook.islands/   (serve anywhere static)
+    html = export_notebook("notebook.jl")
+
+    # Portable, directly openable HTML:
+    portable = export_notebook("notebook.jl"; single_file=true)
 
     # Legacy full-Pluto static export:
-    export_notebook("notebook.jl"; therapy=false)
+    classic_html = export_notebook("notebook.jl"; therapy=false)
 
     # integrators (e.g. a PlutoSliderServer-style exporter) with their own
     # run/export pipeline call the hook on a RUNNING notebook instead:
@@ -29,6 +31,12 @@ module Snapshot
 import Pluto
 import PlutoDependencyExplorer
 import JSON
+import NodeJS_22_jll
+
+# Snapshot's export oracle requires WasmGC, JS-string builtins, and exception
+# references. Keep the runtime and its feature contract in one place so neither
+# verifier can accidentally fall back to a user's ambient Node installation.
+_verifier_node() = `$(NodeJS_22_jll.node()) --experimental-wasm-exnref`
 
 include("types.jl")
 include("analysis.jl")

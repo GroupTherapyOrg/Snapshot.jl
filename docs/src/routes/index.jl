@@ -8,9 +8,12 @@ using Snapshot
 
 # lean, themeable Therapy-component export — every compilable bond group
 # ships as a WasmGC island, verified against the real notebook first
-export_notebook("notebook.jl")
+html = export_notebook("notebook.jl")
+# → notebook.html + notebook.islands/   (deploy together)
 
-# → notebook.html + notebook.islands/   (serve anywhere static)"""
+# one directly openable file for the simplest handoff
+portable = export_notebook("notebook.jl"; single_file=true)
+# → notebook.html"""
     quickstart_html = sprint(
         show,
         MIME("text/html"),
@@ -46,6 +49,10 @@ export_notebook("notebook.jl")
             H2(:class => "sn-display text-2xl font-semibold text-base-content", "Quickstart"),
             Pre(:class => "bg-neutral text-neutral-content p-6 rounded-box overflow-x-auto sn-mono text-sm leading-relaxed",
                 Code(RawHtml(quickstart_html))),
+            P(:class => "text-sm text-base-content/60 leading-relaxed",
+                "Use the ordinary directory format for efficient static hosting, or ",
+                Code(:class => "sn-mono", "single_file=true"),
+                " to embed the runtime and WASM in one HTML file that opens directly from disk."),
             P(:class => "text-sm text-base-content/60 leading-relaxed",
                 "At export time the notebook runs once in Pluto. Each group of co-dependent ",
                 Code(:class => "sn-mono", "@bind"),

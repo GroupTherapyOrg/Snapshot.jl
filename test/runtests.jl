@@ -114,6 +114,29 @@ const ERROR_OUTPUT = joinpath(@__DIR__, "notebooks", "error_output.jl")
 const TOC_SCROLL = joinpath(@__DIR__, "notebooks", "toc_scroll.jl")
 const RAW_CONTROLS = joinpath(@__DIR__, "notebooks", "raw_controls.jl")
 
+@testset "file protocol guidance is interactive-only and idempotent" begin
+    source = "<!doctype html><html><head><title>x</title></head><body></body></html>"
+    injected = inject_islands_script(source, "x.islands")
+    reinjected = inject_islands_script(injected, "x.islands")
+
+    @test count("<script id=\"snapshot-file-protocol-warning\">", injected) == 1
+    @test count("x.islands/shim.js", injected) == 1
+    @test reinjected == injected
+    @test occursin("window.location.protocol !== \"file:\"", injected)
+    @test occursin("single_file=true", injected)
+    @test !occursin("snapshot-file-protocol-warning", source)
+end
+
+@testset "portable asset registry is path- and script-safe" begin
+    @test Snapshot._portable_asset_key("..\\shared fonts\\atlas.json") ==
+          "../shared fonts/atlas.json"
+    hostile = "</script><script>window.pwned=true</script>"
+    bootstrap = Snapshot._embedded_assets_bootstrap(Dict(hostile => "AA=="))
+    @test !occursin(hostile, bootstrap)
+    @test count("</script>", bootstrap) == 1
+    @test occursin("TextDecoder", bootstrap)
+end
+
 session = Pluto.ServerSession()
 session.options.evaluation.workspace_use_distributed = false
 
@@ -664,7 +687,11 @@ if HAS_NODE
 
     @testset "compile + node verify" begin
         g = extract_groups(session, notebook; connections, original_state)[1]
-        island = compile_group(g; initial_bodies, verify_node=true)
+        # Snapshot's verifier is compiler infrastructure supplied by a JLL. It
+        # must work even when the user's PATH contains no Node installation.
+        island = withenv("PATH" => mktempdir()) do
+            compile_group(g; initial_bodies, verify_node=true)
+        end
         @test island.ok
         @test length(island.cells) == 2
         @test isempty(island.cell_failures)
@@ -679,7 +706,9 @@ if HAS_NODE
     @testset "differential oracle" begin
         g = extract_groups(session, notebook; connections, original_state)[1]
         island = compile_group(g; verify_node=false)
-        res = differential_oracle(session, notebook, original_state, connections, g, island; samples=5)
+        res = withenv("PATH" => mktempdir()) do
+            differential_oracle(session, notebook, original_state, connections, g, island; samples=5)
+        end
         @test res.ok
         @test res.samples_run == 5
 
@@ -803,6 +832,7 @@ if isdir(WASMMAKIE_DIR)
             # command-stream equality oracle: native html_snippet's embedded
             # RecordingCtx stream vs the wasm export run under recording stubs
             res = differential_oracle(session, nbf, stf, connf, gf, island; samples=4)
+            res.ok || @error "canvas differential oracle failed" res
             @test res.ok
             @test res.samples_run == 4
             @test isempty(res.failed_cells)
@@ -952,9 +982,37 @@ if HAS_NODE
         @test isfile(html_path)
         html = read(html_path, String)
         @test occursin("demo.islands/shim.js", html)
+        @test occursin("snapshot-file-protocol-warning", html)
         @test !occursin("pluto_slider_server_url = \".\"", html)
         @test occursin("<main>", html)
         @test isfile(joinpath(out, "demo.islands", "islands.json"))
+
+        # Portable mode embeds the manifest, runtime, and WASM into one HTML
+        # file. It must not retain a neighboring runtime directory or show the
+        # ordinary file:// guidance banner.
+        portable_out = mktempdir()
+        portable_path = export_notebook(
+            DEMO; output_dir=portable_out, session, single_file=true)
+        portable_html = read(portable_path, String)
+        @test occursin("id=\"snapshot-embedded-assets\"", portable_html)
+        @test occursin("window.__snapshotEmbeddedAssets", portable_html)
+        @test !occursin("snapshot-file-protocol-warning", portable_html)
+        @test !occursin("src=\"demo.islands/shim.js\"", portable_html)
+        @test !ispath(joinpath(portable_out, "demo.islands"))
+        @test_throws ArgumentError export_notebook(
+            DEMO; output_dir=mktempdir(), session,
+            single_file=true, fragment=true)
+        @test_throws ArgumentError export_notebook(
+            DEMO; output_dir=mktempdir(), session,
+            single_file=true, therapy=false)
+
+        # A failed final HTML write must leave the freshly generated split
+        # assets intact so the exporter never destroys the only runnable copy.
+        failed_write_out = mktempdir()
+        mkpath(joinpath(failed_write_out, "demo.html"))
+        @test_throws Exception export_notebook(
+            DEMO; output_dir=failed_write_out, session, single_file=true)
+        @test isdir(joinpath(failed_write_out, "demo.islands"))
 
         # The legacy full-Pluto export remains available only by explicit opt-in.
         classic_out = mktempdir()
@@ -962,17 +1020,21 @@ if HAS_NODE
                                        therapy=false)
         classic_html = read(classic_path, String)
         @test occursin("demo.islands/shim.js", classic_html)
+        @test occursin("snapshot-file-protocol-warning", classic_html)
         @test occursin("pluto_slider_server_url = \".\"", classic_html)
 
         # Browser E2E for both public formats (exit 2 = Playwright unavailable).
         lean_e2e = joinpath(@__DIR__, "islands_smoke.mjs")
         lean_proc = run(ignorestatus(`node $lean_e2e $out demo.html`))
+        portable_proc = run(ignorestatus(
+            `node $lean_e2e $portable_out demo.html --file`))
         classic_e2e = joinpath(@__DIR__, "e2e.mjs")
         classic_proc = run(ignorestatus(`node $classic_e2e $classic_out demo.html`))
-        if lean_proc.exitcode == 2 || classic_proc.exitcode == 2
+        if lean_proc.exitcode == 2 || portable_proc.exitcode == 2 || classic_proc.exitcode == 2
             @test_skip "playwright unavailable"
         else
             @test lean_proc.exitcode == 0
+            @test portable_proc.exitcode == 0
             @test classic_proc.exitcode == 0
         end
     end

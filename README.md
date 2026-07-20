@@ -30,12 +30,84 @@ using Snapshot
 # default: a lean Therapy component — cells rendered to HTML at export time + wasm
 # islands, no Pluto frontend / baked statefile. Drops into any static host or
 # Therapy.jl app, themeable, with or without reactivity.
-export_notebook("notebook.jl")
+html = export_notebook("notebook.jl")
+# → notebook.html + notebook.islands/   (deploy both together)
+
+# portable: embed the runtime and WASM into one directly openable file
+portable = export_notebook("notebook.jl"; single_file=true)
+# → notebook.html
 
 # classic: the full Pluto static export with interactive islands
-export_notebook("notebook.jl"; therapy=false)
-# → notebook.html + notebook.islands/   (serve anywhere static)
+classic_html = export_notebook("notebook.jl"; therapy=false)
+# → notebook.html + notebook.islands/   (deploy both together)
 ```
+
+The ordinary lean and classic formats are static directories rather than
+single self-contained files. The classic format includes Pluto's heavier
+frontend and statefile, but its Snapshot interactivity still uses the
+neighboring `.islands/` directory. Deploy the HTML and that directory together
+to any static host. Browsers block those neighboring WASM and JSON assets when
+the HTML is opened directly through `file://`; use the portable mode below for
+that workflow.
+
+For a portable file that can be opened directly from Finder or Explorer, embed
+the Snapshot runtime, island manifest, and WASM modules into the HTML:
+
+```julia
+portable = export_notebook("notebook.jl"; single_file=true)
+# → notebook.html (no neighboring .islands/ directory)
+```
+
+This format trades a larger HTML file for the simplest handoff: copy, upload,
+or double-click that one file. Base64 encoding makes embedded binary assets
+roughly one third larger. The ordinary directory export remains the efficient
+choice for a website, while `single_file=true` is intended for direct sharing.
+
+### Browser requirements and a "moving slider, stuck output"
+
+Snapshot's current WasmTarget modules use WasmGC and the standardized
+WebAssembly JavaScript string builtins. Use Chrome or Edge 130+, Firefox 134+,
+or another browser with equivalent support. Safari does not currently implement
+the required string builtins. This requirement is independent of Windows,
+macOS, and Linux.
+
+An older browser can still move a plain HTML slider even though it cannot
+compile the adjacent WebAssembly island. The visible symptom is therefore a
+moving control with an unchanged, server-rendered plot or value. Current
+exports detect the module compilation failure and show an inline browser-update
+message with the original technical detail. If an export behaves that way,
+first record the browser name and exact version; the Julia and Snapshot package
+versions alone do not identify the browser runtime.
+
+Directory exports also tolerate static servers that send `.wasm` with a generic
+binary MIME type: Snapshot prefers streaming compilation when the server sends
+`application/wasm`, then safely retries from the downloaded bytes otherwise.
+This keeps local Python servers and simple educational/static hosts portable
+without weakening the browser's WebAssembly validation.
+
+### Hosting from a Therapy site
+
+The default output is already a static directory, so a Therapy application can
+serve it without running Pluto or Snapshot in production. Export into a public
+directory during the site's build and mount that directory with Therapy's
+static-file support:
+
+```julia
+# build step (Snapshot environment)
+using Snapshot
+export_notebook("notebook.jl"; output_dir="public/notebook")
+
+# application (Therapy environment)
+using Therapy
+app = App()
+staticfiles(app, "public/notebook", "notebook")
+run(app)
+```
+
+The notebook is then available at `/notebook/notebook.html`, with its
+neighboring `.islands/` directory served from the same static mount. This keeps
+notebook compilation and site serving separate: Therapy does not need Pluto or
+Snapshot at runtime.
 
 ## How it works
 

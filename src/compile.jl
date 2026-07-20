@@ -558,7 +558,13 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
         write(wasm_path, island.bytes)
         write(js_path, script)
         out = IOBuffer(); errio = IOBuffer()
-        ok = success(pipeline(`node $js_path $wasm_path`; stdout=out, stderr=errio))
+        # Verification is part of Snapshot's compiler pipeline, so it must not
+        # inherit an arbitrary `node` from the user's PATH. In particular,
+        # Node 20 rejects WasmGC modules and used to turn otherwise-valid
+        # islands into static fallbacks. NodeJS_22_jll gives every supported
+        # platform the same WasmGC-capable verifier runtime.
+        node = _verifier_node()
+        ok = success(pipeline(`$node $js_path $wasm_path`; stdout=out, stderr=errio))
         ok || return "node failed: $(String(take!(errio))[1:min(end, 300)])"
         got = JSON.parse(String(take!(out)))
         failed = Dict{String,String}()

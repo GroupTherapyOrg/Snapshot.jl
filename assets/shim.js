@@ -147,13 +147,26 @@
 
     // ─── manifest + lazy per-group wasm loading ───
     const orig_fetch = window.fetch.bind(window)
-    // this script lives inside <notebook>.islands/ — resolve siblings from it
-    const assets_base = new URL(".", document.currentScript.src)
+    // Directory exports resolve files next to this script. Portable single-file
+    // exports install the same bytes in an explicit in-document asset registry,
+    // avoiding every file:// fetch without maintaining a second runtime.
+    const embedded_assets = window.__snapshotEmbeddedAssets ?? null
+    const assets_base = embedded_assets ? null : new URL(".", document.currentScript.src)
+    const embedded_bytes = (name) => {
+        const encoded = embedded_assets?.files?.[name]
+        if (typeof encoded !== "string") throw new Error(`embedded Snapshot asset missing: ${name}`)
+        const binary = atob(encoded)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        return bytes
+    }
+    const embedded_text = (name) => new TextDecoder().decode(embedded_bytes(name))
 
     let manifest_promise = null
     const load_manifest = () => {
-        manifest_promise ??= orig_fetch(new URL("islands.json", assets_base))
-            .then((r) => r.json())
+        manifest_promise ??= (embedded_assets
+            ? Promise.resolve(JSON.parse(embedded_text("islands.json")))
+            : orig_fetch(new URL("islands.json", assets_base)).then((r) => r.json()))
             .then((m) => {
                 console.log(`🏝️ islands manifest: ${m.groups.length} group(s)`, m)
                 m.groups.forEach((g) => {
@@ -172,17 +185,41 @@
     let shared_fonts_promise = null
     const load_shared_fonts = (m) => {
         if (!m || !m.fonts_url) return Promise.resolve([])
-        shared_fonts_promise ??= orig_fetch(new URL(m.fonts_url, assets_base))
-            .then((r) => r.text()).then((t) => JSON.parse(t)).catch(() => [])
+        shared_fonts_promise ??= (embedded_assets
+            ? Promise.resolve(embedded_text(m.fonts_url))
+            : orig_fetch(new URL(m.fonts_url, assets_base)).then((r) => r.text()))
+            .then((t) => JSON.parse(t)).catch(() => [])
         return shared_fonts_promise
     }
 
     const load_group = (group) => {
         group._instance ??= (async () => {
-            const wasm_resp = await orig_fetch(new URL(group.wasm, assets_base))
             // builtins: WasmTarget emits wasm:js-string imports for string
             // production (axis labels, string(::Complex/::Float64)).
-            const mod = await WebAssembly.compileStreaming(wasm_resp, { builtins: ['js-string'] })
+            const compile_options = { builtins: ['js-string'] }
+            let mod
+            if (embedded_assets) {
+                mod = await WebAssembly.compile(embedded_bytes(group.wasm), compile_options)
+            } else {
+                const response = await orig_fetch(new URL(group.wasm, assets_base))
+                if (!response.ok) throw new Error(`could not load ${group.wasm}: HTTP ${response.status}`)
+                // compileStreaming is the fast path, but it deliberately rejects
+                // responses without Content-Type: application/wasm. Small local
+                // servers (notably Python installations whose MIME table comes
+                // from Windows) and some static hosts may label .wasm as generic
+                // binary data. The bytes are still valid: retry through compile()
+                // rather than leaving live HTML controls beside frozen SSR output.
+                try {
+                    mod = await WebAssembly.compileStreaming(response.clone(), compile_options)
+                } catch (stream_error) {
+                    try {
+                        mod = await WebAssembly.compile(await response.arrayBuffer(), compile_options)
+                    } catch (compile_error) {
+                        try { compile_error.cause ??= stream_error } catch {}
+                        throw compile_error
+                    }
+                }
+            }
             // canvas provider (E-004): groups with figure cells carry their
             // own glue (canvas2d_imports/canvas2d_load_fonts from the
             // notebook's WasmMakie). Imports are fixed at instantiation, so
@@ -229,6 +266,24 @@
             return { ex, read_str, canvas_api: group._canvas_api ?? null }
         })()
         return group._instance
+    }
+
+    // WasmTarget currently emits WasmGC modules that use the standardized
+    // JavaScript string builtins. A browser that predates those builtins can
+    // still move an ordinary HTML slider, but it cannot instantiate the
+    // adjacent island: the server-rendered output then appears "stuck". Keep
+    // this feature-based (the real module compile is the probe), not UA-based,
+    // and turn that otherwise cryptic CompileError into an actionable message.
+    const runtime_failure_message = (e) => {
+        const detail = (e && e.message) || String(e)
+        if (e instanceof WebAssembly.CompileError ||
+            /js-string|string builtins/i.test(detail)) {
+            return "this browser could not compile the WebAssembly island. " +
+                "Snapshot currently requires WebAssembly JavaScript string builtins " +
+                "(Chrome or Edge 130+, Firefox 134+, or another browser with equivalent support). " +
+                "Update the browser and reload the page. Technical detail: " + detail
+        }
+        return "the compiled island threw while rendering in your browser: " + detail
     }
 
     // ─── WasmTarget.Bridge marshalling: JS value → tagged tree → in-module ctors ───
@@ -498,7 +553,7 @@
                 mount.prepend(warning_node({
                     id: null,
                     reasons: [],
-                    diag: { kind: "runtime", construct: "the compiled island threw while rendering in your browser: " + ((e && e.message) || String(e)) },
+                    diag: { kind: "runtime", construct: runtime_failure_message(e) },
                 }, null))
         }
     }
@@ -852,8 +907,11 @@
 
     let report_promise = null
     const load_report = () => {
-        report_promise ??= orig_fetch(new URL("report.json", assets_base))
-            .then((r) => (r.ok ? r.json() : null))
+        report_promise ??= (embedded_assets
+            ? Promise.resolve(embedded_assets.files?.["report.json"]
+                ? JSON.parse(embedded_text("report.json")) : null)
+            : orig_fetch(new URL("report.json", assets_base))
+                .then((r) => (r.ok ? r.json() : null)))
             .catch(() => null)
         return report_promise
     }

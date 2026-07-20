@@ -307,8 +307,114 @@ editor module executes.
 """
 function inject_islands_script(html::String, islands_dirname::String)::String
     tag = "<script src=\"./$(islands_dirname)/shim.js\"></script>"
-    occursin(tag, html) && return html
-    replace(html, "<head>" => "<head>" * tag; count=1)
+    warning = _file_protocol_warning_script()
+    warning_marker = "<script id=\"snapshot-file-protocol-warning\">"
+    occursin(tag, html) && occursin(warning_marker, html) && return html
+    insertion = (occursin(warning_marker, html) ? "" : warning) *
+                (occursin(tag, html) ? "" : tag)
+    replace(html, "<head>" => "<head>" * insertion; count=1)
+end
+
+function _file_protocol_warning_script()
+    """<script id="snapshot-file-protocol-warning">
+(function () {
+  if (window.location.protocol !== "file:") return;
+  function showSnapshotFileWarning() {
+    if (document.getElementById("snapshot-file-protocol-warning-banner")) return;
+    var banner = document.createElement("div");
+    banner.id = "snapshot-file-protocol-warning-banner";
+    banner.setAttribute("role", "alert");
+    banner.style.cssText = "position:fixed;z-index:2147483647;left:16px;right:16px;top:16px;padding:16px 20px;border:2px solid #b45309;border-radius:12px;background:#fffbeb;color:#451a03;font:600 16px/1.45 system-ui,sans-serif;box-shadow:0 12px 35px #0003";
+    banner.textContent = "This directory-style Snapshot export was opened directly from disk, so the browser cannot load its neighboring WebAssembly assets. Export with single_file=true for one directly openable HTML file, or serve this export directory over HTTP.";
+    document.body.prepend(banner);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", showSnapshotFileWarning, { once: true });
+  else showSnapshotFileWarning();
+})();
+</script>"""
+end
+
+"""
+Inline every Snapshot-generated browser asset used by an island export.
+
+The ordinary directory format remains the efficient default. This transform is
+reserved for `single_file=true`: it installs a base64 asset registry before the
+unchanged island runtime, replaces the external shim tag with that runtime, and
+removes the file-protocol warning. Presentation-only CDN resources may still be
+used, but notebook interactivity no longer performs a `file://` fetch.
+"""
+function _inline_island_assets(
+    html::String,
+    output_dir::AbstractString,
+    islands_dirname::AbstractString,
+)::String
+    assets_dir = joinpath(output_dir, islands_dirname)
+    manifest_path = joinpath(assets_dir, "islands.json")
+    shim_path = joinpath(assets_dir, "shim.js")
+    isfile(manifest_path) || error("Snapshot island manifest is missing")
+    isfile(shim_path) || error("Snapshot island runtime is missing")
+
+    files = Dict{String,String}()
+    for filename in readdir(assets_dir)
+        path = joinpath(assets_dir, filename)
+        isfile(path) || continue
+        filename == "shim.js" && continue
+        files[filename] = base64encode(read(path))
+    end
+
+    # A collection export may deduplicate WasmMakie's font atlas outside the
+    # notebook's islands directory. Preserve that exact manifest-relative key
+    # inside the portable registry as well.
+    manifest = JSON.parsefile(manifest_path)
+    fonts_url = get(manifest, "fonts_url", nothing)
+    if fonts_url isa AbstractString && !isempty(fonts_url)
+        fonts_path = normpath(joinpath(assets_dir, fonts_url))
+        isfile(fonts_path) || error("Snapshot shared font asset is missing: $fonts_url")
+        normalized_fonts_url = _portable_asset_key(fonts_url)
+        manifest["fonts_url"] = normalized_fonts_url
+        files[normalized_fonts_url] = base64encode(read(fonts_path))
+    end
+    # The embedded manifest must use the same platform-independent keys as the
+    # registry. This matters when relpath emitted Windows backslashes.
+    files["islands.json"] = base64encode(JSON.json(manifest))
+
+    bootstrap = _embedded_assets_bootstrap(files)
+    shim = read(shim_path, String)
+    occursin(r"</script"i, shim) && error(
+        "Snapshot island runtime unexpectedly contains a closing script tag")
+    inline_tag = string(bootstrap,
+        "<script data-therapy-rerun=\"blocking\">", shim, "</script>")
+
+    candidates = (
+        "<script data-therapy-rerun=\"blocking\" src=\"$islands_dirname/shim.js\"></script>",
+        "<script src=\"./$islands_dirname/shim.js\"></script>",
+    )
+    replaced = false
+    for tag in candidates
+        if occursin(tag, html)
+            html = replace(html, tag => inline_tag; count=1)
+            replaced = true
+            break
+        end
+    end
+    replaced || error("Snapshot could not locate the island runtime tag to inline")
+    replace(html, _file_protocol_warning_script() => ""; count=1)
+end
+
+_portable_asset_key(path::AbstractString) = replace(String(path), '\\' => '/')
+
+function _embedded_assets_bootstrap(files::AbstractDict)
+    # Encode the complete JSON registry rather than interpolating caller-derived
+    # filenames into an executable script. Base64's alphabet cannot terminate
+    # the script element, and TextDecoder preserves non-ASCII paths.
+    payload = base64encode(JSON.json(files))
+    string(
+        "<script id=\"snapshot-embedded-assets\">",
+        "(()=>{const b=atob(\"", payload,
+        "\"),u=Uint8Array.from(b,c=>c.charCodeAt(0));",
+        "window.__snapshotEmbeddedAssets=Object.freeze({files:Object.freeze(",
+        "JSON.parse(new TextDecoder().decode(u)))});})();</script>",
+    )
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -322,6 +428,7 @@ end
                     baked_state=true, baked_notebookfile=true,
                     disable_ui=true, pluto_cdn_root=nothing,
                     session=nothing, therapy=true, fragment=false,
+                    single_file=false,
                     fragment_dependencies=:inline) -> output html path
 
 Run a Pluto notebook and write a static HTML export where every compilable
@@ -335,6 +442,8 @@ island runtime. Pass `therapy=false` for the legacy full-Pluto static export.
 `baked_state`, `baked_notebookfile`, `disable_ui`, and `pluto_cdn_root` apply
 only to that classic mode; `theme_picker`, `fragment`,
 `fragment_dependencies`, and `assets_base` apply only to Therapy output.
+Pass `single_file=true` to embed the generated island runtime, manifest, and
+WASM modules into the returned HTML so it can be opened directly from disk.
 """
 function export_notebook(
     notebook_path::AbstractString;
@@ -368,7 +477,14 @@ function export_notebook(
     # document-global DaisyUI/KaTeX resources once for an entire collection.
     fragment_dependencies::Symbol=:inline,
     assets_base::AbstractString="",
+    # Portable delivery: one double-clickable HTML file with all
+    # Snapshot-generated runtime assets embedded in the document.
+    single_file::Bool=false,
 )
+    single_file && fragment && throw(ArgumentError(
+        "single_file=true cannot be combined with fragment=true; use the ordinary split export for Therapy embedding"))
+    single_file && !therapy && throw(ArgumentError(
+        "single_file=true is supported by the lean Therapy-style export; omit therapy=false"))
     mkpath(output_dir)
     jl_contents = read(notebook_path, String)
     name = without_pluto_file_extension(basename(notebook_path))
@@ -415,7 +531,17 @@ function export_notebook(
     if therapy
         # lean Therapy-style export: SSR the cells + drive the wasm islands from
         # plain HTML inputs (no Pluto frontend, no 2.6 MB baked statefile).
-        write(export_html_path, generate_therapy_html(notebook, output_dir, name, islands_dirname; theme_picker))
+        html = generate_therapy_html(notebook, output_dir, name, islands_dirname; theme_picker)
+        remove_embedded_assets = single_file && islands_dirname !== nothing
+        if remove_embedded_assets
+            html = _inline_island_assets(html, output_dir, islands_dirname)
+        end
+        write(export_html_path, html)
+        # Keep the split assets intact unless the complete replacement HTML was
+        # written successfully. A failed write must never destroy the runnable
+        # directory export that may already exist.
+        remove_embedded_assets &&
+            rm(joinpath(output_dir, islands_dirname); recursive=true, force=true)
         # native-inline component fragment (no iframe): same SSR cells + islands, but
         # CSS @scope-isolated and asset URLs = the `assets_base` placeholder the host
         # rewrites. One notebook run → both the standalone page and the embeddable.
@@ -903,8 +1029,10 @@ function generate_therapy_html(notebook, output_dir::AbstractString, name::Abstr
 })();
 </script>
 """)) : (_ -> "")
-    shim_tag = islands_dirname === nothing ? "" :
-        string("<script data-therapy-rerun=\"blocking\" src=\"", islands_dirname, "/shim.js\"></script>")
+    shim_tag = islands_dirname === nothing ? "" : string(
+        _file_protocol_warning_script(),
+        "<script data-therapy-rerun=\"blocking\" src=\"", islands_dirname, "/shim.js\"></script>",
+    )
     wiring = raw"""
 <script data-therapy-rerun>
 (function () {
@@ -1333,8 +1461,10 @@ function __piSetTheme(t){document.documentElement.setAttribute('data-theme',t);t
         scoped_audit = replace(scoped, r"/\*.*?\*/"s => "")
         occursin(r"(^|[},])\s*(?:html|body|:root)\b"m, scoped_audit) &&
             error("fragment CSS contains an unscoped document selector")
-        frag_shim = islands_dirname === nothing ? "" :
-            string("<script data-therapy-rerun=\"blocking\" src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>")
+        frag_shim = islands_dirname === nothing ? "" : string(
+            _file_protocol_warning_script(),
+            "<script data-therapy-rerun=\"blocking\" src=\"", assets_base, "/", islands_dirname, "/shim.js\"></script>",
+        )
         fragment_resources = fragment_dependencies === :inline ? string(
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/daisyui@5.6.2/themes.css\">\n",
             "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css\">\n",

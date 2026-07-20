@@ -10,6 +10,59 @@ permissions:
   contents: read
 
 jobs:
+  portable-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install Chromium for portable-export smoke test
+        run: |
+          npm install --no-save playwright@1.59.1
+          npx playwright install chromium
+      - name: Run Windows portable-export browser test
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          $out = Join-Path $env:RUNNER_TEMP 'snapshot preview alpha'
+          julia --project=. test/windows_portable_smoke.jl $out
+          node test/islands_smoke.mjs $out demo.html --file --require-island
+
+  fractals-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install browser engines
+        run: |
+          npm install --no-save playwright@1.59.1
+          npx playwright install --with-deps chromium firefox
+      - name: Export the featured fractals notebook
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Snapshot; export_notebook("test/notebooks/featured/fractals.jl"; output_dir="fractals-http")'
+          julia --project=. -e 'using Snapshot; export_notebook("test/notebooks/featured/fractals.jl"; output_dir="fractals-file", single_file=true)'
+      - name: Assert slider changes rendered pixels
+        run: |
+          SNAPSHOT_BROWSER=chromium node test/e2e_fractals.mjs fractals-http fractals.html
+          SNAPSHOT_BROWSER=firefox node test/e2e_fractals.mjs fractals-http fractals.html
+          SNAPSHOT_BROWSER=chromium node test/e2e_fractals.mjs fractals-file fractals.html --file
+          SNAPSHOT_BROWSER=firefox node test/e2e_fractals.mjs fractals-file fractals.html --file
+          SNAPSHOT_BROWSER=chromium node test/e2e_fractals.mjs fractals-http fractals.html --wrong-wasm-mime
+          SNAPSHOT_BROWSER=chromium node test/e2e_fractals.mjs fractals-http fractals.html --simulate-unsupported-wasm
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 90
