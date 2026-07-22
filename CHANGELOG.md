@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/GroupTherapyOrg/Snapshot.jl/compare/v0.2.0...v0.2.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* add portable single-file exports ([#57](https://github.com/GroupTherapyOrg/Snapshot.jl/issues/57)) ([2e24af9](https://github.com/GroupTherapyOrg/Snapshot.jl/commit/2e24af9035c1e5e8040682f105cbdf8f3a2e23ca))
+
 ## [0.2.0](https://github.com/GroupTherapyOrg/Snapshot.jl/compare/v0.1.1...v0.2.0) (2026-07-17)
 
 
