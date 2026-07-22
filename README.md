@@ -95,16 +95,18 @@ app = App(
     tailwind=false,
 )
 staticfiles(app, joinpath(@__DIR__, "public", "notebook"), "notebook")
-Therapy.run(app)
+Therapy.build(app)
 ```
 
 Run `julia --project=snapshot-build snapshot-build/build_notebooks.jl`, then
-`julia --project=therapy-site therapy-site/app.jl dev` to serve the notebook at
-`/notebook/notebook.html`. For deployment,
-`julia --project=therapy-site therapy-site/app.jl build`
-copies the HTML and its neighboring `.islands/` directory into `dist/notebook/`
+`julia --project=therapy-site therapy-site/app.jl` to build the site. The
+explicit `Therapy.build(app)` call copies the HTML and its neighboring
+`.islands/` directory into `dist/notebook/`
 and writes the `.nojekyll` file expected by GitHub Pages. Upload `dist/` with
 GitHub's standard Pages action, or deploy it unchanged to any static host.
+
+While developing the site, use `Therapy.dev(app)` instead of
+`Therapy.build(app)` to start the local server with hot reload.
 
 For a project Pages URL such as `https://USER.github.io/REPO/`, add
 `base_path="/REPO"` to `App`. Snapshot's notebook assets use relative URLs, so
