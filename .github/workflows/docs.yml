@@ -75,32 +75,15 @@ jobs:
           # Only changes to
           # src/, assets/, the export driver, or Project.toml bust a notebook's
           # cache. A docs-site or README push now genuinely cache-hits every
-          # notebook. (v5 was the Snapshot.jl rename; v4 the node 20→22
-          # WasmGC-oracle fix; node-version still isn't in the key.)
+          # notebook. (v5 was the Snapshot.jl rename; v4 the ambient-node
+          # WasmGC-oracle fix.) The JLL dependency is included through
+          # Project.toml's engine hash.
           key: snap-nbexport-v9-wt${{ env.SNAPSHOT_WT_REF }}-${{ matrix.notebook.slug }}-${{ hashFiles(format('Snapshot.jl/{0}', matrix.notebook.path)) }}-eng${{ hashFiles('Snapshot.jl/src/**', 'Snapshot.jl/assets/**', 'Snapshot.jl/docs/export_notebooks.jl', 'Snapshot.jl/Project.toml') }}-${{ inputs.force && github.run_id || 'cache' }}
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
         with: { version: '1.12' }
       - if: steps.cache.outputs.cache-hit != 'true'
         uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
-      - if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        # node 22+: WebAssembly GC is on by DEFAULT. The export oracle runs `node
-        # <js> <wasm>` to differentially verify each island; WasmTarget emits WasmGC
-        # (type code 0x50), which node 20 rejects ("enable with --experimental-wasm-
-        # gc") — and that flag is itself removed on modern node. node 20 here silently
-        # failed EVERY oracle → every cell judged fallback → all notebooks went static
-        # (the "0/104 live across 0 notebooks" bug). Must match snapshot.yml (node 22).
-        with: { node-version: '22' }
-      - if: steps.cache.outputs.cache-hit != 'true'
-        name: Preflight — node MUST run WasmGC (else the oracle degrades every cell to static)
-        run: |
-          node -e '
-            const m = new Uint8Array([0,97,115,109,1,0,0,0,1,3,1,0x5f,0]); // (module (type (struct))) — minimal WasmGC
-            WebAssembly.compile(m).then(
-              () => { console.log("WasmGC OK on " + process.version); },
-              (e) => { console.error("FATAL: node " + process.version + " cannot compile WasmGC — exports would all fall back to static. " + e); process.exit(1); }
-            );'
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Instantiate released Snapshot compiler stack
         working-directory: Snapshot.jl
@@ -119,6 +102,21 @@ jobs:
             wt.git_revision == ENV["SNAPSHOT_WT_REF"] ||
               error("Snapshot export compiler resolved unexpected WasmTarget revision $(wt.git_revision)")
             println("Snapshot export compiler: WasmTarget ", wt.version, " @ ", wt.git_revision)
+          '
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Preflight — bundled Node 24 verifier, independent of PATH
+        working-directory: Snapshot.jl
+        run: |
+          julia --project=. -e '
+            using Snapshot
+            node, version = withenv("PATH" => mktempdir()) do
+              node = Snapshot._verifier_node()
+              node, strip(read(`$node --version`, String))
+            end
+            startswith(version, "v24.") || error("unexpected verifier runtime: $version")
+            occursin("experimental-wasm", string(node)) &&
+              error("Node 24 verifier must use its default stable feature set")
+            println("Snapshot bundled verifier: ", version)
           '
       - if: steps.cache.outputs.cache-hit != 'true'
         name: Export this notebook → WASM islands (cache miss → force-rebuild it)

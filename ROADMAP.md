@@ -272,8 +272,9 @@ New `[WasmIslands]` section in `PlutoDeployment.toml` mirroring `[Precompute]`:
 
 ## 5. Definition of done (v0 = end of M5)
 
-- [ ] `export_notebook(nb; WasmIslands_enabled=true)` produces a directory that, served
-  by ANY static file host (or `file://`), gives working sliders with **zero** Julia
+- [ ] `export_notebook(nb; WasmIslands_enabled=true)` produces either a directory
+  served by any HTTP static host or a portable `single_file=true` export opened
+  through `file://`, with working sliders and **zero** Julia
   processes and **zero** precomputed staterequest files for island-judged groups.
 - [ ] Every shipped island passed the export-time differential oracle on a random
   sample of its bond domain; non-passing groups visibly fell back (report says why).

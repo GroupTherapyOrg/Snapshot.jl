@@ -208,7 +208,10 @@ function _wasm_bodies(
         write(wasm_path, island.bytes)
         write(js_path, script)
         out = IOBuffer(); errio = IOBuffer()
-        ok = success(pipeline(`node $js_path $wasm_path`; stdout=out, stderr=errio))
+        # Use Snapshot's pinned verifier runtime, never an ambient Node whose
+        # WasmGC feature set varies by user machine.
+        node = _verifier_node()
+        ok = success(pipeline(`$node $js_path $wasm_path`; stdout=out, stderr=errio))
         ok || return "node failed: $(String(take!(errio))[1:min(end, 300)])"
         raw = JSON.parse(String(take!(out)))
         [Dict{String,Any}(k => v for (k, v) in sample) for sample in raw]

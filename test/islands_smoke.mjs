@@ -8,11 +8,13 @@ import http from "node:http"
 import fs from "node:fs"
 import path from "node:path"
 import { createRequire } from "node:module"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const OUT = process.argv[2]
 const PAGE = process.argv[3]
+const FILE_PROTOCOL = process.argv.includes("--file")
+const REQUIRE_ISLAND = process.argv.includes("--require-island")
 
 const candidates = [
     process.env.PLAYWRIGHT_NODE_MODULES,
@@ -26,14 +28,14 @@ for (const c of candidates) {
 if (!chromium) { console.error("playwright not found — skip"); process.exit(2) }
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".wasm": "application/wasm" }
-const server = http.createServer((req, res) => {
+const server = FILE_PROTOCOL ? null : http.createServer((req, res) => {
     const url = new URL(req.url, "http://localhost")
     const file = path.join(OUT, decodeURIComponent(url.pathname))
     if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); res.end(); return }
     res.writeHead(200, { "Content-Type": MIME[path.extname(file)] ?? "application/octet-stream" })
     fs.createReadStream(file).pipe(res)
 })
-await new Promise((r) => server.listen(0, r))
+if (server) await new Promise((r) => server.listen(0, r))
 
 const browser = await chromium.launch()
 const page = await browser.newPage()
@@ -43,7 +45,11 @@ const errors = []
 page.on("console", (m) => { consoleLogs.push(`${m.type()}: ${m.text()}`); if (m.text().includes("🏝")) logs.push(m.text()) })
 page.on("pageerror", (e) => errors.push(String(e)))
 
-await page.goto(`http://localhost:${server.address().port}/${encodeURIComponent(PAGE)}`, { waitUntil: "domcontentloaded" })
+const pagePath = PAGE.split("/").map(encodeURIComponent).join("/")
+const pageURL = FILE_PROTOCOL
+    ? pathToFileURL(path.resolve(OUT, PAGE)).href
+    : `http://localhost:${server.address().port}/${pagePath}`
+await page.goto(pageURL, { waitUntil: "domcontentloaded" })
 // Classic Pluto exports use <pluto-cell>; lean Therapy exports use .pl-cell.
 // Keep this smoke test format-agnostic so the public default and the legacy
 // opt-in path exercise the same island runtime contract.
@@ -59,6 +65,9 @@ if (!logs.some((l) => l.includes("islands manifest"))) fail("manifest not loaded
 // the initial module instantiation on slower CI runners.
 for (let waited = 0; waited < 60_000 && !logs.some((l) => l.includes("island loaded")); waited += 250) {
     await page.waitForTimeout(250)
+}
+if (REQUIRE_ISLAND && !logs.some((l) => l.includes("island loaded"))) {
+    fail("no Wasm island loaded; console: " + consoleLogs.join(" | "))
 }
 
 const slider = page.locator("pluto-cell input[type=range], .pl-cell input[type=range]").first()
@@ -112,5 +121,5 @@ if ((await textbox.count()) > 0) {
 if (errors.length > 0) fail("page errors: " + errors.slice(0, 2).join(" / "))
 console.log(`SMOKE PASS: ${PAGE} (${logs.length} island log lines)`)
 await browser.close()
-server.close()
+server?.close()
 process.exit(0)
