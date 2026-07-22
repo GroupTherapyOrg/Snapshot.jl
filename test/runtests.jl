@@ -15,8 +15,13 @@ const HAS_NODE = Sys.which("node") !== nothing
     docs_project = Pkg.TOML.parsefile(joinpath(root, "docs", "Project.toml"))
     @test !haskey(project, "sources")
     @test project["compat"]["WasmTarget"] == "0.5.2"
+    @test project["compat"]["NodeJS_24_jll"] == "=24.18.0"
     @test !haskey(docs_project, "sources")
     @test docs_project["compat"]["Therapy"] == "0.2.6"
+
+    verifier = Snapshot._verifier_node()
+    @test !occursin("experimental-wasm", string(verifier))
+    @test startswith(strip(read(`$verifier --version`, String)), "v24.")
 end
 
 @testset "fun export theme contract" begin
@@ -680,12 +685,12 @@ let
     Pluto.SessionActions.shutdown(session, nbm)
 end
 
-if HAS_NODE
+let
     initial_bodies = Dict{String,Any}(
         string(id) => cr["output"]["body"] for (id, cr) in original_state["cell_results"]
     )
 
-    @testset "compile + node verify" begin
+    @testset "compile + bundled Node 24 verify" begin
         g = extract_groups(session, notebook; connections, original_state)[1]
         # Snapshot's verifier is compiler infrastructure supplied by a JLL. It
         # must work even when the user's PATH contains no Node installation.

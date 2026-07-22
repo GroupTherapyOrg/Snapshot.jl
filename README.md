@@ -59,9 +59,13 @@ portable = export_notebook("notebook.jl"; single_file=true)
 ```
 
 This format trades a larger HTML file for the simplest handoff: copy, upload,
-or double-click that one file. Base64 encoding makes embedded binary assets
-roughly one third larger. The ordinary directory export remains the efficient
-choice for a website, while `single_file=true` is intended for direct sharing.
+or double-click that one file. It is useful for email attachments, downloadable
+examples, and platforms that accept active HTML. It is not the preferred web
+deployment format: base64 makes binary assets roughly one third larger, every
+page load downloads the complete document again, and individual WASM files
+cannot be cached. Some learning-management systems also sanitize scripts or
+disallow WebAssembly; `single_file=true` cannot override the host's security
+policy. Use the ordinary directory export for a website.
 
 ### Browser requirements and a "moving slider, stuck output"
 
@@ -70,6 +74,13 @@ WebAssembly JavaScript string builtins. Use Chrome or Edge 130+, Firefox 134+,
 or another browser with equivalent support. Safari does not currently implement
 the required string builtins. This requirement is independent of Windows,
 macOS, and Linux.
+
+Snapshot bundles Node 24 for export-time verification; it never uses a Node
+installation from `PATH`. The registered JLL currently provides exporter
+artifacts for 64-bit Windows; x86_64 and ARM64 macOS; x86_64 and ARM64 Linux
+(glibc or musl); and powerpc64le Linux (glibc). The generated HTML remains
+portable across operating systems—the separate list describes machines that
+can run the exporter itself.
 
 An older browser can still move a plain HTML slider even though it cannot
 compile the adjacent WebAssembly island. The visible symptom is therefore a
@@ -85,29 +96,105 @@ binary MIME type: Snapshot prefers streaming compilation when the server sends
 This keeps local Python servers and simple educational/static hosts portable
 without weakening the browser's WebAssembly validation.
 
-### Hosting from a Therapy site
+### Publishing with Therapy
 
 The default output is already a static directory, so a Therapy application can
-serve it without running Pluto or Snapshot in production. Export into a public
-directory during the site's build and mount that directory with Therapy's
-static-file support:
+mount it without running Pluto or Snapshot in production. Keep the notebook
+exporter and site builder in two small environments: Snapshot's Pluto stack and
+Therapy currently resolve different HTTP major versions, while the generated
+files form a clean boundary between them.
 
 ```julia
-# build step (Snapshot environment)
+# snapshot-build/build_notebooks.jl — run when the notebook changes
 using Snapshot
-export_notebook("notebook.jl"; output_dir="public/notebook")
-
-# application (Therapy environment)
-using Therapy
-app = App()
-staticfiles(app, "public/notebook", "notebook")
-run(app)
+export_notebook(
+    joinpath(@__DIR__, "..", "notebook.jl");
+    output_dir=joinpath(@__DIR__, "..", "therapy-site", "public", "notebook"),
+)
 ```
 
-The notebook is then available at `/notebook/notebook.html`, with its
-neighboring `.islands/` directory served from the same static mount. This keeps
-notebook compilation and site serving separate: Therapy does not need Pluto or
-Snapshot at runtime.
+```julia
+# therapy-site/app.jl — an ordinary Therapy application
+using Therapy
+
+app = App(
+    routes_dir=joinpath(@__DIR__, "routes"),
+    components_dir=joinpath(@__DIR__, "components"),
+    output_dir=joinpath(@__DIR__, "dist"),
+    tailwind=false,
+)
+staticfiles(app, joinpath(@__DIR__, "public", "notebook"), "notebook")
+Therapy.run(app)
+```
+
+Run `julia --project=snapshot-build snapshot-build/build_notebooks.jl`, then
+`julia --project=therapy-site therapy-site/app.jl dev` to serve the notebook at
+`/notebook/notebook.html`. For deployment,
+`julia --project=therapy-site therapy-site/app.jl build`
+copies the HTML and its neighboring `.islands/` directory into `dist/notebook/`
+and writes the `.nojekyll` file expected by GitHub Pages. Upload `dist/` with
+GitHub's standard Pages action, or deploy it unchanged to any static host.
+
+For a project Pages URL such as `https://USER.github.io/REPO/`, add
+`base_path="/REPO"` to `App`. Snapshot's notebook assets use relative URLs, so
+the same exported directory works beneath that prefix. This separation is
+intentional: Snapshot executes and compiles the notebook during the build;
+Therapy composes and builds the site; the deployed result is only static HTML,
+JavaScript, and WebAssembly. No Julia process runs on the host.
+
+Only mount notebook exports you trust on the same origin as an application.
+Notebook HTML is author-controlled executable content; publish untrusted
+exports on a separate origin so they cannot inherit the application's browser
+credentials.
+
+A minimal Pages workflow uses Therapy as the site builder and uploads its
+`dist/` directory directly:
+
+```yaml
+name: Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=snapshot-build -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --project=therapy-site -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --project=snapshot-build snapshot-build/build_notebooks.jl
+      - run: julia --project=therapy-site therapy-site/app.jl build
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: therapy-site/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+Enable **GitHub Actions** as the repository's Pages source once; subsequent
+pushes rebuild the notebook, build the Therapy site, and publish the static
+result. Put `Snapshot` in `snapshot-build/Project.toml` and `Therapy` in
+`therapy-site/Project.toml` so both build stages remain reproducible and their
+dependency graphs stay independent.
 
 ## How it works
 

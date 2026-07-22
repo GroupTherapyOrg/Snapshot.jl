@@ -31,12 +31,13 @@ module Snapshot
 import Pluto
 import PlutoDependencyExplorer
 import JSON
-import NodeJS_22_jll
+import NodeJS_24_jll
 
-# Snapshot's export oracle requires WasmGC, JS-string builtins, and exception
-# references. Keep the runtime and its feature contract in one place so neither
-# verifier can accidentally fall back to a user's ambient Node installation.
-_verifier_node() = `$(NodeJS_22_jll.node()) --experimental-wasm-exnref`
+# Snapshot's export oracle requires WasmGC, exception references, and JS-string
+# builtins. Node 24 enables that feature set by default. Keep the bundled
+# runtime in one place so neither verifier can accidentally fall back to a
+# user's ambient Node.
+_verifier_node() = `$(NodeJS_24_jll.node())`
 
 include("types.jl")
 include("analysis.jl")

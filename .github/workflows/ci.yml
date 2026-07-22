@@ -10,6 +10,38 @@ permissions:
   contents: read
 
 jobs:
+  bundled-verifier:
+    name: Bundled Node 24 (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
+      - name: Export and verify with no ambient Node
+        shell: bash
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e '
+            using Snapshot
+            withenv("PATH" => mktempdir()) do
+              node = Snapshot._verifier_node()
+              version = strip(read(`$node --version`, String))
+              startswith(version, "v24.") || error("unexpected verifier runtime: $version")
+              occursin("experimental-wasm", string(node)) && error("feature flag leaked into Node 24 command")
+              out = mktempdir()
+              html = export_notebook("test/notebooks/demo.jl"; output_dir=out, single_file=true)
+              isfile(html) || error("portable export missing: $html")
+              occursin("snapshot-embedded-assets", read(html, String)) || error("portable assets missing")
+            end
+          '
+
   portable-windows:
     runs-on: windows-latest
     timeout-minutes: 30
@@ -21,7 +53,9 @@ jobs:
       - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          # Deliberately older ambient runtime: export verification must still
+          # use the bundled Node 24 JLL rather than whatever is on PATH.
+          node-version: '20'
       - name: Install Chromium for portable-export smoke test
         run: |
           npm install --no-save playwright@1.59.1
@@ -44,7 +78,7 @@ jobs:
       - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Install browser engines
         run: |
           npm install --no-save playwright@1.59.1
@@ -74,7 +108,7 @@ jobs:
       - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Run tests
         env:
           JULIA_PKG_SERVER: ""
