@@ -67,35 +67,6 @@ cannot be cached. Some learning-management systems also sanitize scripts or
 disallow WebAssembly; `single_file=true` cannot override the host's security
 policy. Use the ordinary directory export for a website.
 
-### Browser requirements and a "moving slider, stuck output"
-
-Snapshot's current WasmTarget modules use WasmGC and the standardized
-WebAssembly JavaScript string builtins. Use Chrome or Edge 130+, Firefox 134+,
-or another browser with equivalent support. Safari does not currently implement
-the required string builtins. This requirement is independent of Windows,
-macOS, and Linux.
-
-Snapshot bundles Node 24 for export-time verification; it never uses a Node
-installation from `PATH`. The registered JLL currently provides exporter
-artifacts for 64-bit Windows; x86_64 and ARM64 macOS; x86_64 and ARM64 Linux
-(glibc or musl); and powerpc64le Linux (glibc). The generated HTML remains
-portable across operating systems—the separate list describes machines that
-can run the exporter itself.
-
-An older browser can still move a plain HTML slider even though it cannot
-compile the adjacent WebAssembly island. The visible symptom is therefore a
-moving control with an unchanged, server-rendered plot or value. Current
-exports detect the module compilation failure and show an inline browser-update
-message with the original technical detail. If an export behaves that way,
-first record the browser name and exact version; the Julia and Snapshot package
-versions alone do not identify the browser runtime.
-
-Directory exports also tolerate static servers that send `.wasm` with a generic
-binary MIME type: Snapshot prefers streaming compilation when the server sends
-`application/wasm`, then safely retries from the downloaded bytes otherwise.
-This keeps local Python servers and simple educational/static hosts portable
-without weakening the browser's WebAssembly validation.
-
 ### Publishing with Therapy
 
 The default output is already a static directory, so a Therapy application can
