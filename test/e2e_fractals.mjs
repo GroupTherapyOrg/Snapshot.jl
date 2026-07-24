@@ -9,6 +9,7 @@
 import http from "node:http"
 import fs from "node:fs"
 import path from "node:path"
+import crypto from "node:crypto"
 import { createRequire } from "node:module"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
@@ -60,8 +61,21 @@ if (SIMULATE_UNSUPPORTED) await page.addInitScript(() => {
     WebAssembly.compileStreaming = unsupported
 })
 const diagnostics = []
-page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning" || m.text().includes("🏝️")) diagnostics.push(`${m.type()}: ${m.text()}`) })
-page.on("pageerror", (e) => diagnostics.push(`pageerror: ${e.message}`))
+const fatalDiagnostics = []
+page.on("console", (m) => {
+    const message = `${m.type()}: ${m.text()}`
+    if (m.type() === "error" || m.type() === "warning" || m.text().includes("🏝️")) diagnostics.push(message)
+})
+page.on("pageerror", (e) => {
+    const message = `pageerror: ${e.message}`
+    diagnostics.push(message)
+    fatalDiagnostics.push(message)
+})
+page.on("requestfailed", (request) => {
+    const message = `requestfailed: ${request.url()} (${request.failure()?.errorText ?? "unknown error"})`
+    diagnostics.push(message)
+    fatalDiagnostics.push(message)
+})
 
 const url = FILE_PROTOCOL
     ? pathToFileURL(path.resolve(OUT, PAGE)).href
@@ -81,34 +95,41 @@ if (SIMULATE_UNSUPPORTED) {
 await page.waitForFunction(() => document.querySelectorAll("canvas.wasmmakie-island").length >= 2, null, { timeout: 60_000 })
 await page.waitForTimeout(1000)
 
-const canvasHashes = () => page.locator("canvas.wasmmakie-island").evaluateAll((canvases) => canvases.map((canvas) => {
-    const data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data
-    let hash = 2166136261
-    for (let i = 0; i < data.length; i += 97) hash = Math.imul(hash ^ data[i], 16777619) >>> 0
-    return hash
-}))
-const before = await canvasHashes()
+// The first WasmMakie canvas is the Julia-set plot controlled by julia_cx.
+// Hash its complete screenshot so a redraw in a different plot cannot pass.
+const targetCanvas = page.locator("canvas.wasmmakie-island").first()
+const canvasHash = async () => crypto.createHash("sha256").update(await targetCanvas.screenshot()).digest("hex")
+const before = await canvasHash()
+await page.waitForTimeout(500)
+const stable = await canvasHash()
+if (stable !== before)
+    throw new Error(`target fractal canvas was not stable before interaction\nbefore=${before}\nstable=${stable}`)
 
 const slider = page.locator('bond[def="julia_cx"] input[type="range"]').first()
 if (await slider.count() === 0) throw new Error("fractals export has no julia_cx slider")
-await slider.evaluate((el) => {
+const sliderBefore = await slider.inputValue()
+const sliderAfter = await slider.evaluate((el) => {
     const min = Number(el.min || -2), max = Number(el.max || 2), current = Number(el.value)
     el.value = String(Math.abs(current - min) > Math.abs(current - max) ? min : max)
     el.dispatchEvent(new Event("input", { bubbles: true }))
     el.dispatchEvent(new Event("change", { bubbles: true }))
+    return el.value
 })
+if (sliderAfter === sliderBefore)
+    throw new Error(`julia_cx slider value did not change (${sliderBefore})`)
 
 let after = before
 for (let waited = 0; waited < 60_000; waited += 250) {
     await page.waitForTimeout(250)
-    after = await canvasHashes()
-    if (after.some((hash, i) => hash !== before[i])) break
+    after = await canvasHash()
+    if (after !== before) break
 }
-if (!after.some((hash, i) => hash !== before[i])) {
+if (after === before) {
     const warnings = await page.locator(".pss-island-fallback-warning").allTextContents()
     throw new Error(`slider moved but no fractal canvas pixels changed\nbefore=${before}\nafter=${after}\nwarnings=${warnings.join(" | ")}\n${diagnostics.join("\n")}`)
 }
-
+if (fatalDiagnostics.length > 0)
+    throw new Error(`fractal changed, but the page emitted fatal browser diagnostics\n${fatalDiagnostics.join("\n")}`)
 console.log(`FRACTALS PASS: ${BROWSER_NAME} ${FILE_PROTOCOL ? "file" : (WRONG_WASM_MIME ? "http wrong-MIME fallback" : "http")} ${before} → ${after}`)
 await browser.close()
 server?.close()
