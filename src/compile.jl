@@ -565,7 +565,7 @@ function _verify_initial_bodies(island::CompiledIsland, initial_bodies::Dict{Str
         # platform the same WasmGC-capable verifier runtime.
         node = _verifier_node()
         ok = success(pipeline(`$node $js_path $wasm_path`; stdout=out, stderr=errio))
-        ok || return "node failed: $(String(take!(errio))[1:min(end, 300)])"
+        ok || return "bundled Node verifier ($(_verifier_identity())) failed: $(String(take!(errio))[1:min(end, 300)])"
         got = JSON.parse(String(take!(out)))
         failed = Dict{String,String}()
         for c in verifiable

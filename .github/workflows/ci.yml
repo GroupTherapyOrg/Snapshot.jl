@@ -97,6 +97,50 @@ jobs:
           SNAPSHOT_BROWSER=chromium node test/e2e_fractals.mjs fractals-http fractals.html --wrong-wasm-mime
           SNAPSHOT_BROWSER=chromium node test/e2e_fractals.mjs fractals-http fractals.html --simulate-unsupported-wasm
 
+  fractals-windows:
+    name: Fractals pixels (Windows, Chromium + Firefox)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@d10a6fd8f31b12404a54613ebad242900567f2b9 # v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Keep ambient Node older than WasmGC support. Snapshot must use its
+          # bundled Node 24 verifier, independently of PATH.
+          node-version: '20'
+      - name: Install Chromium and Firefox
+        run: |
+          npm install --no-save playwright@1.59.1
+          npx playwright install chromium firefox
+      - name: Export split and portable fractals notebooks
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          $split = Join-Path $env:RUNNER_TEMP 'snapshot fractals split'
+          $portable = Join-Path $env:RUNNER_TEMP 'snapshot fractals portable'
+          julia --project=. -e 'using Snapshot; split, portable = ARGS; node = Snapshot._verifier_node(); startswith(strip(read(`$node --version`, String)), "v24.") || error("bundled verifier is not Node 24"); export_notebook("test/notebooks/featured/fractals.jl"; output_dir=split); export_notebook("test/notebooks/featured/fractals.jl"; output_dir=portable, single_file=true)' $split $portable
+          "SNAPSHOT_FRACTALS_SPLIT=$split" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SNAPSHOT_FRACTALS_PORTABLE=$portable" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Assert Chromium pixels change over HTTP
+        env:
+          SNAPSHOT_BROWSER: chromium
+        run: node test/e2e_fractals.mjs "$env:SNAPSHOT_FRACTALS_SPLIT" fractals.html
+      - name: Assert Chromium pixels change from file
+        env:
+          SNAPSHOT_BROWSER: chromium
+        run: node test/e2e_fractals.mjs "$env:SNAPSHOT_FRACTALS_PORTABLE" fractals.html --file
+      - name: Assert Firefox pixels change over HTTP
+        env:
+          SNAPSHOT_BROWSER: firefox
+        run: node test/e2e_fractals.mjs "$env:SNAPSHOT_FRACTALS_SPLIT" fractals.html
+      - name: Assert Firefox pixels change from file
+        env:
+          SNAPSHOT_BROWSER: firefox
+        run: node test/e2e_fractals.mjs "$env:SNAPSHOT_FRACTALS_PORTABLE" fractals.html --file
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 90

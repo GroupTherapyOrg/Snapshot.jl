@@ -22,6 +22,10 @@ const HAS_NODE = Sys.which("node") !== nothing
     verifier = Snapshot._verifier_node()
     @test !occursin("experimental-wasm", string(verifier))
     @test startswith(strip(read(`$verifier --version`, String)), "v24.")
+    verifier_identity = Snapshot._verifier_identity()
+    @test occursin("v24.", verifier_identity)
+    @test occursin("node", lowercase(verifier_identity))
+    @test !occursin(homedir(), verifier_identity)
 end
 
 @testset "fun export theme contract" begin

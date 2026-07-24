@@ -39,6 +39,15 @@ import NodeJS_24_jll
 # user's ambient Node.
 _verifier_node() = `$(NodeJS_24_jll.node())`
 
+function _verifier_identity()
+    version = try
+        strip(read(`$(_verifier_node()) --version`, String))
+    catch
+        "version unavailable"
+    end
+    "Node $version from NodeJS_24_jll v$(Base.pkgversion(NodeJS_24_jll)) on $(Sys.MACHINE)"
+end
+
 include("types.jl")
 include("analysis.jl")
 include("run_bonds.jl")
