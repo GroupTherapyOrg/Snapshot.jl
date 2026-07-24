@@ -147,7 +147,7 @@ jobs:
       - run: julia --project=snapshot-build -e 'using Pkg; Pkg.instantiate()'
       - run: julia --project=therapy-site -e 'using Pkg; Pkg.instantiate()'
       - run: julia --project=snapshot-build snapshot-build/build_notebooks.jl
-      - run: julia --project=therapy-site therapy-site/app.jl build
+      - run: julia --project=therapy-site therapy-site/app.jl
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
